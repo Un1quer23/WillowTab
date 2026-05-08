@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "UniTab",
+  "version": "1.0.0",
+  "description": "A unified new tab page with search, wallpapers, and customization.",
+  "author": "Un1quer",
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://suggestqueries.google.com/*",
+    "https://www.baidu.com/*",
+    "https://api.bing.com/*",
+    "https://duckduckgo.com/*",
+    "https://www.google.com/*",
+    "https://favicon.im/*"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
