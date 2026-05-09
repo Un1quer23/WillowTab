@@ -918,8 +918,13 @@ body.has-custom-bg {
 }
 
 .setting-subgroup.disabled {
-  opacity: 0.35;
   pointer-events: none;
+}
+.setting-subgroup.disabled .setting-row,
+.setting-subgroup.disabled .color-presets,
+.setting-subgroup.disabled .custom-color-row,
+.setting-subgroup.disabled .wallpaper-gallery {
+  opacity: 0.35;
 }
 
 /* Theme options */
