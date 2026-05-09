@@ -705,9 +705,9 @@ body.has-custom-bg {
   opacity: 0.5;
 }
 
-/* "仅在浅色模式下可用" label for color settings in dark mode */
+/* Hint label for color settings in dark mode */
 #color-section.disabled::after {
-  content: '仅在浅色模式下可用';
+  content: attr(data-hint);
   position: absolute;
   top: 2px;
   right: 0;

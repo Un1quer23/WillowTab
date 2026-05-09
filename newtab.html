@@ -11,13 +11,13 @@
   <div class="container">
     <header class="clock-section">
       <time id="time" class="time-display">00:00</time>
-      <p id="greeting" class="greeting">你好</p>
+      <p id="greeting" class="greeting" data-i18n="greeting.default">你好</p>
     </header>
 
     <main class="search-section">
       <form id="search-form" class="search-form" autocomplete="off">
         <div class="search-input-wrapper">
-          <button type="button" id="engine-toggle" class="engine-toggle" aria-label="切换搜索引擎" title="切换搜索引擎">
+          <button type="button" id="engine-toggle" class="engine-toggle" data-i18n-aria="search.toggleEngine" data-i18n-title="search.toggleEngine" aria-label="切换搜索引擎" title="切换搜索引擎">
             <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <circle cx="11" cy="11" r="8"/>
               <path d="M21 21l-4.35-4.35"/>
@@ -28,6 +28,7 @@
             type="text"
             id="search-input"
             class="search-input"
+            data-i18n-placeholder="search.placeholder"
             placeholder="Think Different."
             autofocus
             autocomplete="off"
@@ -38,7 +39,7 @@
     </main>
 
     <footer class="actions-section">
-      <button id="settings-btn" class="action-btn" aria-label="设置">
+      <button id="settings-btn" class="action-btn" data-i18n-aria="settings.title" aria-label="设置">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -49,8 +50,8 @@
 
   <div id="settings-panel" class="settings-panel" hidden>
     <div class="settings-panel-header">
-      <h2>设置</h2>
-      <button id="settings-close" class="action-btn small icon-only" aria-label="关闭">
+      <h2 data-i18n="settings.title">设置</h2>
+      <button id="settings-close" class="action-btn small icon-only" data-i18n-aria="settings.close" aria-label="关闭">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="18" y1="6" x2="6" y2="18"/>
           <line x1="6" y1="6" x2="18" y2="18"/>
@@ -60,25 +61,25 @@
     <div class="settings-content">
       <!-- Background -->
       <section class="setting-group">
-        <h3 class="setting-group-title">背景</h3>
+        <h3 class="setting-group-title" data-i18n="settings.background">背景</h3>
 
         <div class="setting-row">
-          <label class="setting-label">背景模式</label>
+          <label class="setting-label" data-i18n="settings.bgMode">背景模式</label>
           <div class="mode-toggle" id="mode-toggle">
-            <button class="mode-option active" data-mode="color">纯色背景</button>
-            <button class="mode-option" data-mode="wallpaper">壁纸</button>
+            <button class="mode-option active" data-mode="color" data-i18n="settings.bgColorMode">纯色背景</button>
+            <button class="mode-option" data-mode="wallpaper" data-i18n="settings.bgWallpaperMode">壁纸</button>
           </div>
         </div>
 
         <!-- Color section -->
         <div class="setting-subgroup" id="color-section">
           <div class="setting-row">
-            <label class="setting-label">预设颜色</label>
+            <label class="setting-label" data-i18n="settings.presetColors">预设颜色</label>
             <div class="color-presets" id="color-presets"></div>
           </div>
 
           <div class="setting-row">
-            <label class="setting-label">自选颜色</label>
+            <label class="setting-label" data-i18n="settings.customColor">自选颜色</label>
             <div class="custom-color-row">
               <input type="color" id="custom-color-picker" class="custom-color-picker">
               <input type="text" id="custom-color-hex" class="custom-color-hex" placeholder="#F5F5DC" maxlength="7" spellcheck="false">
@@ -89,15 +90,15 @@
         <!-- Wallpaper section -->
         <div class="setting-subgroup" id="wallpaper-section" hidden>
           <div class="setting-row">
-            <label class="setting-label">壁纸设置</label>
-            <button id="wallpaper-folder-btn" class="action-btn small">选择文件夹</button>
+            <label class="setting-label" data-i18n="settings.wallpaperSettings">壁纸设置</label>
+            <button id="wallpaper-folder-btn" class="action-btn small" data-i18n="settings.selectFolder">选择文件夹</button>
             <input type="file" id="wallpaper-folder-input" class="wallpaper-input" webkitdirectory hidden>
           </div>
 
           <div class="wallpaper-gallery" id="wallpaper-gallery"></div>
 
           <div class="setting-row">
-            <label class="setting-label">遮罩强度 <span id="overlay-value">25%</span></label>
+            <label class="setting-label"><span data-i18n="settings.overlayStrength">遮罩强度</span> <span id="overlay-value">25%</span></label>
             <input type="range" id="overlay-slider" class="overlay-slider" min="0" max="50" value="25" step="5">
           </div>
         </div>
@@ -105,64 +106,65 @@
 
       <!-- Theme -->
       <section class="setting-group" id="theme-section">
-        <h3 class="setting-group-title">显示模式</h3>
+        <h3 class="setting-group-title" data-i18n="settings.displayMode">显示模式</h3>
         <div class="theme-options" id="theme-options">
-          <button class="theme-option" data-theme="auto">跟随系统</button>
-          <button class="theme-option" data-theme="dark">深色</button>
-          <button class="theme-option" data-theme="light">浅色</button>
+          <button class="theme-option" data-theme="auto" data-i18n="settings.followSystem">跟随系统</button>
+          <button class="theme-option" data-theme="dark" data-i18n="settings.dark">深色</button>
+          <button class="theme-option" data-theme="light" data-i18n="settings.light">浅色</button>
         </div>
       </section>
 
       <!-- Font -->
       <section class="setting-group">
-        <h3 class="setting-group-title">字体</h3>
+        <h3 class="setting-group-title" data-i18n="settings.font">字体</h3>
         <div class="font-options" id="font-options">
           <button class="font-option active" data-font="serif">
             <span class="font-preview" style="font-family: Georgia, 'Times New Roman', 'Songti SC', serif;">Aa</span>
-            <span class="font-name">衬线体</span>
+            <span class="font-name" data-i18n="settings.fontSerif">衬线体</span>
           </button>
           <button class="font-option" data-font="system">
             <span class="font-preview" style="font-family: system-ui, 'Segoe UI', 'Microsoft YaHei', sans-serif;">Aa</span>
-            <span class="font-name">系统默认</span>
+            <span class="font-name" data-i18n="settings.fontSystem">系统默认</span>
           </button>
           <button class="font-option" data-font="mono">
             <span class="font-preview" style="font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;">Aa</span>
-            <span class="font-name">等宽体</span>
+            <span class="font-name" data-i18n="settings.fontMono">等宽体</span>
           </button>
         </div>
       </section>
 
       <!-- Border Radius -->
       <section class="setting-group">
-        <h3 class="setting-group-title">圆角</h3>
+        <h3 class="setting-group-title" data-i18n="settings.radius">圆角</h3>
         <div class="theme-options" id="radius-options">
-          <button class="theme-option active" data-radius="20px">圆润</button>
-          <button class="theme-option" data-radius="4px">方正</button>
-          <button class="theme-option" data-radius="12px">微圆</button>
-          <button class="theme-option" data-radius="28px">胶囊</button>
+          <button class="theme-option active" data-radius="20px" data-i18n="settings.radiusRounded">圆润</button>
+          <button class="theme-option" data-radius="4px" data-i18n="settings.radiusSquare">方正</button>
+          <button class="theme-option" data-radius="12px" data-i18n="settings.radiusSlight">微圆</button>
+          <button class="theme-option" data-radius="28px" data-i18n="settings.radiusCapsule">胶囊</button>
         </div>
       </section>
 
       <!-- Shadow -->
       <section class="setting-group">
-        <h3 class="setting-group-title">阴影</h3>
+        <h3 class="setting-group-title" data-i18n="settings.shadow">阴影</h3>
         <div class="setting-row">
-          <label class="setting-label">阴影强度 <span id="shadow-value">25</span></label>
+          <label class="setting-label"><span data-i18n="settings.shadowStrength">阴影强度</span> <span id="shadow-value">25</span></label>
           <input type="range" id="shadow-slider" class="overlay-slider" min="0" max="50" value="25" step="5">
         </div>
       </section>
 
       <!-- Settings Button Position -->
       <section class="setting-group">
-        <h3 class="setting-group-title">设置按钮位置</h3>
+        <h3 class="setting-group-title" data-i18n="settings.settingsBtnPosition">设置按钮位置</h3>
         <div class="theme-options" id="settings-btn-position-options">
-          <button class="theme-option active" data-position="footer">搜索框底部</button>
-          <button class="theme-option" data-position="dropdown">搜索引擎菜单</button>
+          <button class="theme-option active" data-position="footer" data-i18n="settings.btnPosFooter">搜索框底部</button>
+          <button class="theme-option" data-position="dropdown" data-i18n="settings.btnPosDropdown">搜索引擎菜单</button>
         </div>
       </section>
     </div>
   </div>
 
+  <script src="js/i18n.js"></script>
   <script src="js/search.js"></script>
   <script src="js/clock.js"></script>
   <script src="js/settings.js"></script>

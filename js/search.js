@@ -12,7 +12,7 @@
     },
     {
       id: 'baidu',
-      name: '百度',
+      get name() { return (window.__i18n && window.__i18n.t('engine.baidu')) || '百度'; },
       url: 'https://www.baidu.com/s?wd=',
       suggestUrl: 'https://www.baidu.com/sugrec?prod=pc&wd=',
       parseSuggestions(data) {
@@ -73,7 +73,7 @@
     const suffix = document.body.dataset.settingsBtnPosition === 'dropdown' ? `
       <li class="engine-dropdown-separator"></li>
       <li class="engine-dropdown-item engine-dropdown-settings" data-action="settings" role="menuitem">
-        <span class="engine-dropdown-name">设置</span>
+        <span class="engine-dropdown-name">${(window.__i18n && window.__i18n.t('search.settings')) || '设置'}</span>
       </li>
     ` : '';
 

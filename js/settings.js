@@ -24,8 +24,8 @@
 
   // Preset background colors
   const PRESET_COLORS = [
-    { value: '#F5F5DC', label: '米灰' },
-    { value: '#bfbb98', label: '鼠尾草' },
+    { value: '#F5F5DC', get label() { return (window.__i18n && window.__i18n.t('color.beige')) || '米灰'; } },
+    { value: '#bfbb98', get label() { return (window.__i18n && window.__i18n.t('color.sage')) || '鼠尾草'; } },
   ];
 
   let settings = { ...DEFAULTS };
@@ -73,7 +73,8 @@
         // Migrate old single wallpaper string to new format
         if (parsed.wallpaper && typeof parsed.wallpaper === 'string') {
           const id = generateId();
-          parsed.wallpapers = [{ id, data: parsed.wallpaper, name: '旧壁纸' }];
+          const oldName = (window.__i18n && window.__i18n.t('wallpaper.oldWallpaper')) || '旧壁纸';
+          parsed.wallpapers = [{ id, data: parsed.wallpaper, name: oldName }];
           parsed.activeWallpaperId = id;
           parsed.bgMode = 'wallpaper';
           delete parsed.wallpaper;
@@ -110,7 +111,7 @@
         settings.wallpapers = [];
         settings.activeWallpaperId = '';
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-        alert('存储空间不足，已清除所有壁纸。请删除部分壁纸后重新添加。');
+        alert((window.__i18n && window.__i18n.t('error.quotaExceeded')) || '存储空间不足，已清除所有壁纸。请删除部分壁纸后重新添加。');
       }
     }
   }
@@ -303,7 +304,14 @@
 
     // Section visibility — hide irrelevant sections completely
     colorSection.hidden = (settings.bgMode !== 'color');
-    if (!colorSection.hidden) colorSection.classList.toggle('disabled', isDark);
+    if (!colorSection.hidden) {
+      colorSection.classList.toggle('disabled', isDark);
+      if (isDark) {
+        colorSection.setAttribute('data-hint', (window.__i18n && window.__i18n.t('hint.darkColorDisabled')) || '仅在浅色模式下可用');
+      } else {
+        colorSection.removeAttribute('data-hint');
+      }
+    }
     wallpaperSection.hidden = (settings.bgMode !== 'wallpaper');
     themeSection.hidden = (settings.bgMode === 'wallpaper');
 
@@ -356,7 +364,8 @@
   function renderWallpaperGallery() {
     wallpaperGallery.innerHTML = '';
     if (!settings.wallpapers.length) {
-      wallpaperGallery.innerHTML = '<div style="color:var(--text-tertiary);font-size:0.8rem;padding:8px;text-align:center">暂无壁纸，请选择文件夹添加</div>';
+      const emptyText = (window.__i18n && window.__i18n.t('wallpaper.empty')) || '暂无壁纸，请选择文件夹添加';
+      wallpaperGallery.innerHTML = `<div style="color:var(--text-tertiary);font-size:0.8rem;padding:8px;text-align:center">${emptyText}</div>`;
       return;
     }
     settings.wallpapers.forEach((w) => {
@@ -366,7 +375,7 @@
       thumb.innerHTML = `
         <img src="${w.data}" alt="${w.name}" loading="lazy">
         <span class="wallpaper-thumb-name">${w.name}</span>
-        <button class="wallpaper-thumb-delete" title="删除">×</button>
+        <button class="wallpaper-thumb-delete" title="${(window.__i18n && window.__i18n.t('wallpaper.delete')) || '删除'}">×</button>
       `;
       wallpaperGallery.appendChild(thumb);
     });
@@ -481,9 +490,10 @@
     }
 
     if (skipped > 0) {
+      const tWallpaper = (k, vars) => (window.__i18n && window.__i18n.t(k, vars)) || k;
       const msg = added > 0
-        ? `新增 ${added} 张，跳过 ${skipped} 张重复`
-        : `全部 ${skipped} 张已存在，已跳过`;
+        ? tWallpaper('toast.addedAndSkipped', { added, skipped })
+        : tWallpaper('toast.allSkipped', { skipped });
       showToast(msg);
     }
 
@@ -557,18 +567,19 @@
   });
 
   // Build font options
+  const t = (k) => (window.__i18n && window.__i18n.t(k)) || k;
   fontOptions.innerHTML = `
     <button class="font-option" data-font="serif">
       <span class="font-preview" style="font-family: ${FONT_STACKS.serif}">Aa</span>
-      <span class="font-name">衬线体</span>
+      <span class="font-name">${t('settings.fontSerif')}</span>
     </button>
     <button class="font-option" data-font="system">
       <span class="font-preview" style="font-family: ${FONT_STACKS.system}">Aa</span>
-      <span class="font-name">系统默认</span>
+      <span class="font-name">${t('settings.fontSystem')}</span>
     </button>
     <button class="font-option" data-font="mono">
       <span class="font-preview" style="font-family: ${FONT_STACKS.mono}">Aa</span>
-      <span class="font-name">等宽体</span>
+      <span class="font-name">${t('settings.fontMono')}</span>
     </button>
   `;
 

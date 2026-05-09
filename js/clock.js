@@ -8,13 +8,14 @@
   }
 
   function getGreeting(hours) {
-    if (hours < 6) return '夜深了，注意休息';
-    if (hours < 9) return '早上好';
-    if (hours < 12) return '上午好';
-    if (hours < 14) return '中午好';
-    if (hours < 18) return '下午好';
-    if (hours < 22) return '晚上好';
-    return '夜深了，注意休息';
+    const t = window.__i18n ? window.__i18n.t : (k) => k;
+    if (hours < 6) return t('greeting.深夜');
+    if (hours < 9) return t('greeting.早上好');
+    if (hours < 12) return t('greeting.上午好');
+    if (hours < 14) return t('greeting.中午好');
+    if (hours < 18) return t('greeting.下午好');
+    if (hours < 22) return t('greeting.晚上好');
+    return t('greeting.深夜');
   }
 
   function update() {
