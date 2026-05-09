@@ -392,13 +392,13 @@ body.has-custom-bg {
 .engine-dropdown {
   position: absolute;
   top: 100%;
-  left: 8px;
+  left: 0;
+  right: 0;
   margin-top: 6px;
-  min-width: 200px;
   padding: 6px;
   background: var(--input-bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-ui);
   box-shadow: var(--shadow-lg);
   list-style: none;
   opacity: 0;
@@ -1165,7 +1165,7 @@ body.has-custom-bg {
     padding: 14px 14px 14px 44px;
   }
   .engine-dropdown {
-    left: 4px;
-    min-width: 170px;
+    left: 0;
+    right: 0;
   }
 }

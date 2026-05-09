@@ -81,6 +81,7 @@
   }
 
   function openEngineDropdown() {
+    closeSuggestions();
     renderEngineDropdown();
     engineDropdown.classList.add('visible');
   }
