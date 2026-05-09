@@ -150,7 +150,7 @@
   window.__i18n = {
     lang,
     t(key, vars) {
-      let text = (DICT[lang] && DICT[lang][key]) || DICT.en[key] || key;
+      let text = (DICT[this.lang] && DICT[this.lang][key]) || DICT.en[key] || key;
       if (vars) {
         for (const [k, v] of Object.entries(vars)) {
           text = text.replace(`{${k}}`, v);
