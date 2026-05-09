@@ -430,6 +430,7 @@
 
     let added = 0;
     for (const file of files) {
+      if (settings.wallpapers.some((w) => w.name === file.name)) continue;
       try {
         const dataUrl = await new Promise((resolve) => {
           const reader = new FileReader();
