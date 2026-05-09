@@ -13,7 +13,7 @@
   --accent: #c87a3c;
   --accent-hover: #d4893e;
   --accent-subtle: rgba(200, 122, 60, 0.08);
-  --accent-badge-bg: color-mix(in srgb, var(--bg-primary) 75%, white);
+
   --font-body: Georgia, 'Times New Roman', 'Songti SC', 'SimSun', serif;
   --border: color-mix(in srgb, var(--bg-primary) 75%, black);
   --border-focus: #c87a3c;
@@ -28,7 +28,7 @@
   --wallpaper-text-color: var(--text-primary);
   --wallpaper-input-bg: rgba(255, 255, 255, 0.15);
   --radius-sm: 8px;
-  --radius-md: 14px;
+
   --radius-lg: 20px;
   --radius-full: 9999px;
   --radius-ui: 20px;
@@ -73,7 +73,7 @@
   --accent: #c87a3c;
   --accent-hover: #d4893e;
   --accent-subtle: rgba(200, 122, 60, 0.08);
-  --accent-badge-bg: color-mix(in srgb, var(--bg-primary) 75%, white);
+
   --font-body: Georgia, 'Times New Roman', 'Songti SC', 'SimSun', serif;
   --border: color-mix(in srgb, var(--bg-primary) 75%, black);
   --border-focus: #c87a3c;
@@ -199,10 +199,6 @@ body.has-wallpaper .action-btn:hover {
 body.has-wallpaper .action-btn.icon-only {
   background: rgba(255, 255, 255, 0.1);
   border-color: transparent;
-}
-
-body.has-wallpaper .settings-panel {
-  /* no frosted glass — settings panel uses its normal solid background */
 }
 
 /* Settings panel buttons use normal colors, not frosted glass */
@@ -716,11 +712,6 @@ body.has-custom-bg {
   font-style: italic;
 }
 
-#theme-section.disabled {
-  opacity: 0.35;
-  pointer-events: none;
-}
-
 .setting-group-title {
   font-size: 0.78rem;
   font-weight: 700;
@@ -829,12 +820,6 @@ body.has-custom-bg {
 }
 
 /* Wallpaper */
-.wallpaper-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .wallpaper-input {
   display: none;
 }

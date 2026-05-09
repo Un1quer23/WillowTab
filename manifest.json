@@ -3,20 +3,17 @@
   "name": "UniTab",
   "version": "1.0.0",
   "description": "A unique new tab with multi-engine search, live clock, harmonious colors, local wallpapers, and refined typography — zero tracking.",
-  "short_description": "A unique new tab page with multi-engine search, wallpapers, harmonious colors, and full customization.",
   "author": "Un1quer",
   "homepage_url": "https://github.com/Un1quer23/UniTab",
   "chrome_url_overrides": {
     "newtab": "newtab.html"
   },
-  "permissions": ["storage"],
   "host_permissions": [
     "https://suggestqueries.google.com/*",
     "https://www.baidu.com/*",
     "https://api.bing.com/*",
     "https://duckduckgo.com/*",
-    "https://www.google.com/*",
-    "https://favicon.im/*"
+    "https://www.google.com/*"
   ],
   "icons": {
     "16": "icons/icon16.png",

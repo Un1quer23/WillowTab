@@ -17,10 +17,7 @@
       'search.settings': '设置',
 
       // Engine names
-      'engine.google': 'Google',
       'engine.baidu': '百度',
-      'engine.bing': 'Bing',
-      'engine.duckduckgo': 'DuckDuckGo',
 
       // Settings panel
       'settings.title': '设置',
@@ -88,10 +85,7 @@
       'search.settings': 'Settings',
 
       // Engine names
-      'engine.google': 'Google',
       'engine.baidu': 'Baidu',
-      'engine.bing': 'Bing',
-      'engine.duckduckgo': 'DuckDuckGo',
 
       // Settings panel
       'settings.title': 'Settings',

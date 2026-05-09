@@ -34,7 +34,6 @@
   const settingsBtn = document.getElementById('settings-btn');
   const panel = document.getElementById('settings-panel');
   const closeBtn = document.getElementById('settings-close');
-  const bgSection = document.querySelector('.setting-group'); // first setting-group = background
   const colorPresets = document.getElementById('color-presets');
   const modeToggle = document.getElementById('mode-toggle');
   const colorSection = document.getElementById('color-section');
