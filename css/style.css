@@ -1137,7 +1137,7 @@ body.has-custom-bg {
    =============================================== */
 .toast {
   position: fixed;
-  bottom: 40px;
+  top: 40px;
   left: 50%;
   transform: translateX(-50%);
   padding: 10px 24px;
