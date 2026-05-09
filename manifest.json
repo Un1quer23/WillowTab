@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "UniTab",
   "version": "1.0.0",
-  "description": "A beautiful, customizable new tab page that replaces your browser's default new tab. UniTab puts a smart search bar, live clock, and your favorite wallpapers front and center — all stored locally, with zero tracking.",
-  "short_description": "A beautiful new tab page with multi-engine search, wallpapers, and full customization.",
+  "description": "A unique, customizable new tab page that replaces your browser's default new tab. UniTab puts a smart multi-engine search bar, live clock with contextual greetings, harmonious color palettes, locally-sourced wallpapers, and refined typography front and center — all stored locally, with zero tracking and full privacy.",
+  "short_description": "A unique new tab page with multi-engine search, wallpapers, harmonious colors, and full customization.",
   "author": "Un1quer",
   "homepage_url": "https://github.com/Un1quer23/UniTab",
   "chrome_url_overrides": {
