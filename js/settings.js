@@ -289,9 +289,11 @@
       opt.classList.toggle('active', opt.dataset.mode === settings.bgMode);
     });
 
-    // Section visibility
-    colorSection.classList.toggle('disabled', isDark || settings.bgMode !== 'color');
-    wallpaperSection.classList.toggle('disabled', settings.bgMode !== 'wallpaper');
+    // Section visibility — hide irrelevant sections completely
+    colorSection.hidden = (settings.bgMode !== 'color');
+    if (!colorSection.hidden) colorSection.classList.toggle('disabled', isDark);
+    wallpaperSection.hidden = (settings.bgMode !== 'wallpaper');
+    themeSection.hidden = (settings.bgMode === 'wallpaper');
 
     // Color presets
     colorPresets.querySelectorAll('.color-swatch').forEach((swatch) => {
@@ -311,8 +313,6 @@
     themeOptions.querySelectorAll('.theme-option').forEach((opt) => {
       opt.classList.toggle('active', opt.dataset.theme === currentTheme);
     });
-    themeSection.classList.toggle('disabled', settings.bgMode === 'wallpaper');
-
     // Shadow slider
     shadowSlider.value = settings.shadowStrength;
     shadowValue.textContent = settings.shadowStrength;
@@ -376,7 +376,7 @@
   themeOptions.addEventListener('click', (e) => {
     const opt = e.target.closest('.theme-option');
     if (!opt) return;
-    if (themeSection.classList.contains('disabled')) return;
+    if (themeSection.hidden) return;
     if (window.__theme) window.__theme.set(opt.dataset.theme);
     syncUI();
   });
