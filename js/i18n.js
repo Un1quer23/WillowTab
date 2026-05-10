@@ -68,6 +68,14 @@
 
       // Hint
       'hint.darkColorDisabled': '仅在浅色模式下可用',
+
+      // About
+      'about.button': '关于',
+      'about.title': '关于 UniTab',
+      'about.desc': '统一的新标签页，集成多引擎搜索、壁纸、和谐色彩与精致排版。',
+      'about.author': '作者',
+      'about.version': '版本',
+      'about.credits': '图标基于 Google Material Design Icons 修改，遵循 Apache License 2.0。',
     },
     en: {
       // Greetings
@@ -136,6 +144,14 @@
 
       // Hint
       'hint.darkColorDisabled': 'Only available in light mode',
+
+      // About
+      'about.button': 'About',
+      'about.title': 'About UniTab',
+      'about.desc': 'A unified new tab page with multi-engine search, wallpapers, harmonious colors, and refined typography.',
+      'about.author': 'Author',
+      'about.version': 'Version',
+      'about.credits': 'Icon based on Google Material Design Icons under Apache License 2.0.',
     },
   };
 

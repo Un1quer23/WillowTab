@@ -620,6 +620,28 @@
     });
   }
 
+  // About panel
+  const aboutBtn = document.getElementById('about-btn');
+  const aboutPanel = document.getElementById('about-panel');
+  const aboutOverlay = document.getElementById('about-overlay');
+  const aboutClose = document.getElementById('about-close');
+
+  if (aboutBtn) {
+    aboutBtn.addEventListener('click', () => {
+      closePanel();
+      aboutPanel.removeAttribute('hidden');
+      aboutOverlay.removeAttribute('hidden');
+    });
+    aboutClose.addEventListener('click', () => {
+      aboutPanel.setAttribute('hidden', '');
+      aboutOverlay.setAttribute('hidden', '');
+    });
+    aboutOverlay.addEventListener('click', () => {
+      aboutPanel.setAttribute('hidden', '');
+      aboutOverlay.setAttribute('hidden', '');
+    });
+  }
+
   // Wire up events
   createOverlay();
   settingsBtn.addEventListener('click', openPanel);

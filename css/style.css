@@ -1141,3 +1141,90 @@ body.has-custom-bg {
 .toast.visible {
   opacity: 1;
 }
+
+/* ===============================================
+   About Section
+   =============================================== */
+.about-section {
+  padding: 16px 24px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+.about-section .action-btn {
+  width: 100%;
+  text-align: center;
+  justify-content: center;
+}
+
+/* ===============================================
+   About Panel
+   =============================================== */
+.about-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  max-width: 90vw;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  animation: fadeIn 0.25s ease both;
+}
+.about-panel[hidden] {
+  display: none;
+}
+.about-panel .settings-panel-header {
+  border-bottom: 1px solid var(--border);
+}
+.about-content {
+  padding: 24px;
+  text-align: center;
+  font-family: var(--font-body);
+  color: var(--text-primary);
+}
+.about-icon {
+  margin-bottom: 12px;
+}
+.about-icon img {
+  border-radius: var(--radius-md, 14px);
+}
+.about-content h3 {
+  font-size: 1.3rem;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+.about-version {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  margin-bottom: 16px;
+}
+.about-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.about-author {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+.about-links {
+  margin-bottom: 16px;
+}
+.about-links a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.about-links a:hover {
+  text-decoration: underline;
+}
+.about-credits {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
