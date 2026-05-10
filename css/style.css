@@ -248,11 +248,8 @@ body.has-wallpaper .suggest-icon {
 }
 
 body.has-wallpaper .engine-dropdown {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   background: var(--wallpaper-input-bg);
   color: var(--wallpaper-text-color);
-  isolation: isolate;
 }
 
 body.has-wallpaper .engine-dropdown-item {
