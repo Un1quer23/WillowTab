@@ -155,6 +155,7 @@
     },
   };
 
+  // 只检查浏览器首选语言；非中文一律返回英文，不做 zh-TW/zh-HK 细分
   function detectLang() {
     const primary = navigator.language;
     if (primary && primary.startsWith('zh')) return 'zh-CN';
@@ -165,6 +166,7 @@
   window.__i18n = {
     get lang() { return state.lang; },
     set lang(v) { state.lang = v; },
+    // 回退链：当前语言 → 英语（最完整）→ 原始 key（兜底，避免显示 undefined）
     t(key, vars) {
       let text = (DICT[state.lang] && DICT[state.lang][key]) || DICT.en[key] || key;
       if (vars) {

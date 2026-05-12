@@ -12,6 +12,7 @@
     },
     {
       id: 'baidu',
+      /* 百度需要 i18n：中文显示"百度"，英文显示"Baidu"；其他引擎名是专有名词，无需翻译 */
       get name() { return (window.__i18n && window.__i18n.t('engine.baidu')) || '百度'; },
       url: 'https://www.baidu.com/s?wd=',
       suggestUrl: 'https://www.baidu.com/sugrec?prod=pc&wd=',

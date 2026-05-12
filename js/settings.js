@@ -199,6 +199,7 @@
             applyBackground(); // re-apply with new brightness
           });
         } else if (brightness >= 0) {
+          // 遮罩会压暗壁纸，将遮罩强度计入有效亮度，使文字颜色也响应遮罩滑块
           const effective = brightness * (1 - settings.overlayStrength / 100);
           if (effective < 0.4) {
             root.style.setProperty('--wallpaper-text-color', '#e8e2d4');
@@ -238,7 +239,7 @@
     const hasWallpaper = document.body.classList.contains('has-wallpaper');
 
     if (hasWallpaper) {
-      // Input shadow — higher opacity for visibility on frosted glass
+      // 壁纸模式用中性黑色阴影——图片颜色不可预测，暖色调会不协调
       root.style.setProperty('--input-shadow',
         `0 2px 8px rgba(0,0,0,${(0.25 * scale).toFixed(3)}), 0 4px 20px rgba(0,0,0,${(0.15 * scale).toFixed(3)})`);
       // Button shadow
@@ -253,7 +254,7 @@
         `0 0 16px rgba(255,255,255,${(0.25 * scale).toFixed(3)}), 0 2px 8px rgba(0,0,0,${(0.5 * scale).toFixed(3)})`);
       root.style.setProperty('--text-shadow-greeting', `0 1px 6px rgba(0,0,0,${(0.4 * scale).toFixed(3)})`);
     } else {
-      // Input shadow — subtle, matches light background
+      // 纯色模式用暖棕阴影，与米白背景调色板融合
       root.style.setProperty('--input-shadow',
         `0 1px 3px rgba(44,36,22,${(0.06 * scale).toFixed(3)}), 0 4px 16px rgba(44,36,22,${(0.04 * scale).toFixed(3)})`);
       // Button shadow
@@ -660,7 +661,7 @@
   aboutClose.addEventListener('click', closeAbout);
   if (aboutOverlay) aboutOverlay.addEventListener('click', closeAbout);
 
-  // Watch for theme changes and update settings UI availability
+  // 监听 html data-theme 属性变化（包括 theme.js 延迟应用的情况），确保设置面板 UI 始终与当前主题同步
   const observer = new MutationObserver(() => {
     applyBackground();
     if (!panel.hasAttribute('hidden')) syncUI();

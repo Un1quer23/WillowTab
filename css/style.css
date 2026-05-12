@@ -60,7 +60,9 @@
   }
 }
 
-/* --- Manual Theme Override --- */
+/* --- 手动主题覆盖 ---
+   使用 html[data-theme] 选择器，特异性 (0,1,1) 高于
+   @media (prefers-color-scheme) (0,1,0)，确保手动选择始终生效。 */
 html[data-theme="light"] {
   --bg-primary: #F5F5DC;
   --bg-secondary: color-mix(in srgb, var(--bg-primary) 88%, white);
@@ -196,7 +198,7 @@ body.has-wallpaper .action-btn.icon-only {
   border-color: transparent;
 }
 
-/* Panels: force light theme in wallpaper mode */
+/* 面板在壁纸模式下强制浅色主题：不透明的米白背景在任何壁纸上都能保证文字可读 */
 body.has-wallpaper .settings-panel,
 body.has-wallpaper .about-panel {
   --bg-primary: #F5F5DC;
@@ -448,6 +450,7 @@ body.has-custom-bg {
   align-items: center;
   gap: 10px;
   padding: 13px 12px;
+  /* 嵌套圆角：内部项比外层容器略小，保持视觉嵌套层次 */
   border-radius: calc(var(--radius-ui) * 0.7);
   cursor: pointer;
   color: var(--text-primary);
@@ -573,6 +576,7 @@ body.has-custom-bg {
 }
 
 .suggest-item:last-child {
+  /* 底部圆角向内缩 1px，使高亮背景不超出外层容器的 1px 边框；max() 防止负值 */
   border-radius: 0 0 max(0px, calc(var(--radius-ui) - 1px)) max(0px, calc(var(--radius-ui) - 1px));
 }
 
