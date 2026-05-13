@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "UniTab",
   "version": "1.2.0",
-  "description": "A unique new tab with multi-engine search, live clock, harmonious colors, local wallpapers, and refined typography — zero tracking. Supports 简体中文 (zh-CN) and English.",
+  "description": "A unique new tab with multi-engine search, live clock, harmonious colors, local wallpapers, and refined typography — zero tracking.\n\nSupported languages: zh-cn, en-us",
   "author": "Un1quer",
   "homepage_url": "https://github.com/Un1quer23/UniTab",
   "chrome_url_overrides": {
