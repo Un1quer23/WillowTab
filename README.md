@@ -46,6 +46,10 @@ WillowTab/
 └── icons/
 ```
 
+## 隐私政策 / Privacy Policy
+
+[隐私政策](privacy-policy.html) · [Privacy Policy](privacy-policy.html)
+
 ## 开源协议 / License
 
 [GNU General Public License v3](LICENSE)
