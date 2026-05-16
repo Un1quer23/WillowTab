@@ -19,7 +19,7 @@ A unique browser new tab extension for a clean and efficient browsing start.
 
 ## 安装 / Install
 
-> **Microsoft Edge 拓展商店**与 **Chrome Web Store** 均处于审核中，预计下周上架。目前请从 GitHub 下载使用。
+> **Microsoft Edge 拓展商店**与 **Chrome Web Store** 均处于审核中，预计下周上架。目前仅支持 GitHub 下载。
 
 1. 下载 [最新版本](https://github.com/Un1quer23/WillowTab/releases/latest) 的 `WillowTab-v*.zip`
 2. 解压到本地文件夹
