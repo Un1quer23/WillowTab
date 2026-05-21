@@ -401,18 +401,33 @@
     wallpaperGallery.innerHTML = '';
     if (!settings.wallpapers.length) {
       const emptyText = (window.__i18n && window.__i18n.t('wallpaper.empty')) || '暂无壁纸，请选择文件夹添加';
-      wallpaperGallery.innerHTML = `<div style="color:var(--text-tertiary);font-size:0.8rem;padding:8px;text-align:center">${emptyText}</div>`;
+      const empty = document.createElement('div');
+      empty.className = 'wallpaper-empty';
+      empty.textContent = emptyText;
+      wallpaperGallery.appendChild(empty);
       return;
     }
     settings.wallpapers.forEach((w) => {
       const thumb = document.createElement('div');
       thumb.className = 'wallpaper-thumb' + (w.id === settings.activeWallpaperId ? ' active' : '');
       thumb.dataset.id = w.id;
-      thumb.innerHTML = `
-        <img src="${w.data}" alt="${w.name}" loading="lazy">
-        <span class="wallpaper-thumb-name">${w.name}</span>
-        <button class="wallpaper-thumb-delete" title="${(window.__i18n && window.__i18n.t('wallpaper.delete')) || '删除'}">×</button>
-      `;
+
+      const img = document.createElement('img');
+      img.src = w.data;
+      img.alt = w.name;
+      img.loading = 'lazy';
+
+      const name = document.createElement('span');
+      name.className = 'wallpaper-thumb-name';
+      name.textContent = w.name;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'wallpaper-thumb-delete';
+      deleteBtn.type = 'button';
+      deleteBtn.title = (window.__i18n && window.__i18n.t('wallpaper.delete')) || '删除';
+      deleteBtn.textContent = '×';
+
+      thumb.append(img, name, deleteBtn);
       wallpaperGallery.appendChild(thumb);
     });
   }

@@ -156,6 +156,7 @@
       abortController.abort();
     }
     abortController = new AbortController();
+    const requestController = abortController;
 
     const engine = ENGINES[activeIndex];
     if (!engine.suggestUrl) {
@@ -172,6 +173,9 @@
         return;
       }
       const data = await resp.json();
+      if (requestController !== abortController || input.value.trim() !== query) {
+        return;
+      }
       const suggestions = engine.parseSuggestions(data).slice(0, 8);
       renderSuggestions(suggestions);
     } catch (err) {
@@ -187,6 +191,10 @@
     const query = input.value.trim();
 
     if (query.length < 2) {
+      if (abortController) {
+        abortController.abort();
+        abortController = null;
+      }
       closeSuggestions();
       return;
     }

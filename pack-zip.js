@@ -1,5 +1,18 @@
 const fs = require('fs');
+const path = require('path');
 const zlib = require('zlib');
+
+const VERSION = '1.5.0';
+const TARGETS = {
+  generic: {
+    cwd: '.',
+    output: `WillowTab-v${VERSION}.zip`,
+  },
+  chrome: {
+    cwd: 'chrome-store',
+    output: `WillowTab-for-Chrome-v${VERSION}.zip`,
+  },
+};
 
 const files = [
   'css/style.css',
@@ -9,6 +22,17 @@ const files = [
   '_locales/en/messages.json', '_locales/zh_CN/messages.json',
   'LICENSE', 'manifest.json', 'newtab.html', 'privacy-policy.html', 'README.md',
 ];
+
+const targetName = process.argv[2] || 'generic';
+const target = TARGETS[targetName];
+
+if (!target) {
+  console.error(`Unknown target "${targetName}". Use one of: ${Object.keys(TARGETS).join(', ')}`);
+  process.exit(1);
+}
+
+const root = process.cwd();
+const sourceDir = path.resolve(root, target.cwd);
 
 function crc32(buf) {
   const table = new Uint32Array(256);
@@ -31,8 +55,14 @@ function dosDateTime() {
 
 const localParts = [];
 const cdEntries = [];
+
 for (const file of files) {
-  const content = fs.readFileSync(file);
+  const absoluteFile = path.join(sourceDir, file);
+  if (!fs.existsSync(absoluteFile)) {
+    throw new Error(`Missing package file for ${targetName}: ${file}`);
+  }
+
+  const content = fs.readFileSync(absoluteFile);
   const nameBuf = Buffer.from(file.replace(/\\/g, '/'), 'utf8');
   const dt = dosDateTime();
   const crc = crc32(content);
@@ -57,6 +87,7 @@ for (const file of files) {
   localParts.push(header, data);
   cdEntries.push({ nameBuf, method, dt, crc, compSize: data.length, origSize: content.length, localOffset });
 }
+
 const cdOffset = localParts.reduce((s, p) => s + p.length, 0);
 const cdParts = [];
 for (const e of cdEntries) {
@@ -81,6 +112,7 @@ for (const e of cdEntries) {
   e.nameBuf.copy(cd, i);
   cdParts.push(cd);
 }
+
 const cdSize = cdParts.reduce((s, c) => s + c.length, 0);
 const eocd = Buffer.alloc(22);
 let j = 0;
@@ -92,6 +124,8 @@ eocd.writeUInt16LE(cdEntries.length, j); j += 2;
 eocd.writeUInt32LE(cdSize, j); j += 4;
 eocd.writeUInt32LE(cdOffset, j); j += 4;
 eocd.writeUInt16LE(0, j);
+
 const output = Buffer.concat([...localParts, ...cdParts, eocd]);
-fs.writeFileSync('WillowTab-v1.4.1.zip', output);
-console.log('Done: WillowTab-v1.4.1.zip');
+const outputPath = path.join(sourceDir, target.output);
+fs.writeFileSync(outputPath, output);
+console.log(`Done: ${path.relative(root, outputPath)}`);

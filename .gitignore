@@ -1,4 +1,6 @@
 screenshots/
+.chrome-headless/
+visual-checks/
 .claude/
 *.tmp
 node_modules/
@@ -6,3 +8,4 @@ website/
 CLAUDE.md
 *.zip
 svg/
+AGENTS.md

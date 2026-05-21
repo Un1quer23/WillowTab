@@ -46,6 +46,21 @@ WillowTab/
 └── icons/
 ```
 
+## 发布 / Release
+
+```bash
+# 同步 Chrome Web Store 发行目录中的公共文件
+node scripts/build-chrome-store.js
+
+# 打包通用版
+node pack-zip.js
+
+# 打包 Chrome Web Store 版
+node pack-zip.js chrome
+```
+
+Chrome Web Store 版保留在 `chrome-store/`，其中 `manifest.json`、`newtab.html`、`js/search.js`、`js/settings.js`、`js/i18n.js`、`privacy-policy.html`、`README.md` 是审核策略相关的覆盖文件。
+
 ## 隐私政策 / Privacy Policy
 
 [隐私政策](https://un1quer23.github.io/WillowTab/privacy-policy.html) · [Privacy Policy](https://un1quer23.github.io/WillowTab/privacy-policy.html)

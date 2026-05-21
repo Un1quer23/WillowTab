@@ -1069,6 +1069,14 @@ body.has-custom-bg {
   padding-right: 4px;
 }
 
+.wallpaper-empty {
+  grid-column: 1 / -1;
+  padding: 8px;
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
 .wallpaper-thumb {
   position: relative;
   aspect-ratio: 16 / 10;

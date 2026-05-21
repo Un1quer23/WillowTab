@@ -17,7 +17,7 @@
       'search.settings': '设置',
 
       // Engine names
-      'engine.default': '默认',
+      'engine.default': '浏览器默认',
       'engine.baidu': '百度',
 
       // Settings panel
@@ -106,11 +106,11 @@
       'privacy.section3.title': '三、网络请求',
       'privacy.section3.p': '本扩展仅在以下场景发起网络请求，<strong>不附加任何用户标识信息</strong>：',
       'privacy.section3_1.title': '3.1 搜索建议',
-      'privacy.section3_1.p': '当你在搜索框中输入关键词时，扩展会将该关键词发送到当前选择的搜索引擎（Google、百度、Bing 或 DuckDuckGo）以获取自动补全建议。这与你在浏览器地址栏或搜索引擎网站直接输入时的行为完全一致。该请求不包含任何个人身份信息或设备标识符。',
+      'privacy.section3_1.p': '当你在搜索框中输入关键词并开启搜索联想时，扩展会将该关键词发送到当前选择的搜索引擎（Google、百度、Bing 或 DuckDuckGo）以获取自动补全建议。提交搜索时，如果你选择“浏览器默认”，扩展会使用浏览器默认搜索服务；如果你手动选择其他搜索引擎，关键词会直接发送到所选搜索服务。这些请求不包含任何个人身份信息或设备标识符。',
       'privacy.section4.title': '四、权限说明',
       'privacy.section4.p': '本扩展在浏览器中声明了以下权限，均仅用于实现核心功能：',
       'privacy.section4.li1': '<strong>新标签页覆盖（newtab）</strong>：用于替换浏览器默认新标签页，显示 WillowTab 界面。',
-      'privacy.section4.li2': '<strong>主机权限（host_permissions）</strong>：用于向所选搜索引擎发送搜索建议请求。仅限声明的域名。',
+      'privacy.section4.li2': '<strong>可选主机权限（optional_host_permissions）</strong>：仅在你开启搜索联想时请求，用于向所选搜索引擎发送搜索建议请求。关闭后会撤销该权限。',
       'privacy.section5.title': '五、第三方服务',
       'privacy.section5.li1': '本扩展<strong>不集成</strong>任何第三方统计分析 SDK、广告联盟、用户画像或行为跟踪服务。',
       'privacy.section5.li2': '搜索建议请求直接发往各搜索引擎的公开 API 接口，各搜索引擎的隐私政策请参见其官方网站。',
@@ -144,7 +144,7 @@
       'search.settings': 'Settings',
 
       // Engine names
-      'engine.default': 'Default',
+      'engine.default': 'Browser Default',
       'engine.baidu': 'Baidu',
 
       // Settings panel
@@ -233,11 +233,11 @@
       'privacy.section3.title': 'III. Network Requests',
       'privacy.section3.p': 'The Extension initiates network requests only in the following scenarios, <strong>without attaching any user identification information</strong>:',
       'privacy.section3_1.title': '3.1 Search Suggestions',
-      'privacy.section3_1.p': 'When you enter keywords in the search box, the Extension sends that keyword to the currently selected search engine (Google, Baidu, Bing, or DuckDuckGo) to retrieve autocomplete suggestions. This is exactly the same behavior as when you type directly into the browser\'s address bar or a search engine website. The request contains no personal identity information or device identifiers.',
+      'privacy.section3_1.p': 'When you enter keywords in the search box and enable search suggestions, the Extension sends that keyword to the currently selected search engine (Google, Baidu, Bing, or DuckDuckGo) to retrieve autocomplete suggestions. When submitting a search, choosing "Browser Default" uses your browser\'s default search provider; manually choosing another search engine sends the keyword directly to that selected search service. These requests contain no personal identity information or device identifiers.',
       'privacy.section4.title': 'IV. Permission Explanation',
       'privacy.section4.p': 'The Extension declares the following permissions in the browser, all used solely to implement core functionality:',
       'privacy.section4.li1': '<strong>New Tab Override (newtab)</strong>: Used to replace the browser\'s default new tab page and display the WillowTab interface.',
-      'privacy.section4.li2': '<strong>Host Permissions (host_permissions)</strong>: Used to send search suggestion requests to the selected search engine. Limited to the declared domains only.',
+      'privacy.section4.li2': '<strong>Optional Host Permissions (optional_host_permissions)</strong>: Requested only when search suggestions are enabled, used to send suggestion requests to the selected search engine, and removed again when suggestions are disabled.',
       'privacy.section5.title': 'V. Third-Party Services',
       'privacy.section5.li1': 'The Extension <strong>does not integrate</strong> any third-party statistical analytics SDKs, advertising networks, user profiling, or behavioral tracking services.',
       'privacy.section5.li2': 'Search suggestion requests are sent directly to the public API endpoints of each search engine. Please refer to each search engine\'s official website for their respective privacy policies.',

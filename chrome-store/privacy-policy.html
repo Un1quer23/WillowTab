@@ -46,13 +46,13 @@
 <p data-i18n-html="privacy.section3.p">本扩展仅在以下场景发起网络请求，<strong>不附加任何用户标识信息</strong>：</p>
 
 <h3 data-i18n="privacy.section3_1.title">3.1 搜索建议</h3>
-<p data-i18n="privacy.section3_1.p">当你在搜索框中输入关键词时，扩展会将该关键词发送到当前选择的搜索引擎（Google、百度、Bing 或 DuckDuckGo）以获取自动补全建议。这与你在浏览器地址栏或搜索引擎网站直接输入时的行为完全一致。该请求不包含任何个人身份信息或设备标识符。</p>
+<p data-i18n="privacy.section3_1.p">当你在搜索框中输入关键词并开启搜索联想时，扩展会将该关键词发送到当前选择的搜索引擎（Google、百度、Bing 或 DuckDuckGo）以获取自动补全建议。提交搜索时，如果你选择“浏览器默认”，扩展会使用浏览器默认搜索服务；如果你手动选择其他搜索引擎，关键词会直接发送到所选搜索服务。这些请求不包含任何个人身份信息或设备标识符。</p>
 
 <h2 data-i18n="privacy.section4.title">四、权限说明</h2>
 <p data-i18n="privacy.section4.p">本扩展在浏览器中声明了以下权限，均仅用于实现核心功能：</p>
 <ul>
   <li data-i18n-html="privacy.section4.li1"><strong>新标签页覆盖（newtab）</strong>：用于替换浏览器默认新标签页，显示 WillowTab 界面。</li>
-  <li data-i18n-html="privacy.section4.li2"><strong>主机权限（host_permissions）</strong>：用于向所选搜索引擎发送搜索建议请求。仅限声明的域名。</li>
+  <li data-i18n-html="privacy.section4.li2"><strong>可选主机权限（optional_host_permissions）</strong>：仅在你开启搜索联想时请求，用于向所选搜索引擎发送搜索建议请求。关闭后会撤销该权限。</li>
 </ul>
 
 <h2 data-i18n="privacy.section5.title">五、第三方服务</h2>
