@@ -34,53 +34,53 @@ It replaces the default new tab page with a focused start page that includes a s
   Personal settings and wallpaper data are stored locally in your browser. WillowTab does not collect, track, or sell personal data.  
   个性化设置和壁纸数据均保存在浏览器本地。WillowTab 不收集、不追踪、不出售个人数据。
 
-## Downloads / 下载
+## Install / 安装
 
-Microsoft Edge users can install WillowTab directly from Microsoft Edge Add-ons:
+### Microsoft Edge
+
+Edge users should install WillowTab directly from Microsoft Edge Add-ons:
 
 [Install from Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/willowtab/ljkgjcbecpanckomdgebinggfhpkmmph)
 
-Microsoft Edge 用户建议直接从 Microsoft Edge 扩展商店安装：
+Edge 用户建议直接从 Microsoft Edge 扩展商店安装：
 
 [从 Microsoft Edge 扩展商店安装](https://microsoftedge.microsoft.com/addons/detail/willowtab/ljkgjcbecpanckomdgebinggfhpkmmph)
 
-Download the latest release from:
+### Other Chromium Browsers
+
+For other Chromium-based browsers, install manually from GitHub Releases:
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-下载最新版：
+Download `WillowTab-v1.5.0.zip`, the generic build for Chromium-based browsers.
+
+其他 Chromium 系浏览器用户，请从 GitHub Releases 手动安装：
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-Release packages:
+下载 `WillowTab-v1.5.0.zip`，也就是适用于 Chromium 系浏览器的通用版。
 
-- `WillowTab-v1.5.0.zip` — generic build for Chromium-based browsers
-- `WillowTab-for-Chrome-v1.5.0.zip` — dedicated Chrome Web Store build for Google compliance
+Manual installation steps:
 
-For manual installation from GitHub, the generic build is recommended. Edge users should prefer Microsoft Edge Add-ons when available.
-
-发布包：
-
-- `WillowTab-v1.5.0.zip` — 通用版，适用于 Chromium 系浏览器
-- `WillowTab-for-Chrome-v1.5.0.zip` — 为满足 Google 合规要求提供的 Chrome Web Store 特供版
-
-如果从 GitHub 手动安装，建议直接安装通用版。Edge 用户优先推荐使用 Microsoft Edge 扩展商店版本。
-
-## Manual Install / 手动安装
-
-1. Edge users should install from Microsoft Edge Add-ons when available. For GitHub manual installation, download `WillowTab-v1.5.0.zip`, the recommended generic build.
+1. Download `WillowTab-v1.5.0.zip`.
 2. Extract it to a local folder.
-3. Open `chrome://extensions` or `edge://extensions`.
+3. Open your browser's extension management page, such as `chrome://extensions`.
 4. Enable Developer mode.
 5. Click "Load unpacked" and select the extracted folder.
 
-手动安装：
+手动安装步骤：
 
-1. Edge 用户建议优先从 Microsoft Edge 扩展商店安装。如需从 GitHub 手动安装，请下载 `WillowTab-v1.5.0.zip`，这是推荐用于手动安装的通用版。
+1. 下载 `WillowTab-v1.5.0.zip`。
 2. 解压到本地文件夹。
-3. 打开 `chrome://extensions` 或 `edge://extensions`。
+3. 打开浏览器扩展管理页面，例如 `chrome://extensions`。
 4. 启用“开发者模式”。
 5. 点击“加载已解压的扩展”，选择解压后的文件夹。
+
+### Chrome Web Store Build
+
+`WillowTab-for-Chrome-v1.5.0.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
+
+`WillowTab-for-Chrome-v1.5.0.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
 
 ## Build / 打包
 
