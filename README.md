@@ -18,10 +18,6 @@ It replaces the default new tab page with a focused start page that includes a s
   The generic build supports switching between Google, Baidu, Bing, and DuckDuckGo.  
   通用版支持在 Google、百度、Bing、DuckDuckGo 之间切换。
 
-- **Chrome Web Store build / Chrome 商店版**  
-  The Chrome Web Store build is a dedicated package for Google / Chrome Web Store compliance and includes a browser-default search option.  
-  Chrome Web Store 版是为满足 Google / Chrome Web Store 合规要求而提供的特供包，并包含“浏览器默认”搜索选项。
-
 - **Custom wallpapers / 个性化壁纸**  
   Use a solid color background or choose local images as wallpapers.  
   支持纯色背景，也可以选择本地图片作为壁纸。
@@ -53,14 +49,18 @@ Release packages:
 - `WillowTab-v1.5.0.zip` — generic build for Chromium-based browsers
 - `WillowTab-for-Chrome-v1.5.0.zip` — dedicated Chrome Web Store build for Google compliance
 
+For manual installation from GitHub, the generic build is recommended.
+
 发布包：
 
 - `WillowTab-v1.5.0.zip` — 通用版，适用于 Chromium 系浏览器
 - `WillowTab-for-Chrome-v1.5.0.zip` — 为满足 Google 合规要求提供的 Chrome Web Store 特供版
 
+如果从 GitHub 手动安装，建议直接安装通用版。
+
 ## Manual Install / 手动安装
 
-1. Download the release zip.
+1. Download `WillowTab-v1.5.0.zip`, the recommended generic build for manual installation.
 2. Extract it to a local folder.
 3. Open `chrome://extensions` or `edge://extensions`.
 4. Enable Developer mode.
@@ -68,7 +68,7 @@ Release packages:
 
 手动安装：
 
-1. 下载 release zip。
+1. 下载 `WillowTab-v1.5.0.zip`，这是推荐用于手动安装的通用版。
 2. 解压到本地文件夹。
 3. 打开 `chrome://extensions` 或 `edge://extensions`。
 4. 启用“开发者模式”。
