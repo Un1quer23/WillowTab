@@ -76,28 +76,11 @@ Manual installation steps:
 4. 启用“开发者模式”。
 5. 点击“加载已解压的扩展”，选择解压后的文件夹。
 
-### Chrome Web Store Build
+### Chrome Web Store Package / Chrome 商店特供包
 
 `WillowTab-for-Chrome-v1.5.0.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
 
 `WillowTab-for-Chrome-v1.5.0.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
-
-## Build / 打包
-
-Use the Node.js zip packer. Do not use PowerShell `Compress-Archive`, because it can flatten locale paths and cause duplicate-file errors in extension stores.
-
-请使用 Node.js 打包脚本。不要使用 PowerShell `Compress-Archive`，它可能会破坏 `_locales/*/messages.json` 目录结构，导致扩展商店报重复文件。
-
-```bash
-# Sync shared files into the Chrome Web Store build directory
-node scripts/build-chrome-store.js
-
-# Build the generic package
-node pack-zip.js
-
-# Build the Chrome Web Store package
-node pack-zip.js chrome
-```
 
 ## Project Structure / 项目结构
 
