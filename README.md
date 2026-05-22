@@ -36,6 +36,14 @@ It replaces the default new tab page with a focused start page that includes a s
 
 ## Downloads / 下载
 
+Microsoft Edge users can install WillowTab directly from Microsoft Edge Add-ons:
+
+[Install from Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/willowtab/ljkgjcbecpanckomdgebinggfhpkmmph)
+
+Microsoft Edge 用户建议直接从 Microsoft Edge 扩展商店安装：
+
+[从 Microsoft Edge 扩展商店安装](https://microsoftedge.microsoft.com/addons/detail/willowtab/ljkgjcbecpanckomdgebinggfhpkmmph)
+
 Download the latest release from:
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
@@ -49,18 +57,18 @@ Release packages:
 - `WillowTab-v1.5.0.zip` — generic build for Chromium-based browsers
 - `WillowTab-for-Chrome-v1.5.0.zip` — dedicated Chrome Web Store build for Google compliance
 
-For manual installation from GitHub, the generic build is recommended.
+For manual installation from GitHub, the generic build is recommended. Edge users should prefer Microsoft Edge Add-ons when available.
 
 发布包：
 
 - `WillowTab-v1.5.0.zip` — 通用版，适用于 Chromium 系浏览器
 - `WillowTab-for-Chrome-v1.5.0.zip` — 为满足 Google 合规要求提供的 Chrome Web Store 特供版
 
-如果从 GitHub 手动安装，建议直接安装通用版。
+如果从 GitHub 手动安装，建议直接安装通用版。Edge 用户优先推荐使用 Microsoft Edge 扩展商店版本。
 
 ## Manual Install / 手动安装
 
-1. Download `WillowTab-v1.5.0.zip`, the recommended generic build for manual installation.
+1. Edge users should install from Microsoft Edge Add-ons when available. For GitHub manual installation, download `WillowTab-v1.5.0.zip`, the recommended generic build.
 2. Extract it to a local folder.
 3. Open `chrome://extensions` or `edge://extensions`.
 4. Enable Developer mode.
@@ -68,7 +76,7 @@ For manual installation from GitHub, the generic build is recommended.
 
 手动安装：
 
-1. 下载 `WillowTab-v1.5.0.zip`，这是推荐用于手动安装的通用版。
+1. Edge 用户建议优先从 Microsoft Edge 扩展商店安装。如需从 GitHub 手动安装，请下载 `WillowTab-v1.5.0.zip`，这是推荐用于手动安装的通用版。
 2. 解压到本地文件夹。
 3. 打开 `chrome://extensions` 或 `edge://extensions`。
 4. 启用“开发者模式”。
