@@ -19,8 +19,8 @@ It replaces the default new tab page with a focused start page that includes a s
   通用版支持在 Google、百度、Bing、DuckDuckGo 之间切换。
 
 - **Chrome Web Store build / Chrome 商店版**  
-  The Chrome Web Store build includes a browser-default search option for Chrome policy compliance.  
-  Chrome Web Store 版包含“浏览器默认”搜索选项，以适配 Chrome 商店审核要求。
+  The Chrome Web Store build is a dedicated package for Google / Chrome Web Store compliance and includes a browser-default search option.  
+  Chrome Web Store 版是为满足 Google / Chrome Web Store 合规要求而提供的特供包，并包含“浏览器默认”搜索选项。
 
 - **Custom wallpapers / 个性化壁纸**  
   Use a solid color background or choose local images as wallpapers.  
@@ -51,12 +51,12 @@ Download the latest release from:
 Release packages:
 
 - `WillowTab-v1.5.0.zip` — generic build for Chromium-based browsers
-- `WillowTab-for-Chrome-v1.5.0.zip` — Chrome Web Store build
+- `WillowTab-for-Chrome-v1.5.0.zip` — dedicated Chrome Web Store build for Google compliance
 
 发布包：
 
 - `WillowTab-v1.5.0.zip` — 通用版，适用于 Chromium 系浏览器
-- `WillowTab-for-Chrome-v1.5.0.zip` — Chrome Web Store 特供版
+- `WillowTab-for-Chrome-v1.5.0.zip` — 为满足 Google 合规要求提供的 Chrome Web Store 特供版
 
 ## Manual Install / 手动安装
 
