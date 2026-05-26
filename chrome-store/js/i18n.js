@@ -53,7 +53,7 @@
       'settings.tabTitle': '标签页名称',
       'settings.tabTitlePlaceholder': '留空使用默认名称',
       'settings.suggestions': '搜索联想',
-      'settings.suggestionsDesc': '输入时显示搜索建议（需授权网络请求）',
+      'settings.suggestionsDesc': '输入时显示搜索建议（需授权网络请求）。使用浏览器默认搜索时不支持搜索联想。',
       'settings.suggestionsOn': '已开启',
       'settings.suggestionsOff': '已关闭',
 
@@ -180,7 +180,7 @@
       'settings.tabTitle': 'Tab Title',
       'settings.tabTitlePlaceholder': 'Leave empty for default',
       'settings.suggestions': 'Search Suggestions',
-      'settings.suggestionsDesc': 'Show search suggestions as you type (requires network permission)',
+      'settings.suggestionsDesc': 'Show search suggestions as you type (requires network permission). Search suggestions are not supported when using Browser Default search.',
       'settings.suggestionsOn': 'On',
       'settings.suggestionsOff': 'Off',
 
