@@ -20,6 +20,7 @@
         <div class="search-input-wrapper">
           <button type="button" id="engine-toggle" class="engine-toggle" data-i18n-aria="search.toggleEngine" data-i18n-title="search.toggleEngine" aria-label="切换搜索引擎" title="切换搜索引擎" aria-haspopup="true" aria-expanded="false" aria-controls="engine-dropdown"></button>
           <ul id="engine-dropdown" class="engine-dropdown" role="menu"></ul>
+          <label class="sr-only" for="search-input" data-i18n="search.input">搜索关键词</label>
           <input
             type="text"
             id="search-input"
@@ -28,6 +29,8 @@
             placeholder="Think Different."
             autofocus
             autocomplete="off"
+            data-i18n-aria="search.input"
+            aria-label="搜索关键词"
             role="combobox"
             aria-autocomplete="list"
             aria-expanded="false"
@@ -70,7 +73,7 @@
         <h3 class="setting-group-title" data-i18n="settings.background">背景</h3>
 
         <div class="setting-row">
-          <label class="setting-label" data-i18n="settings.bgMode">背景模式</label>
+          <div class="setting-label" data-i18n="settings.bgMode">背景模式</div>
           <div class="mode-toggle" id="mode-toggle">
             <button class="mode-option active" data-mode="color" data-i18n="settings.bgColorMode">纯色背景</button>
             <button class="mode-option" data-mode="wallpaper" data-i18n="settings.bgWallpaperMode">壁纸</button>
@@ -80,15 +83,16 @@
         <!-- Color section -->
         <div class="setting-subgroup" id="color-section">
           <div class="setting-row">
-            <label class="setting-label" data-i18n="settings.presetColors">预设颜色</label>
+            <div class="setting-label" data-i18n="settings.presetColors">预设颜色</div>
             <div class="color-presets" id="color-presets"></div>
           </div>
 
           <div class="setting-row">
-            <label class="setting-label" data-i18n="settings.customColor">自选颜色</label>
+            <label class="setting-label" for="custom-color-picker" data-i18n="settings.customColor">自选颜色</label>
             <div class="custom-color-row">
-              <input type="color" id="custom-color-picker" class="custom-color-picker">
-              <input type="text" id="custom-color-hex" class="custom-color-hex" placeholder="#F5F5DC" maxlength="7" spellcheck="false">
+              <input type="color" id="custom-color-picker" class="custom-color-picker" data-i18n-aria="settings.customColorPicker" aria-label="自选颜色">
+              <label class="sr-only" for="custom-color-hex" data-i18n="settings.customColorHex">自选颜色 HEX 值</label>
+              <input type="text" id="custom-color-hex" class="custom-color-hex" data-i18n-aria="settings.customColorHex" aria-label="自选颜色 HEX 值" placeholder="#F5F5DC" maxlength="7" spellcheck="false">
             </div>
           </div>
         </div>
@@ -96,16 +100,17 @@
         <!-- Wallpaper section -->
         <div class="setting-subgroup" id="wallpaper-section" hidden>
           <div class="setting-row">
-            <label class="setting-label" data-i18n="settings.wallpaperSettings">壁纸设置</label>
+            <div class="setting-label" data-i18n="settings.wallpaperSettings">壁纸设置</div>
             <button id="wallpaper-folder-btn" class="action-btn small" data-i18n="settings.selectFolder">选择文件夹</button>
-            <input type="file" id="wallpaper-folder-input" class="wallpaper-input" webkitdirectory hidden>
+            <label class="sr-only" for="wallpaper-folder-input" data-i18n="settings.selectFolder">选择文件夹</label>
+            <input type="file" id="wallpaper-folder-input" class="wallpaper-input" data-i18n-aria="settings.selectFolder" aria-label="选择文件夹" webkitdirectory hidden>
           </div>
 
           <div class="wallpaper-gallery" id="wallpaper-gallery"></div>
 
           <div class="setting-row">
-            <label class="setting-label"><span data-i18n="settings.overlayStrength">遮罩强度</span> <span id="overlay-value">25%</span></label>
-            <input type="range" id="overlay-slider" class="range-slider" min="0" max="50" value="25" step="5">
+            <label class="setting-label" for="overlay-slider"><span data-i18n="settings.overlayStrength">遮罩强度</span> <span id="overlay-value">25%</span></label>
+            <input type="range" id="overlay-slider" class="range-slider" data-i18n-aria="settings.overlayStrength" aria-label="遮罩强度" min="0" max="50" value="25" step="5">
           </div>
         </div>
       </section>
@@ -114,8 +119,8 @@
       <section class="setting-group">
         <h3 class="setting-group-title" data-i18n="settings.shadow">阴影</h3>
         <div class="setting-row">
-          <label class="setting-label"><span data-i18n="settings.shadowStrength">阴影强度</span> <span id="shadow-value">25</span></label>
-          <input type="range" id="shadow-slider" class="range-slider" min="0" max="50" value="25" step="5">
+          <label class="setting-label" for="shadow-slider"><span data-i18n="settings.shadowStrength">阴影强度</span> <span id="shadow-value">25</span></label>
+          <input type="range" id="shadow-slider" class="range-slider" data-i18n-aria="settings.shadowStrength" aria-label="阴影强度" min="0" max="50" value="25" step="5">
         </div>
       </section>
 
@@ -171,7 +176,8 @@
       <section class="setting-group">
         <h3 class="setting-group-title" data-i18n="settings.tabTitle">标签页名称</h3>
         <div class="setting-row">
-          <input type="text" id="tab-title-input" class="tab-title-input" data-i18n-placeholder="settings.tabTitlePlaceholder" placeholder="留空使用默认名称" maxlength="50" spellcheck="false">
+          <label class="sr-only" for="tab-title-input" data-i18n="settings.tabTitle">标签页名称</label>
+          <input type="text" id="tab-title-input" class="tab-title-input" data-i18n-placeholder="settings.tabTitlePlaceholder" data-i18n-aria="settings.tabTitle" aria-label="标签页名称" placeholder="留空使用默认名称" maxlength="50" spellcheck="false">
         </div>
       </section>
 
@@ -179,9 +185,9 @@
       <section class="setting-group" id="suggestions-group">
         <h3 class="setting-group-title" data-i18n="settings.suggestions">搜索联想</h3>
         <div class="setting-row">
-          <label class="setting-label">
+          <div class="setting-label">
             <span data-i18n="settings.suggestionsDesc">输入时显示搜索建议（需授权网络请求）。使用浏览器默认搜索时不支持搜索联想。</span>
-          </label>
+          </div>
           <button id="suggestions-toggle" class="action-btn small suggestions-toggle" data-enabled="false">Off</button>
         </div>
       </section>

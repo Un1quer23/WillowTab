@@ -13,6 +13,7 @@
 
       // Search
       'search.placeholder': 'Think Different.',
+      'search.input': '搜索关键词',
       'search.toggleEngine': '切换搜索引擎',
       'search.settings': '设置',
 
@@ -29,6 +30,8 @@
       'settings.bgWallpaperMode': '壁纸',
       'settings.presetColors': '预设颜色',
       'settings.customColor': '自选颜色',
+      'settings.customColorPicker': '自选颜色',
+      'settings.customColorHex': '自选颜色 HEX 值',
       'settings.wallpaperSettings': '壁纸设置',
       'settings.selectFolder': '选择文件夹',
       'settings.overlayStrength': '遮罩强度',
@@ -141,6 +144,7 @@
 
       // Search
       'search.placeholder': 'Think Different.',
+      'search.input': 'Search query',
       'search.toggleEngine': 'Switch search engine',
       'search.settings': 'Settings',
 
@@ -157,6 +161,8 @@
       'settings.bgWallpaperMode': 'Wallpaper',
       'settings.presetColors': 'Preset Colors',
       'settings.customColor': 'Custom Color',
+      'settings.customColorPicker': 'Custom color',
+      'settings.customColorHex': 'Custom color HEX value',
       'settings.wallpaperSettings': 'Wallpaper Settings',
       'settings.selectFolder': 'Select Folder',
       'settings.overlayStrength': 'Overlay Opacity',
