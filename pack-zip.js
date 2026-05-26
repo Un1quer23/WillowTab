@@ -2,15 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const VERSION = '1.5.0';
 const TARGETS = {
   generic: {
     cwd: '.',
-    output: `WillowTab-v${VERSION}.zip`,
+    outputName(version) { return `WillowTab-v${version}.zip`; },
   },
   chrome: {
     cwd: 'chrome-store',
-    output: `WillowTab-for-Chrome-v${VERSION}.zip`,
+    outputName(version) { return `WillowTab-for-Chrome-v${version}.zip`; },
   },
 };
 
@@ -33,6 +32,11 @@ if (!target) {
 
 const root = process.cwd();
 const sourceDir = path.resolve(root, target.cwd);
+const manifest = JSON.parse(fs.readFileSync(path.join(sourceDir, 'manifest.json'), 'utf8'));
+const version = manifest.version;
+if (!version) {
+  throw new Error(`Missing manifest version for ${targetName}`);
+}
 
 function crc32(buf) {
   const table = new Uint32Array(256);
@@ -126,6 +130,6 @@ eocd.writeUInt32LE(cdOffset, j); j += 4;
 eocd.writeUInt16LE(0, j);
 
 const output = Buffer.concat([...localParts, ...cdParts, eocd]);
-const outputPath = path.join(sourceDir, target.output);
+const outputPath = path.join(sourceDir, target.outputName(version));
 fs.writeFileSync(outputPath, output);
 console.log(`Done: ${path.relative(root, outputPath)}`);

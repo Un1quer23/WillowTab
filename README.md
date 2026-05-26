@@ -78,9 +78,9 @@ Manual installation steps:
 
 ### Chrome Web Store Package / Chrome 商店特供包
 
-`WillowTab-for-Chrome-v1.5.0.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
+`WillowTab-for-Chrome-v1.5.1.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
 
-`WillowTab-for-Chrome-v1.5.0.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
+`WillowTab-for-Chrome-v1.5.1.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
 
 ## Project Structure / 项目结构
 
