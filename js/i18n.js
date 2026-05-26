@@ -72,9 +72,10 @@
       // Toast
       'toast.addedAndSkipped': '新增 {added} 张，跳过 {skipped} 张重复',
       'toast.allSkipped': '全部 {skipped} 张已存在，已跳过',
+      'toast.wallpaperFailed': '有 {failed} 张壁纸无法保存，已有壁纸已保留',
 
       // Error
-      'error.quotaExceeded': '存储空间不足，已清除所有壁纸。请删除部分壁纸后重新添加。',
+      'error.quotaExceeded': '存储空间不足，新的设置未能保存，已有壁纸已保留。',
 
       // Hint
       'hint.darkColorDisabled': '仅在浅色模式下可用',
@@ -89,10 +90,10 @@
       'privacy.section2_1.title': '2.1 我们不收集的信息',
       'privacy.section2_1.p': '本扩展<strong>不收集、不存储、不传输</strong>任何可识别个人身份的信息，包括但不限于：姓名、电子邮箱、电话号码、地理位置、IP 地址、设备标识符、浏览历史、书签数据。',
       'privacy.section2_2.title': '2.2 本地存储的信息',
-      'privacy.section2_2.p1': '以下数据仅存储在你设备的浏览器本地存储（localStorage）中，<strong>完全离线</strong>，不会上传至任何服务器：',
+      'privacy.section2_2.p1': '以下数据仅存储在你设备的浏览器本地存储空间（localStorage 与 IndexedDB）中，<strong>完全离线</strong>，不会上传至任何服务器：',
       'privacy.section2_2.li1': '背景模式偏好（纯色 / 壁纸）',
       'privacy.section2_2.li2': '自定义背景颜色值',
-      'privacy.section2_2.li3': '壁纸图片文件（本地压缩后以 Base64 格式存储）',
+      'privacy.section2_2.li3': '壁纸图片文件（本地压缩后存储在 IndexedDB；localStorage 仅保存壁纸名称、ID 和亮度等元数据）',
       'privacy.section2_2.li4': '字体、圆角、阴影强度等界面偏好',
       'privacy.section2_2.li5': '显示模式偏好（跟随系统 / 深色 / 浅色）',
       'privacy.section2_2.li6': '当前选择的搜索引擎',
@@ -194,9 +195,10 @@
       // Toast
       'toast.addedAndSkipped': '{added} added, {skipped} duplicates skipped',
       'toast.allSkipped': 'All {skipped} already exist, skipped',
+      'toast.wallpaperFailed': '{failed} wallpapers could not be saved. Existing wallpapers were kept.',
 
       // Error
-      'error.quotaExceeded': 'Storage full. All wallpapers cleared. Please remove some wallpapers and try again.',
+      'error.quotaExceeded': 'Storage full. New settings could not be saved. Existing wallpapers were kept.',
 
       // Hint
       'hint.darkColorDisabled': 'Only available in light mode',
@@ -211,10 +213,10 @@
       'privacy.section2_1.title': '2.1 Information We Do NOT Collect',
       'privacy.section2_1.p': 'The Extension <strong>does not collect, store, or transmit</strong> any personally identifiable information, including but not limited to: name, email address, phone number, geographic location, IP address, device identifiers, browsing history, or bookmark data.',
       'privacy.section2_2.title': '2.2 Locally Stored Information',
-      'privacy.section2_2.p1': 'The following data is stored solely in your browser\'s local storage (localStorage), <strong>completely offline</strong>, and is never uploaded to any server:',
+      'privacy.section2_2.p1': 'The following data is stored solely in your browser\'s local storage area (localStorage and IndexedDB), <strong>completely offline</strong>, and is never uploaded to any server:',
       'privacy.section2_2.li1': 'Background mode preference (solid color / wallpaper)',
       'privacy.section2_2.li2': 'Custom background color value',
-      'privacy.section2_2.li3': 'Wallpaper image files (stored locally as compressed Base64)',
+      'privacy.section2_2.li3': 'Wallpaper image files (compressed locally and stored in IndexedDB; localStorage only keeps metadata such as wallpaper name, ID, and brightness)',
       'privacy.section2_2.li4': 'Font, corner radius, shadow strength, and other interface preferences',
       'privacy.section2_2.li5': 'Display mode preference (follow system / dark / light)',
       'privacy.section2_2.li6': 'Currently selected search engine',

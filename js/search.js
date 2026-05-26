@@ -61,6 +61,7 @@
   const wrapper = document.querySelector('.search-input-wrapper');
 
   let activeIndex = 0;
+  let selectedEngineIndex = 0;
   let selectedSuggestIndex = -1;
   let abortController = null;
 
@@ -73,7 +74,7 @@
   // --- Engine dropdown ---
   function renderEngineDropdown() {
     const items = ENGINES.map((engine, i) => `
-      <li class="engine-dropdown-item ${i === activeIndex ? 'active' : ''}" data-index="${i}" role="menuitem">
+      <li class="engine-dropdown-item ${i === activeIndex ? 'active' : ''} ${i === selectedEngineIndex ? 'keyboard-active' : ''}" data-index="${i}" role="menuitemradio" aria-checked="${i === activeIndex}">
         <span class="engine-dropdown-name">${engine.name}</span>
         ${i === activeIndex ? '<svg class="engine-dropdown-check" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
       </li>
@@ -91,12 +92,21 @@
 
   function openEngineDropdown() {
     closeSuggestions();
+    selectedEngineIndex = activeIndex;
     renderEngineDropdown();
     engineDropdown.classList.add('visible');
+    toggle.setAttribute('aria-expanded', 'true');
   }
 
   function closeEngineDropdown() {
     engineDropdown.classList.remove('visible');
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+
+  function updateEngineKeyboardHighlight() {
+    engineDropdown.querySelectorAll('.engine-dropdown-item[data-index]').forEach((item) => {
+      item.classList.toggle('keyboard-active', parseInt(item.dataset.index, 10) === selectedEngineIndex);
+    });
   }
 
   function updateToggleIcon() {
@@ -123,12 +133,15 @@
     suggestionsEl.innerHTML = '';
     selectedSuggestIndex = -1;
     wrapper.classList.remove('has-suggestions');
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
   }
 
   function showSuggestions() {
     closeEngineDropdown();
     suggestionsEl.hidden = false;
     wrapper.classList.add('has-suggestions');
+    input.setAttribute('aria-expanded', 'true');
   }
 
   function doSearch(query) {
@@ -144,7 +157,7 @@
       return;
     }
     suggestionsEl.innerHTML = suggestions.map((text, i) => `
-      <li class="suggest-item ${i === selectedSuggestIndex ? 'active' : ''}" data-index="${i}">
+      <li id="suggestion-${i}" class="suggest-item ${i === selectedSuggestIndex ? 'active' : ''}" data-index="${i}" role="option" aria-selected="${i === selectedSuggestIndex}">
         <svg class="suggest-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
         </svg>
@@ -261,6 +274,26 @@
 
   // Keyboard
   document.addEventListener('keydown', (e) => {
+    if (engineDropdown.classList.contains('visible')) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedEngineIndex = (selectedEngineIndex + 1) % ENGINES.length;
+        updateEngineKeyboardHighlight();
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedEngineIndex = (selectedEngineIndex - 1 + ENGINES.length) % ENGINES.length;
+        updateEngineKeyboardHighlight();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        selectEngine(selectedEngineIndex);
+        return;
+      }
+    }
+
     // Escape
     if (e.key === 'Escape') {
       if (engineDropdown.classList.contains('visible')) {
@@ -295,8 +328,15 @@
 
   function updateSuggestHighlight(items) {
     items.forEach((item, i) => {
-      item.classList.toggle('active', i === selectedSuggestIndex);
+      const selected = i === selectedSuggestIndex;
+      item.classList.toggle('active', selected);
+      item.setAttribute('aria-selected', selected ? 'true' : 'false');
     });
+    if (selectedSuggestIndex >= 0 && items[selectedSuggestIndex]) {
+      input.setAttribute('aria-activedescendant', items[selectedSuggestIndex].id);
+    } else {
+      input.removeAttribute('aria-activedescendant');
+    }
   }
 
   // Submit

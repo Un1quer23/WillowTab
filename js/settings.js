@@ -59,7 +59,11 @@
   const aboutClose = document.getElementById('about-close');
   const aboutOverlay = document.getElementById('about-overlay');
 
+  const wallpaperAssets = window.__wallpaperAssets;
   let settingsOverlay = null;
+  let saveTimer = null;
+  let wallpaperApplyToken = 0;
+  let lastFocusedBeforePanel = null;
 
   // Detect effective theme (taking auto mode into account)
   function effectiveThemeIsDark() {
@@ -92,6 +96,16 @@
     }
   }
 
+  async function migrateWallpaperStorage() {
+    if (!wallpaperAssets) return;
+    const oldName = (window.__i18n && window.__i18n.t('wallpaper.oldWallpaper')) || '旧壁纸';
+    const result = await wallpaperAssets.migrateSettings(settings, generateId, oldName);
+    settings = { ...DEFAULTS, ...result.settings };
+    if (result.changed) {
+      saveSettingsNow();
+    }
+  }
+
   function showToast(message) {
     const toast = document.createElement('div');
     toast.className = 'toast';
@@ -109,17 +123,36 @@
   }
 
   function saveSettings() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveSettingsNow, 150);
+  }
+
+  function saveSettingsNow() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(serializeSettings(settings)));
     } catch (e) {
       if (e.name === 'QuotaExceededError') {
-        // Storage full — clear wallpapers and save rest
-        settings.wallpapers = [];
-        settings.activeWallpaperId = '';
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-        alert((window.__i18n && window.__i18n.t('error.quotaExceeded')) || '存储空间不足，已清除所有壁纸。请删除部分壁纸后重新添加。');
+        alert((window.__i18n && window.__i18n.t('error.quotaExceeded')) || '存储空间不足，新的设置未能保存，已有壁纸已保留。');
       }
     }
+  }
+
+  function serializeSettings(value) {
+    return {
+      ...value,
+      wallpapers: (value.wallpapers || []).map((w) => {
+        const meta = {
+          id: w.id,
+          name: w.name,
+          brightness: w.brightness,
+          createdAt: w.createdAt,
+        };
+        if (w.data) meta.data = w.data;
+        return meta;
+      }),
+    };
   }
 
   // Compress image to a reasonable size before storing
@@ -174,6 +207,7 @@
 
   // --- Apply settings to page ---
   function applyBackground() {
+    const token = ++wallpaperApplyToken;
     const root = document.documentElement;
     const body = document.body;
     body.classList.remove('has-wallpaper', 'has-custom-bg');
@@ -188,31 +222,44 @@
       const active = settings.wallpapers.find((w) => w.id === settings.activeWallpaperId);
       if (active) {
         body.classList.add('has-wallpaper');
-        body.style.setProperty('--wallpaper', `url(${active.data})`);
         root.style.setProperty('--overlay-strength', settings.overlayStrength / 100);
 
-        // Adaptive text color based on wallpaper brightness + overlay
-        let brightness = active.brightness;
-        if (brightness == null) {
-          // Old wallpaper without brightness — analyze now
-          analyzeBrightness(active.data).then((b) => {
-            active.brightness = b;
-            saveSettings();
-            applyBackground(); // re-apply with new brightness
-          });
-        } else if (brightness >= 0) {
-          // 遮罩会压暗壁纸，将遮罩强度计入有效亮度，使文字颜色也响应遮罩滑块
-          const effective = brightness * (1 - settings.overlayStrength / 100);
-          if (effective < 0.4) {
-            root.style.setProperty('--wallpaper-text-color', '#e8e2d4');
-            root.style.setProperty('--wallpaper-input-bg', 'rgba(255,255,255,0.18)');
-          } else if (effective < 0.6) {
-            root.style.setProperty('--wallpaper-text-color', '#f0ece0');
-            root.style.setProperty('--wallpaper-input-bg', 'rgba(255,255,255,0.18)');
-          } else {
-            root.style.removeProperty('--wallpaper-text-color');
-            root.style.removeProperty('--wallpaper-input-bg');
+        const renderWallpaper = (record) => {
+          const source = (record && record.data) ? record : active;
+          if (token !== wallpaperApplyToken) return;
+          if (!source || !source.data) {
+            body.classList.remove('has-wallpaper');
+            root.style.removeProperty('--overlay-strength');
+            return;
           }
+          body.style.setProperty('--wallpaper', `url(${source.data})`);
+
+          let brightness = active.brightness;
+          if (brightness == null) brightness = source.brightness;
+          if (brightness == null) {
+            analyzeBrightness(source.data).then((b) => {
+              if (token !== wallpaperApplyToken) return;
+              active.brightness = b;
+              if (record && wallpaperAssets) wallpaperAssets.put({ ...record, brightness: b }).catch(() => {});
+              saveSettings();
+              applyBackground();
+            });
+          } else if (brightness >= 0) {
+            applyWallpaperTextColor(brightness);
+          }
+        };
+
+        if (wallpaperAssets) {
+          wallpaperAssets.get(active.id).then(renderWallpaper).catch(() => {
+            if (token !== wallpaperApplyToken) return;
+            renderWallpaper(active);
+            if (!active.data) {
+              body.classList.remove('has-wallpaper');
+              root.style.removeProperty('--overlay-strength');
+            }
+          });
+        } else {
+          renderWallpaper(active);
         }
       }
     }
@@ -224,6 +271,21 @@
     }
 
     applyShadowStrength();
+  }
+
+  function applyWallpaperTextColor(brightness) {
+    const root = document.documentElement;
+    const effective = brightness * (1 - settings.overlayStrength / 100);
+    if (effective < 0.4) {
+      root.style.setProperty('--wallpaper-text-color', '#e8e2d4');
+      root.style.setProperty('--wallpaper-input-bg', 'rgba(255,255,255,0.18)');
+    } else if (effective < 0.6) {
+      root.style.setProperty('--wallpaper-text-color', '#f0ece0');
+      root.style.setProperty('--wallpaper-input-bg', 'rgba(255,255,255,0.18)');
+    } else {
+      root.style.removeProperty('--wallpaper-text-color');
+      root.style.removeProperty('--wallpaper-input-bg');
+    }
   }
 
   function applyFont() {
@@ -305,14 +367,21 @@
   }
 
   function openPanel() {
+    lastFocusedBeforePanel = document.activeElement;
     panel.removeAttribute('hidden');
     if (settingsOverlay) settingsOverlay.removeAttribute('hidden');
     syncUI();
+    closeBtn.focus();
   }
 
   function closePanel() {
     panel.setAttribute('hidden', '');
     if (settingsOverlay) settingsOverlay.setAttribute('hidden', '');
+    if (lastFocusedBeforePanel && typeof lastFocusedBeforePanel.focus === 'function' && document.contains(lastFocusedBeforePanel)) {
+      lastFocusedBeforePanel.focus();
+    } else if (settingsBtn) {
+      settingsBtn.focus();
+    }
   }
 
   // --- About panel ---
@@ -413,9 +482,16 @@
       thumb.dataset.id = w.id;
 
       const img = document.createElement('img');
-      img.src = w.data;
       img.alt = w.name;
       img.loading = 'lazy';
+      if (w.data) img.src = w.data;
+      if (wallpaperAssets) {
+        wallpaperAssets.get(w.id).then((record) => {
+          if (record && record.data && img.isConnected) {
+            img.src = record.data;
+          }
+        }).catch(() => {});
+      }
 
       const name = document.createElement('span');
       name.className = 'wallpaper-thumb-name';
@@ -502,6 +578,7 @@
 
     let added = 0;
     let skipped = 0;
+    let failed = 0;
     for (const file of files) {
       if (settings.wallpapers.some((w) => w.name === file.name)) {
         skipped++;
@@ -518,10 +595,18 @@
         const compressed = await compressImage(dataUrl, 1920);
         const brightness = await analyzeBrightness(compressed);
         const id = generateId();
-        settings.wallpapers.push({ id, data: compressed, name: file.name, brightness });
+        if (!wallpaperAssets) throw new Error('Wallpaper storage is unavailable');
+        const meta = await wallpaperAssets.put({
+          id,
+          data: compressed,
+          name: file.name,
+          brightness,
+          createdAt: Date.now(),
+        });
+        settings.wallpapers.push(meta);
         added++;
       } catch (_) {
-        // Skip files that fail to process
+        failed++;
       }
     }
 
@@ -532,7 +617,7 @@
       }
       settings.bgMode = 'wallpaper';
       try {
-        saveSettings();
+        saveSettingsNow();
       } catch (_) {
         // If save fails (quota), wallpapers were already cleared by saveSettings
       }
@@ -548,6 +633,11 @@
       showToast(msg);
     }
 
+    if (failed > 0) {
+      const tWallpaper = (k, vars) => (window.__i18n && window.__i18n.t(k, vars)) || k;
+      showToast(tWallpaper('toast.wallpaperFailed', { failed }));
+    }
+
     wallpaperFolderInput.value = '';
   });
 
@@ -560,11 +650,12 @@
     // Delete button
     if (e.target.closest('.wallpaper-thumb-delete')) {
       settings.wallpapers = settings.wallpapers.filter((w) => w.id !== id);
+      if (wallpaperAssets) wallpaperAssets.remove(id).catch(() => {});
       if (settings.activeWallpaperId === id) {
         settings.activeWallpaperId = settings.wallpapers.length > 0 ? settings.wallpapers[0].id : '';
         if (!settings.activeWallpaperId) settings.bgMode = 'color';
       }
-      saveSettings();
+      saveSettingsNow();
       applyBackground();
       syncUI();
       return;
@@ -573,7 +664,7 @@
     // Switch active wallpaper
     settings.activeWallpaperId = id;
     settings.bgMode = 'wallpaper';
-    saveSettings();
+    saveSettingsNow();
     applyBackground();
     syncUI();
   });
@@ -591,6 +682,7 @@
     settings.overlayStrength = parseInt(overlaySlider.value);
     overlayValue.textContent = settings.overlayStrength;
     document.documentElement.style.setProperty('--overlay-strength', settings.overlayStrength / 100);
+    applyBackground();
     saveSettings();
   });
 
@@ -614,6 +706,7 @@
 
   // --- Init ---
   loadSettings();
+  const settingsReady = migrateWallpaperStorage().catch(() => {});
 
   // Build color preset buttons
   PRESET_COLORS.forEach((c) => {
@@ -708,6 +801,12 @@
   // Expose for search.js dropdown settings entry
   window.__settingsPanel = { open: openPanel };
 
+  window.addEventListener('pagehide', () => {
+    if (saveTimer) saveSettingsNow();
+  });
+
   // Apply on load
-  applyAll();
+  settingsReady.finally(() => {
+    applyAll();
+  });
 })();

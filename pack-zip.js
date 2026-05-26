@@ -17,7 +17,7 @@ const files = [
   'css/style.css',
   'icons/icon128.png', 'icons/icon16.png', 'icons/icon48.png',
   'icons/ntp16.png', 'icons/ntp48.png', 'icons/ntp128.png',
-  'js/clock.js', 'js/i18n.js', 'js/search.js', 'js/settings.js', 'js/theme.js',
+  'js/assets.js', 'js/clock.js', 'js/i18n.js', 'js/search.js', 'js/settings.js', 'js/theme.js',
   '_locales/en/messages.json', '_locales/zh_CN/messages.json',
   'LICENSE', 'manifest.json', 'newtab.html', 'privacy-policy.html', 'README.md',
 ];

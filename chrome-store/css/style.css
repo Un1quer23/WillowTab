@@ -288,7 +288,8 @@ body.has-wallpaper .engine-dropdown-item {
   color: var(--wallpaper-text-color);
 }
 
-body.has-wallpaper .engine-dropdown-item:hover {
+body.has-wallpaper .engine-dropdown-item:hover,
+body.has-wallpaper .engine-dropdown-item.keyboard-active {
   background: rgba(255, 255, 255, 0.15);
 }
 
@@ -503,7 +504,8 @@ body.has-custom-bg {
   transition: background var(--transition-fast);
 }
 
-.engine-dropdown-item:hover {
+.engine-dropdown-item:hover,
+.engine-dropdown-item.keyboard-active {
   background: var(--bg-tertiary);
 }
 

@@ -30,11 +30,11 @@
 <p data-i18n-html="privacy.section2_1.p">本扩展<strong>不收集、不存储、不传输</strong>任何可识别个人身份的信息，包括但不限于：姓名、电子邮箱、电话号码、地理位置、IP 地址、设备标识符、浏览历史、书签数据。</p>
 
 <h3 data-i18n="privacy.section2_2.title">2.2 本地存储的信息</h3>
-<p data-i18n-html="privacy.section2_2.p1">以下数据仅存储在你设备的浏览器本地存储（localStorage）中，<strong>完全离线</strong>，不会上传至任何服务器：</p>
+<p data-i18n-html="privacy.section2_2.p1">以下数据仅存储在你设备的浏览器本地存储空间（localStorage 与 IndexedDB）中，<strong>完全离线</strong>，不会上传至任何服务器：</p>
 <ul>
   <li data-i18n="privacy.section2_2.li1">背景模式偏好（纯色 / 壁纸）</li>
   <li data-i18n="privacy.section2_2.li2">自定义背景颜色值</li>
-  <li data-i18n="privacy.section2_2.li3">壁纸图片文件（本地压缩后以 Base64 格式存储）</li>
+  <li data-i18n="privacy.section2_2.li3">壁纸图片文件（本地压缩后存储在 IndexedDB；localStorage 仅保存壁纸名称、ID 和亮度等元数据）</li>
   <li data-i18n="privacy.section2_2.li4">字体、圆角、阴影强度等界面偏好</li>
   <li data-i18n="privacy.section2_2.li5">显示模式偏好（跟随系统 / 深色 / 浅色）</li>
   <li data-i18n="privacy.section2_2.li6">当前选择的搜索引擎</li>

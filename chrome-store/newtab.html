@@ -18,7 +18,7 @@
     <main class="search-section">
       <form id="search-form" class="search-form" autocomplete="off">
         <div class="search-input-wrapper">
-          <button type="button" id="engine-toggle" class="engine-toggle" data-i18n-aria="search.toggleEngine" data-i18n-title="search.toggleEngine" aria-label="切换搜索引擎" title="切换搜索引擎"></button>
+          <button type="button" id="engine-toggle" class="engine-toggle" data-i18n-aria="search.toggleEngine" data-i18n-title="search.toggleEngine" aria-label="切换搜索引擎" title="切换搜索引擎" aria-haspopup="true" aria-expanded="false" aria-controls="engine-dropdown"></button>
           <ul id="engine-dropdown" class="engine-dropdown" role="menu"></ul>
           <input
             type="text"
@@ -28,6 +28,10 @@
             placeholder="Think Different."
             autofocus
             autocomplete="off"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls="suggestions-dropdown"
           >
           <button type="submit" id="search-submit" class="search-submit" aria-label="搜索" title="搜索">
             <svg class="search-icon" viewBox="1.5 1.5 22 22" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -35,7 +39,7 @@
               <path d="M21 21l-4.35-4.35"/>
             </svg>
           </button>
-          <ul id="suggestions-dropdown" class="suggestions-dropdown" hidden></ul>
+          <ul id="suggestions-dropdown" class="suggestions-dropdown" role="listbox" hidden></ul>
         </div>
       </form>
     </main>
@@ -230,6 +234,7 @@
   <script src="js/theme.js"></script>
   <script src="js/search.js"></script>
   <script src="js/clock.js"></script>
+  <script src="js/assets.js"></script>
   <script src="js/settings.js"></script>
 </body>
 </html>
