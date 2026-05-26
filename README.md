@@ -52,17 +52,17 @@ For other Chromium-based browsers, install manually from GitHub Releases:
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-Download `WillowTab-v1.5.0.zip`, the generic build for Chromium-based browsers.
+Download `WillowTab-v1.5.2.zip`, the generic build for Chromium-based browsers.
 
 其他 Chromium 系浏览器用户，请从 GitHub Releases 手动安装：
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-下载 `WillowTab-v1.5.0.zip`，也就是适用于 Chromium 系浏览器的通用版。
+下载 `WillowTab-v1.5.2.zip`，也就是适用于 Chromium 系浏览器的通用版。
 
 Manual installation steps:
 
-1. Download `WillowTab-v1.5.0.zip`.
+1. Download `WillowTab-v1.5.2.zip`.
 2. Extract it to a local folder.
 3. Open your browser's extension management page, such as `chrome://extensions`.
 4. Enable Developer mode.
@@ -70,7 +70,7 @@ Manual installation steps:
 
 手动安装步骤：
 
-1. 下载 `WillowTab-v1.5.0.zip`。
+1. 下载 `WillowTab-v1.5.2.zip`。
 2. 解压到本地文件夹。
 3. 打开浏览器扩展管理页面，例如 `chrome://extensions`。
 4. 启用“开发者模式”。
@@ -78,9 +78,9 @@ Manual installation steps:
 
 ### Chrome Web Store Package / Chrome 商店特供包
 
-`WillowTab-for-Chrome-v1.5.1.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
+`WillowTab-for-Chrome-v1.5.2.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
 
-`WillowTab-for-Chrome-v1.5.1.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
+`WillowTab-for-Chrome-v1.5.2.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
 
 ## Project Structure / 项目结构
 
