@@ -18,9 +18,13 @@ It replaces the default new tab page with a focused start page that includes a s
   The generic build supports switching between Google, Baidu, Bing, and DuckDuckGo.  
   通用版支持在 Google、百度、Bing、DuckDuckGo 之间切换。
 
-- **Custom wallpapers / 个性化壁纸**  
-  Use a solid color background or choose local images as wallpapers.  
-  支持纯色背景，也可以选择本地图片作为壁纸。
+- **Custom wallpapers / 个性化壁纸**
+  Use a solid color background, import local images or folders, manage wallpapers in batches, and rotate wallpapers automatically.
+  支持纯色背景、本地图片/文件夹导入、批量壁纸管理和自动轮播。
+
+- **Adaptive readability / 自适应可读性**
+  Wallpaper mode can adapt text, controls, and the search surface for clearer reading on different images.
+  壁纸模式可根据图片自动调整文字、控件和搜索框观感，让不同壁纸下的内容更清晰。
 
 - **Light and dark themes / 浅色与深色主题**  
   Choose light mode, dark mode, or follow the system appearance.  
@@ -52,17 +56,17 @@ For other Chromium-based browsers, install manually from GitHub Releases:
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-Download `WillowTab-v1.5.2.zip`, the generic build for Chromium-based browsers.
+Download `WillowTab-v1.6.0.zip`, the generic build for Chromium-based browsers.
 
 其他 Chromium 系浏览器用户，请从 GitHub Releases 手动安装：
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-下载 `WillowTab-v1.5.2.zip`，也就是适用于 Chromium 系浏览器的通用版。
+下载 `WillowTab-v1.6.0.zip`，也就是适用于 Chromium 系浏览器的通用版。
 
 Manual installation steps:
 
-1. Download `WillowTab-v1.5.2.zip`.
+1. Download `WillowTab-v1.6.0.zip`.
 2. Extract it to a local folder.
 3. Open your browser's extension management page, such as `chrome://extensions`.
 4. Enable Developer mode.
@@ -70,7 +74,7 @@ Manual installation steps:
 
 手动安装步骤：
 
-1. 下载 `WillowTab-v1.5.2.zip`。
+1. 下载 `WillowTab-v1.6.0.zip`。
 2. 解压到本地文件夹。
 3. 打开浏览器扩展管理页面，例如 `chrome://extensions`。
 4. 启用“开发者模式”。
@@ -78,9 +82,9 @@ Manual installation steps:
 
 ### Chrome Web Store Package / Chrome 商店特供包
 
-`WillowTab-for-Chrome-v1.5.2.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
+`WillowTab-for-Chrome-v1.6.0.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
 
-`WillowTab-for-Chrome-v1.5.2.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
+`WillowTab-for-Chrome-v1.6.0.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
 
 ## Project Structure / 项目结构
 

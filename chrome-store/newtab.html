@@ -60,7 +60,12 @@
 
   <div id="settings-panel" class="settings-panel" hidden>
     <div class="settings-panel-header">
-      <h2 data-i18n="settings.title">设置</h2>
+      <button id="settings-back" class="action-btn small icon-only settings-back" data-i18n-aria="settings.back" aria-label="返回" hidden>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+      <h2 id="settings-panel-title" data-i18n="settings.title">设置</h2>
       <button id="settings-close" class="action-btn small icon-only" data-i18n-aria="settings.close" aria-label="关闭">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="18" y1="6" x2="6" y2="18"/>
@@ -68,7 +73,7 @@
         </svg>
       </button>
     </div>
-    <div class="settings-content">
+    <div id="settings-main-view" class="settings-content settings-view">
       <!-- Background -->
       <section class="setting-group">
         <h3 class="setting-group-title" data-i18n="settings.background">背景</h3>
@@ -102,16 +107,10 @@
         <div class="setting-subgroup" id="wallpaper-section" hidden>
           <div class="setting-row">
             <div class="setting-label" data-i18n="settings.wallpaperSettings">壁纸设置</div>
-            <button id="wallpaper-folder-btn" class="action-btn small" data-i18n="settings.selectFolder">选择文件夹</button>
-            <label class="sr-only" for="wallpaper-folder-input" data-i18n="settings.selectFolder">选择文件夹</label>
-            <input type="file" id="wallpaper-folder-input" class="wallpaper-input" data-i18n-aria="settings.selectFolder" aria-label="选择文件夹" webkitdirectory hidden>
-          </div>
-
-          <div class="wallpaper-gallery" id="wallpaper-gallery"></div>
-
-          <div class="setting-row">
-            <label class="setting-label" for="overlay-slider"><span data-i18n="settings.overlayStrength">遮罩强度</span> <span id="overlay-value">25%</span></label>
-            <input type="range" id="overlay-slider" class="range-slider" data-i18n-aria="settings.overlayStrength" aria-label="遮罩强度" min="0" max="50" value="25" step="5">
+            <button id="wallpaper-open-btn" class="settings-nav-btn" type="button">
+              <span data-i18n="settings.manageWallpapers">管理壁纸</span>
+              <span id="wallpaper-summary" class="settings-nav-summary"></span>
+            </button>
           </div>
         </div>
       </section>
@@ -198,6 +197,74 @@
         <button id="about-btn" class="about-trigger" data-i18n="about.title">关于 WillowTab</button>
       </div>
     </div>
+
+    <div id="wallpaper-settings-view" class="settings-content settings-view" hidden>
+      <section class="setting-group">
+        <h3 class="setting-group-title" data-i18n="settings.readabilitySettings">可读性设置</h3>
+
+        <div class="setting-row">
+          <label class="setting-toggle-row" for="wallpaper-readability-toggle">
+            <span data-i18n="settings.wallpaperReadability">自动可读性保护</span>
+            <input type="checkbox" id="wallpaper-readability-toggle" class="setting-switch" checked>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-label" data-i18n="settings.wallpaperSurfaceMode">搜索框样式</div>
+          <div class="theme-options" id="wallpaper-surface-mode-options">
+            <button class="theme-option active" data-surface-mode="auto" data-i18n="settings.surfaceAuto">自适应</button>
+            <button class="theme-option" data-surface-mode="light" data-i18n="settings.surfaceLight">浅色</button>
+            <button class="theme-option" data-surface-mode="dark" data-i18n="settings.surfaceDark">深色</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <label class="setting-label" for="overlay-slider"><span data-i18n="settings.overlayStrength">遮罩强度</span> <span id="overlay-value">25%</span></label>
+          <input type="range" id="overlay-slider" class="range-slider" data-i18n-aria="settings.overlayStrength" aria-label="遮罩强度" min="0" max="50" value="25" step="5">
+        </div>
+      </section>
+
+      <section class="setting-group">
+        <h3 class="setting-group-title" data-i18n="settings.wallpaperRotation">自动切换</h3>
+        <div class="setting-row">
+          <div class="theme-options compact" id="wallpaper-rotation-options">
+            <button class="theme-option active" data-rotation="off" data-i18n="settings.rotationOff">关闭</button>
+            <button class="theme-option" data-rotation="30m" data-i18n="settings.rotation30m">30分钟</button>
+            <button class="theme-option" data-rotation="1h" data-i18n="settings.rotation1h">1小时</button>
+            <button class="theme-option" data-rotation="2h" data-i18n="settings.rotation2h">2小时</button>
+            <button class="theme-option" data-rotation="24h" data-i18n="settings.rotation24h">24小时</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-label" data-i18n="settings.wallpaperRotationMode">轮播模式</div>
+          <div class="theme-options" id="wallpaper-rotation-mode-options">
+            <button class="theme-option active" data-rotation-mode="sequence" data-i18n="settings.rotationSequence">顺序</button>
+            <button class="theme-option" data-rotation-mode="random" data-i18n="settings.rotationRandom">随机</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="setting-group">
+        <h3 class="setting-group-title" data-i18n="settings.wallpaperLibrary">壁纸库</h3>
+        <div class="wallpaper-import-row">
+          <button id="wallpaper-photo-btn" class="action-btn small" data-i18n="settings.selectPhotos">选择照片</button>
+          <button id="wallpaper-folder-btn" class="action-btn small" data-i18n="settings.selectFolder">选择文件夹</button>
+          <label class="sr-only" for="wallpaper-photo-input" data-i18n="settings.selectPhotos">选择照片</label>
+          <input type="file" id="wallpaper-photo-input" class="wallpaper-input" data-i18n-aria="settings.selectPhotos" aria-label="选择照片" accept="image/*" multiple hidden>
+          <label class="sr-only" for="wallpaper-folder-input" data-i18n="settings.selectFolder">选择文件夹</label>
+          <input type="file" id="wallpaper-folder-input" class="wallpaper-input" data-i18n-aria="settings.selectFolder" aria-label="选择文件夹" webkitdirectory hidden>
+        </div>
+
+        <div class="wallpaper-toolbar" aria-label="壁纸管理">
+          <button id="wallpaper-select-mode-btn" class="action-btn small" data-i18n="settings.wallpaperSelect">批量管理</button>
+          <button id="wallpaper-delete-selected-btn" class="action-btn small danger" data-i18n="settings.wallpaperDeleteSelected" disabled>删除所选</button>
+          <button id="wallpaper-clear-all-btn" class="action-btn small danger" data-i18n="settings.wallpaperClearAll" disabled>清空全部</button>
+        </div>
+
+        <div class="wallpaper-gallery" id="wallpaper-gallery"></div>
+      </section>
+    </div>
   </div>
 
   <!-- About Modal Overlay -->
@@ -219,6 +286,10 @@
         <p data-i18n="about.description">WillowTab 是一个特别的浏览器新标签页扩展，致力于为您带来简洁高效的浏览器启动与搜索体验。</p>
       </div>
       <div class="about-info">
+        <div class="about-row">
+          <span class="about-label" data-i18n="about.version">版本</span>
+          <span class="about-value">v1.6.0</span>
+        </div>
         <div class="about-row">
           <span class="about-label" data-i18n="about.author">作者</span>
           <span class="about-value">Un1quer</span>

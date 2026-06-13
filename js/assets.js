@@ -64,6 +64,7 @@
       id: record.id,
       name: record.name || 'Wallpaper',
       brightness: record.brightness,
+      complexity: record.complexity,
       createdAt: record.createdAt || Date.now(),
     };
   }
@@ -77,6 +78,7 @@
       name: record.name || 'Wallpaper',
       data: record.data,
       brightness: record.brightness,
+      complexity: record.complexity,
       createdAt: record.createdAt || Date.now(),
     };
     await withStore('readwrite', (store, resolve, reject) => {
@@ -118,6 +120,7 @@
           name: oldName || 'Old Wallpaper',
           data: next.wallpaper,
           brightness: next.wallpaperBrightness,
+          complexity: next.wallpaperComplexity,
           createdAt: Date.now(),
         });
         wallpapers.push(meta);
@@ -125,6 +128,7 @@
         next.bgMode = 'wallpaper';
         delete next.wallpaper;
         delete next.wallpaperBrightness;
+        delete next.wallpaperComplexity;
         changed = true;
       } catch (_) {
         // Keep legacy data in localStorage if IndexedDB migration fails.
@@ -140,6 +144,7 @@
             name: wallpaper.name,
             data: wallpaper.data,
             brightness: wallpaper.brightness,
+            complexity: wallpaper.complexity,
             createdAt: wallpaper.createdAt,
           });
           migrated.push(meta);

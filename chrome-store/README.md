@@ -8,7 +8,8 @@ A unique browser new tab extension for a clean and efficient browsing start.
 
 - **实时时钟与问候** — 大号数字时钟，根据时段自动问候
 - **多引擎搜索** — Google / Baidu / Bing / DuckDuckGo，一键切换，实时联想
-- **壁纸模式** — 本地图片文件夹作为背景，文字颜色自适应，毛玻璃效果
+- **壁纸模式** — 本地图片/文件夹作为背景，支持批量管理、拖拽排序与自动轮播
+- **自适应可读性** — 根据壁纸自动优化文字、控件和搜索框观感
 - **浅色 / 深色主题** — 跟随系统或手动切换，暖色调护眼
 - **字体切换** — 衬线体 / 系统默认 / 等宽体
 - **可调圆角与阴影** — 胶囊 / 微圆 / 方正，阴影强度可调
@@ -16,7 +17,7 @@ A unique browser new tab extension for a clean and efficient browsing start.
 - **中英双语** — 根据浏览器语言自动切换
 - **零追踪** — 所有数据存储在本地，不上传任何服务器
 
-> Live clock with greetings · Multi-engine search · Wallpaper gallery with frosted glass · Light/dark themes · Font switching · Adjustable radius & shadow · Custom tab title · i18n (zh-CN/en) · Zero tracking
+> Live clock with greetings · Multi-engine search · Wallpaper gallery with batch management and rotation · Adaptive readability · Light/dark themes · Font switching · Adjustable radius & shadow · Custom tab title · i18n (zh-CN/en) · Zero tracking
 
 ## 安装 / Install
 

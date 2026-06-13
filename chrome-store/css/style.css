@@ -27,6 +27,10 @@
   --text-shadow-greeting: 0 1px 4px rgba(0, 0, 0, 0.1);
   --wallpaper-text-color: var(--text-primary);
   --wallpaper-input-bg: rgba(255, 255, 255, 0.15);
+  --wallpaper-button-bg: rgba(255, 255, 255, 0.15);
+  --wallpaper-button-hover-bg: rgba(255, 255, 255, 0.25);
+  --wallpaper-surface-border: rgba(255, 255, 255, 0.2);
+  --wallpaper-protection-bg: rgba(0, 0, 0, 0);
   --radius-sm: 8px;
 
   --radius-lg: 20px;
@@ -169,6 +173,17 @@ body.has-wallpaper::before {
   pointer-events: none;
 }
 
+body.has-wallpaper.wallpaper-readable::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 42%, var(--wallpaper-protection-bg) 0%, transparent 58%),
+    linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.08) 100%);
+  z-index: 0;
+  pointer-events: none;
+}
+
 body.has-wallpaper .container {
   position: relative;
   z-index: 1;
@@ -179,7 +194,7 @@ body.has-wallpaper .search-input {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   background: var(--wallpaper-input-bg);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--wallpaper-surface-border);
   color: var(--wallpaper-text-color);
 }
 
@@ -192,22 +207,31 @@ body.has-wallpaper .search-input:focus {
   border-color: var(--border-focus);
 }
 
+body.has-wallpaper .engine-toggle,
+body.has-wallpaper .search-submit {
+  color: var(--wallpaper-text-color);
+}
+
+body.has-wallpaper .engine-toggle:hover,
+body.has-wallpaper .search-submit:hover {
+  background: var(--wallpaper-button-bg);
+}
+
 body.has-wallpaper .action-btn {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #e8e2d4;
+  background: var(--wallpaper-button-bg);
+  border-color: var(--wallpaper-surface-border);
+  color: var(--wallpaper-text-color);
 }
 
 body.has-wallpaper .action-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--wallpaper-button-hover-bg);
   border-color: var(--accent);
-  color: #fff;
 }
 
 body.has-wallpaper .action-btn.icon-only {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--wallpaper-button-bg);
   border-color: transparent;
 }
 
@@ -283,7 +307,7 @@ body.has-wallpaper .suggest-item {
 
 body.has-wallpaper .suggest-item:hover,
 body.has-wallpaper .suggest-item.active {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--wallpaper-button-bg);
 }
 
 body.has-wallpaper .suggest-icon {
@@ -302,23 +326,23 @@ body.has-wallpaper .engine-dropdown-item {
 
 body.has-wallpaper .engine-dropdown-item:hover,
 body.has-wallpaper .engine-dropdown-item.keyboard-active {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--wallpaper-button-bg);
 }
 
 body.has-wallpaper .engine-dropdown-item.active {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--wallpaper-button-hover-bg);
   color: var(--accent);
 }
 
 /* Text shadow for readability on any wallpaper */
 body.has-wallpaper .time-display {
   text-shadow: var(--text-shadow-time);
-  color: #f0ece0;
+  color: var(--wallpaper-time-color, #f0ece0);
 }
 
 body.has-wallpaper .greeting {
   text-shadow: var(--text-shadow-greeting);
-  color: #d0c8b8;
+  color: var(--wallpaper-greeting-color, #d0c8b8);
 }
 
 body.has-custom-bg {
@@ -780,7 +804,7 @@ body.has-custom-bg {
 .settings-panel-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   padding: 24px 24px 16px;
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -790,16 +814,25 @@ body.has-custom-bg {
 }
 
 .settings-panel-header h2 {
+  flex: 1;
   font-size: 1.3rem;
   font-weight: 400;
   color: var(--text-primary);
   letter-spacing: -0.01em;
 }
 
+.settings-back[hidden] {
+  display: none;
+}
+
 .settings-content {
   flex: 1;
   padding: 20px 24px 24px;
   overflow-y: auto;
+}
+
+.settings-view[hidden] {
+  display: none;
 }
 
 .setting-group {
@@ -937,6 +970,44 @@ body.has-custom-bg {
 
 .custom-color-hex:focus {
   border-color: var(--border-focus);
+}
+
+.settings-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-ui);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition), border-color var(--transition), transform var(--transition);
+}
+
+.settings-nav-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  transform: translateY(-1px);
+}
+
+.settings-nav-btn::after {
+  content: '\2192';
+  color: var(--text-tertiary);
+  font-size: 1.05rem;
+  flex: 0 0 auto;
+}
+
+.settings-nav-summary {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 /* Tab Title */
@@ -1090,6 +1161,95 @@ body.has-custom-bg {
   color: #fff;
 }
 
+.theme-options.compact .theme-option {
+  font-size: 0.78rem;
+  padding: 8px 4px;
+}
+
+.theme-option:disabled,
+.mode-option:disabled,
+.action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.setting-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.setting-switch {
+  width: 42px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  position: relative;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  flex: 0 0 auto;
+}
+
+.setting-switch::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.setting-switch:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.setting-switch:checked::before {
+  transform: translateX(18px);
+  background: #fff;
+}
+
+.wallpaper-toolbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 6px 0 12px;
+}
+
+.wallpaper-import-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.wallpaper-import-row .action-btn {
+  justify-content: center;
+  min-width: 0;
+}
+
+.wallpaper-toolbar .action-btn {
+  justify-content: center;
+  min-width: 0;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+
+.wallpaper-toolbar .danger:not(:disabled):hover {
+  border-color: rgba(190, 57, 57, 0.75);
+  color: #b83232;
+}
+
 /* Wallpaper gallery */
 .wallpaper-gallery {
   display: grid;
@@ -1124,9 +1284,56 @@ body.has-custom-bg {
   border-color: var(--accent);
 }
 
+.wallpaper-thumb.dragging {
+  opacity: 0.45;
+}
+
+.wallpaper-thumb.drag-over {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
 .wallpaper-thumb.active {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.wallpaper-thumb.selected {
+  border-color: #2f7d61;
+  box-shadow: 0 0 0 2px rgba(47, 125, 97, 0.22);
+}
+
+.wallpaper-thumb.active.selected {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 2px var(--accent-subtle),
+    inset 0 0 0 3px rgba(47, 125, 97, 0.92);
+}
+
+.wallpaper-thumb-select {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(0, 0, 0, 0.46);
+  color: #fff;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.wallpaper-gallery.selecting .wallpaper-thumb-select {
+  display: flex;
+}
+
+.wallpaper-thumb.selected .wallpaper-thumb-select {
+  background: #2f7d61;
+  border-color: #2f7d61;
 }
 
 .wallpaper-thumb img {
@@ -1173,6 +1380,10 @@ body.has-custom-bg {
 
 .wallpaper-thumb:hover .wallpaper-thumb-delete {
   opacity: 1;
+}
+
+.wallpaper-gallery.selecting .wallpaper-thumb-delete {
+  display: none;
 }
 
 .wallpaper-thumb-delete:hover {
