@@ -88,7 +88,7 @@
       // About
       'about.title': '关于 WillowTab',
       'about.close': '关闭',
-      'about.description': 'WillowTab v1.6.1 强化了壁纸体验，支持批量管理、自动轮播和自适应可读性保护，让新标签页在不同背景下依然清爽易读。',
+      'about.description': 'WillowTab 是一个特别的浏览器新标签页拓展，致力于为您带来简洁高效的浏览器启动与搜索体验。',
       'about.version': '版本',
       'about.author': '作者',
       'about.github': 'GitHub',
@@ -248,7 +248,7 @@
       // About
       'about.title': 'About WillowTab',
       'about.close': 'Close',
-      'about.description': 'WillowTab v1.6.1 improves the wallpaper experience with batch management, automatic rotation, and adaptive readability protection for a clean new tab on every background.',
+      'about.description': 'WillowTab is a distinctive browser new tab extension designed to bring you a clean and efficient browser launch and search experience.',
       'about.version': 'Version',
       'about.author': 'Author',
       'about.github': 'GitHub',

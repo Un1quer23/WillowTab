@@ -127,8 +127,12 @@ function assertVersionReferences(target, version) {
       fail(`${target.name}/${relativeFile} does not contain ${expectedVersionText}`);
     }
 
-    if (relativeFile.endsWith('i18n.js') && !text.includes(`WillowTab ${expectedVersionText}`)) {
-      fail(`${target.name}/${relativeFile} does not contain WillowTab ${expectedVersionText}`);
+    if (relativeFile.endsWith('i18n.js')) {
+      const versionRefs = Array.from(text.matchAll(/WillowTab v(\d+\.\d+\.\d+)/g), (match) => match[1]);
+      const staleRefs = versionRefs.filter((ref) => ref !== version);
+      if (staleRefs.length) {
+        fail(`${target.name}/${relativeFile} contains stale WillowTab version refs: ${staleRefs.join(', ')}`);
+      }
     }
 
     if (target.name === 'generic' && relativeFile === 'README.md') {
