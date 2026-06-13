@@ -658,7 +658,7 @@ body.has-custom-bg {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 18px 9px 20px;
+  padding: 9px 18px 9px 22px;
   border-radius: 0;
   cursor: pointer;
   color: var(--text-primary);
@@ -1657,6 +1657,9 @@ body.has-custom-bg {
   }
   .search-input {
     padding: 14px 44px;
+  }
+  .suggest-item {
+    padding-left: 18px;
   }
   .engine-dropdown {
     left: 0;

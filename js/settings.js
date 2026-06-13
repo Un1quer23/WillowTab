@@ -19,6 +19,7 @@
     wallpaperRotation: 'off',
     wallpaperRotationMode: 'sequence',
     lastWallpaperRotationAt: 0,
+    enableSuggestions: true,
   };
 
   // Font definitions for CSS
@@ -73,6 +74,7 @@
   const fontOptions = document.getElementById('font-options');
   const radiusOptions = document.getElementById('radius-options');
   const tabTitleInput = document.getElementById('tab-title-input');
+  const suggestionsToggle = document.getElementById('suggestions-toggle');
 
   const aboutBtn = document.getElementById('about-btn');
   const aboutPanel = document.getElementById('about-panel');
@@ -779,6 +781,25 @@
     document.title = settings.tabTitle || 'WillowTab';
   }
 
+  function handleSuggestionsToggle() {
+    settings.enableSuggestions = !settings.enableSuggestions;
+    saveSettingsNow();
+    applySuggestions();
+    syncUISuggestions();
+  }
+
+  function applySuggestions() {
+    document.body.dataset.suggestionsEnabled = settings.enableSuggestions ? 'true' : 'false';
+  }
+
+  function syncUISuggestions() {
+    if (!suggestionsToggle) return;
+    suggestionsToggle.dataset.enabled = settings.enableSuggestions ? 'true' : 'false';
+    suggestionsToggle.textContent = settings.enableSuggestions
+      ? t('settings.suggestionsOn')
+      : t('settings.suggestionsOff');
+  }
+
   function applyAll() {
     reconcileWallpaperState();
     applyBackground();
@@ -787,6 +808,7 @@
     applyShadowStrength();
     applySettingsBtnPosition();
     applyTabTitle();
+    applySuggestions();
     rotateWallpaperIfDue();
   }
 
@@ -914,6 +936,7 @@
 
     // Tab title
     tabTitleInput.value = settings.tabTitle || '';
+    syncUISuggestions();
   }
 
   function syncWallpaperControls() {
@@ -1395,6 +1418,11 @@
     applyTabTitle();
     saveSettings();
   });
+
+  // Suggestions toggle
+  if (suggestionsToggle) {
+    suggestionsToggle.addEventListener('click', handleSuggestionsToggle);
+  }
 
   // Keyboard
   document.addEventListener('keydown', (e) => {

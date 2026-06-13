@@ -18,7 +18,7 @@
 <body>
 
 <h1 data-i18n="privacy.title">WillowTab 隐私政策</h1>
-<p class="update-date" data-i18n="privacy.effectiveDate">生效日期：2026年5月8日　|　最后更新：2026年5月22日</p>
+<p class="update-date" data-i18n="privacy.effectiveDate">生效日期：2026年5月8日　|　最后更新：2026年6月13日</p>
 
 <h2 data-i18n="privacy.section1.title">一、引言</h2>
 <p data-i18n="privacy.section1.p1">WillowTab（以下简称"本扩展"）是一款浏览器新标签页替换扩展，由个人开发者 Un1quer（以下简称"我们"）开发和维护。我们高度重视你的隐私和个人信息保护。</p>
@@ -46,13 +46,13 @@
 <p data-i18n-html="privacy.section3.p">本扩展仅在以下场景发起网络请求，<strong>不附加任何用户标识信息</strong>：</p>
 
 <h3 data-i18n="privacy.section3_1.title">3.1 搜索建议</h3>
-<p data-i18n="privacy.section3_1.p">当搜索建议功能启用或当前版本支持搜索联想时，你在搜索框中输入的关键词会被发送到当前选择的搜索引擎（Google、百度、Bing 或 DuckDuckGo）以获取自动补全建议。提交搜索时，支持“浏览器默认”的版本会调用浏览器默认搜索服务；手动选择其他搜索引擎时，关键词会直接发送到所选搜索服务。这些请求不包含任何个人身份信息或设备标识符。</p>
+<p data-i18n="privacy.section3_1.p">当搜索联想开启时，你在搜索框中输入的关键词会被发送到当前选择的搜索引擎（Google、百度、Bing 或 DuckDuckGo）以获取自动补全建议。通用版默认开启搜索联想，可在设置中关闭；Chrome Web Store 版默认关闭，只有在你开启并授权后才会请求建议接口。提交搜索时，支持“浏览器默认”的版本会调用浏览器默认搜索服务；手动选择其他搜索引擎时，关键词会直接发送到所选搜索服务。这些请求不包含任何个人身份信息或设备标识符。</p>
 
 <h2 data-i18n="privacy.section4.title">四、权限说明</h2>
 <p data-i18n="privacy.section4.p">本扩展在浏览器中声明了以下权限，均仅用于实现核心功能：</p>
 <ul>
   <li data-i18n-html="privacy.section4.li1"><strong>新标签页覆盖（newtab）</strong>：用于替换浏览器默认新标签页，显示 WillowTab 界面。</li>
-  <li data-i18n-html="privacy.section4.li2"><strong>主机权限（host_permissions / optional_host_permissions）</strong>：用于向所选搜索引擎发送搜索建议请求。不同浏览器或发布版本可能使用固定主机权限或可选主机权限；可选权限仅在开启搜索联想时请求，关闭后会撤销。</li>
+  <li data-i18n-html="privacy.section4.li2"><strong>主机权限（host_permissions / optional_host_permissions）</strong>：用于向所选搜索引擎发送搜索建议请求。通用版使用固定主机权限，并提供搜索联想开关；Chrome Web Store 版使用可选主机权限，仅在开启搜索联想时请求，关闭后会撤销。</li>
 </ul>
 
 <h2 data-i18n="privacy.section5.title">五、第三方服务</h2>

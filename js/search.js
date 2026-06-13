@@ -174,6 +174,10 @@
   }
 
   async function fetchSuggestions(query) {
+    if (document.body.dataset.suggestionsEnabled !== 'true') {
+      closeSuggestions();
+      return;
+    }
     if (abortController) {
       abortController.abort();
     }
@@ -195,7 +199,9 @@
         return;
       }
       const data = await resp.json();
-      if (requestController !== abortController || input.value.trim() !== query) {
+      if (requestController !== abortController ||
+          input.value.trim() !== query ||
+          document.body.dataset.suggestionsEnabled !== 'true') {
         return;
       }
       const suggestions = engine.parseSuggestions(data).slice(0, 8);
