@@ -50,6 +50,16 @@ Edge 用户建议直接从 Microsoft Edge 扩展商店安装：
 
 [从 Microsoft Edge 扩展商店安装](https://microsoftedge.microsoft.com/addons/detail/willowtab/ljkgjcbecpanckomdgebinggfhpkmmph)
 
+### Google Chrome
+
+Google Chrome users should install WillowTab directly from the Chrome Web Store:
+
+[Install from Chrome Web Store](https://chromewebstore.google.com/detail/willowtab/gfigaeaddejhmnlkeppgccklahgepapm)
+
+Google Chrome 用户建议直接从 Chrome Web Store 安装：
+
+[从 Chrome Web Store 安装](https://chromewebstore.google.com/detail/willowtab/gfigaeaddejhmnlkeppgccklahgepapm)
+
 ### Other Chromium Browsers
 
 For other Chromium-based browsers, install manually from GitHub Releases:

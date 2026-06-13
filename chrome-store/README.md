@@ -21,7 +21,23 @@ A unique browser new tab extension for a clean and efficient browsing start.
 
 ## 安装 / Install
 
-> **Microsoft Edge 商店**与 **Chrome Web Store** 均处于审核中，暂无法从商店安装。请从 GitHub 下载使用。
+### Google Chrome
+
+Google Chrome 用户建议直接从 Chrome Web Store 安装：
+
+[从 Chrome Web Store 安装](https://chromewebstore.google.com/detail/willowtab/gfigaeaddejhmnlkeppgccklahgepapm)
+
+> Google Chrome users should install WillowTab directly from the [Chrome Web Store](https://chromewebstore.google.com/detail/willowtab/gfigaeaddejhmnlkeppgccklahgepapm).
+
+### Microsoft Edge
+
+Edge 用户建议直接从 Microsoft Edge 扩展商店安装：
+
+[从 Microsoft Edge 扩展商店安装](https://microsoftedge.microsoft.com/addons/detail/willowtab/ljkgjcbecpanckomdgebinggfhpkmmph)
+
+> Edge users should install WillowTab directly from [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/willowtab/ljkgjcbecpanckomdgebinggfhpkmmph).
+
+### 其他 Chromium 浏览器 / Other Chromium Browsers
 
 1. 下载 [最新版本](https://github.com/Un1quer23/WillowTab/releases/latest) 的 `WillowTab-v*.zip`
 2. 解压到本地文件夹
