@@ -8,9 +8,9 @@ It replaces the default new tab page with a focused start page that includes a s
 
 ## Screenshots
 
-![WillowTab main page](docs/screenshots/en-main-page.png)
+![WillowTab main page](https://raw.githubusercontent.com/Un1quer23/WillowTab/main/docs/screenshots/en-main-page.png)
 
-![WillowTab settings panel](docs/screenshots/en-settings.png)
+![WillowTab settings panel](https://raw.githubusercontent.com/Un1quer23/WillowTab/main/docs/screenshots/en-settings.png)
 
 它会将默认新标签页替换为一个轻量、专注的启动页面，提供搜索入口、本地壁纸、浅色/深色主题和外观个性化设置。
 
