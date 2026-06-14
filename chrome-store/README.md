@@ -1,8 +1,8 @@
 # WillowTab
 
-一个特别的浏览器新标签页扩展，致力于为您带来简洁高效的浏览器启动与搜索体验。
+一款支持多引擎搜索、本地壁纸、主题和本地优先设置的 Chromium 新标签页扩展。
 
-A unique browser new tab extension for a clean and efficient browsing start.
+A Chromium new tab extension with multi-engine search, local wallpapers, themes, and local-first settings.
 
 ## 功能 / Features
 
@@ -15,9 +15,9 @@ A unique browser new tab extension for a clean and efficient browsing start.
 - **可调圆角与阴影** — 胶囊 / 微圆 / 方正，阴影强度可调
 - **标签页名称自定义** — 自定义浏览器标签页标题，留空使用默认
 - **中英双语** — 根据浏览器语言自动切换
-- **零追踪** — 所有数据存储在本地，不上传任何服务器
+- **本地优先** — 个性化设置和壁纸数据保存在浏览器本地
 
-> Live clock with greetings · Multi-engine search · Wallpaper gallery with batch management and rotation · Adaptive readability · Light/dark themes · Font switching · Adjustable radius & shadow · Custom tab title · i18n (zh-CN/en) · Zero tracking
+> Live clock with greetings · Multi-engine search · Wallpaper gallery with batch management and rotation · Adaptive readability · Light/dark themes · Font switching · Adjustable radius & shadow · Custom tab title · i18n (zh-CN/en) · Local-first settings
 
 ## 安装 / Install
 

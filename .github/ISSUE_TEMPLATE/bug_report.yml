@@ -1,0 +1,63 @@
+name: Bug report
+description: Report a reproducible problem in WillowTab
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting a WillowTab issue. Please remove private data from screenshots, logs, and examples.
+  - type: input
+    id: willowtab-version
+    attributes:
+      label: WillowTab version
+      description: For example, v1.6.2.
+      placeholder: v1.6.2
+    validations:
+      required: true
+  - type: dropdown
+    id: install-source
+    attributes:
+      label: Installation source
+      options:
+        - Chrome Web Store
+        - Microsoft Edge Add-ons
+        - GitHub Releases
+        - Loaded unpacked from source
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Chrome 126, Edge 126, Brave 1.67, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the shortest steps that trigger the problem.
+      placeholder: |
+        1. Open a new tab
+        2. Change ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or console errors
+      description: Optional. Remove private data before posting.
+
