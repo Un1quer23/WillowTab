@@ -1,4 +1,6 @@
 screenshots/
+!docs/screenshots/
+!docs/screenshots/*.png
 .chrome-headless/
 visual-checks/
 .claude/
