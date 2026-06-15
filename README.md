@@ -1,50 +1,36 @@
 # WillowTab
 
-WillowTab is a clean, elegant, and customizable new tab extension for Chromium-based browsers.
+**Languages:** English | [简体中文](README.zh-CN.md)
 
-WillowTab 是一款简洁优雅、可高度自定义的浏览器新标签页扩展。
-
-It replaces the default new tab page with a focused start page that includes a search entry, local wallpapers, light/dark themes, and personal appearance settings.
-
-## Screenshots
+WillowTab is a clean and elegant new tab extension for Chromium-based browsers. It provides a focused search entry, multi-engine search switching, light and dark themes, and personal appearance settings so every new tab feels quieter and more comfortable.
 
 ![WillowTab main page](https://raw.githubusercontent.com/Un1quer23/WillowTab/main/docs/screenshots/en-main-page.png)
 
-![WillowTab settings panel](https://raw.githubusercontent.com/Un1quer23/WillowTab/main/docs/screenshots/en-settings.png)
+## Key Features
 
-它会将默认新标签页替换为一个轻量、专注的启动页面，提供搜索入口、本地壁纸、浅色/深色主题和外观个性化设置。
+### Clean Search Entry and Multi-Engine Switching
 
-## Features / 功能
+Use the centered search box to start searching quickly. WillowTab supports Google, Baidu, Bing, and DuckDuckGo, so you can choose the engine that fits your habits. You can also enable search suggestions to make keyword entry smoother.
 
-- **Clean search entry / 简洁搜索入口**  
-  Start searching directly from the new tab page.  
-  打开新标签页即可直接输入关键词并开始搜索。
+### Personal Backgrounds
 
-- **Multi-engine search switching / 多搜索引擎切换**  
-  The generic build supports switching between Google, Baidu, Bing, and DuckDuckGo.  
-  通用版支持在 Google、百度、Bing、DuckDuckGo 之间切换。
+Use a solid color background, import local images, or import a local folder. You can manage multiple wallpapers, choose one manually, or rotate them automatically. In wallpaper mode, WillowTab also adjusts text, controls, and the search surface to keep the interface readable.
 
-- **Custom wallpapers / 个性化壁纸**
-  Use a solid color background, import local images or folders, manage wallpapers in batches, and rotate wallpapers automatically.
-  支持纯色背景、本地图片/文件夹导入、批量壁纸管理和自动轮播。
+### Light and Dark Themes
 
-- **Adaptive readability / 自适应可读性**
-  Wallpaper mode can adapt text, controls, and the search surface for clearer reading on different images.
-  壁纸模式可根据图片自动调整文字、控件和搜索框观感，让不同壁纸下的内容更清晰。
+Choose light mode, dark mode, or follow the system appearance so the page stays comfortable across different times of day and usage environments.
 
-- **Light and dark themes / 浅色与深色主题**  
-  Choose light mode, dark mode, or follow the system appearance.  
-  支持浅色、深色以及跟随系统主题。
+### Appearance Customization
 
-- **Appearance settings / 外观设置**  
-  Adjust fonts, corner radius, shadow strength, settings button placement, and the tab title.  
-  可调整字体、圆角、阴影强度、设置按钮位置和标签页标题。
+Adjust fonts, corner radius, shadow strength, settings button placement, and the browser tab title so the interface better matches your habits.
 
-- **Local-first and privacy-friendly / 本地优先与隐私友好**  
-  Personal settings and wallpaper data are stored locally in your browser. WillowTab does not collect, track, or sell personal data.  
-  个性化设置和壁纸数据均保存在浏览器本地。WillowTab 不收集、不追踪、不出售个人数据。
+### Privacy-Friendly
 
-## Install / 安装
+WillowTab does not collect, track, or sell personal data.
+
+WillowTab is for people who want a new tab page that stays simple, beautiful, and efficient without adding distracting information.
+
+## Install
 
 ### Microsoft Edge
 
@@ -52,19 +38,11 @@ Edge users should install WillowTab directly from Microsoft Edge Add-ons:
 
 [Install from Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/willowtab/ljkgjcbecpanckomdgebinggfhpkmmph)
 
-Edge 用户建议直接从 Microsoft Edge 扩展商店安装：
-
-[从 Microsoft Edge 扩展商店安装](https://microsoftedge.microsoft.com/addons/detail/willowtab/ljkgjcbecpanckomdgebinggfhpkmmph)
-
 ### Google Chrome
 
 Google Chrome users should install WillowTab directly from the Chrome Web Store:
 
 [Install from Chrome Web Store](https://chromewebstore.google.com/detail/willowtab/gfigaeaddejhmnlkeppgccklahgepapm)
-
-Google Chrome 用户建议直接从 Chrome Web Store 安装：
-
-[从 Chrome Web Store 安装](https://chromewebstore.google.com/detail/willowtab/gfigaeaddejhmnlkeppgccklahgepapm)
 
 ### Other Chromium Browsers
 
@@ -74,12 +52,6 @@ For other Chromium-based browsers, install manually from GitHub Releases:
 
 Download `WillowTab-v1.6.2.zip`, the generic build for Chromium-based browsers.
 
-其他 Chromium 系浏览器用户，请从 GitHub Releases 手动安装：
-
-[GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
-
-下载 `WillowTab-v1.6.2.zip`，也就是适用于 Chromium 系浏览器的通用版。
-
 Manual installation steps:
 
 1. Download `WillowTab-v1.6.2.zip`.
@@ -88,21 +60,11 @@ Manual installation steps:
 4. Enable Developer mode.
 5. Click "Load unpacked" and select the extracted folder.
 
-手动安装步骤：
-
-1. 下载 `WillowTab-v1.6.2.zip`。
-2. 解压到本地文件夹。
-3. 打开浏览器扩展管理页面，例如 `chrome://extensions`。
-4. 启用“开发者模式”。
-5. 点击“加载已解压的扩展”，选择解压后的文件夹。
-
-### Chrome Web Store Package / Chrome 商店特供包
+### Chrome Web Store Package
 
 `WillowTab-for-Chrome-v1.6.2.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
 
-`WillowTab-for-Chrome-v1.6.2.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
-
-### Release Validation / 发版校验
+### Release Validation
 
 Before publishing a release, run:
 
@@ -116,9 +78,7 @@ node scripts/validate-release.js
 
 The validation script checks version consistency, package file existence, zip freshness, and `_locales/*/messages.json` paths.
 
-发版前请运行以上命令。校验脚本会检查版本一致性、打包文件是否存在、zip 是否包含当前文件内容，以及 `_locales/*/messages.json` 目录结构是否被正确保留。
-
-## Project Structure / 项目结构
+## Project Structure
 
 ```text
 WillowTab/
@@ -139,15 +99,13 @@ WillowTab/
 
 The Chrome Web Store build lives in `chrome-store/`. Its policy-specific override files include `manifest.json`, `newtab.html`, `js/search.js`, `js/settings.js`, `js/i18n.js`, `privacy-policy.html`, and `README.md`.
 
-Chrome Web Store 版本位于 `chrome-store/`。其中 `manifest.json`、`newtab.html`、`js/search.js`、`js/settings.js`、`js/i18n.js`、`privacy-policy.html`、`README.md` 是审核策略相关的覆盖文件。
+## Privacy, Security, and Contributing
 
-## Privacy Policy / 隐私政策
+- [Privacy Policy](https://un1quer23.github.io/WillowTab/privacy-policy.html)
+- [Security Policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
 
-[Privacy Policy](https://un1quer23.github.io/WillowTab/privacy-policy.html)
-
-[隐私政策](https://un1quer23.github.io/WillowTab/privacy-policy.html)
-
-## License / 开源协议
+## License
 
 [GNU General Public License v3](LICENSE)
 
