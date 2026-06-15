@@ -64,20 +64,6 @@ Manual installation steps:
 
 `WillowTab-for-Chrome-v1.6.2.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
 
-### Release Validation
-
-Before publishing a release, run:
-
-```bash
-for file in js/*.js chrome-store/js/*.js pack-zip.js scripts/*.js; do node --check "$file"; done
-node scripts/build-chrome-store.js
-node pack-zip.js generic
-node pack-zip.js chrome
-node scripts/validate-release.js
-```
-
-The validation script checks version consistency, package file existence, zip freshness, and `_locales/*/messages.json` paths.
-
 ## Project Structure
 
 ```text

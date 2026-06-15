@@ -64,20 +64,6 @@ Google Chrome 用户建议直接从 Chrome Web Store 安装：
 
 `WillowTab-for-Chrome-v1.6.2.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
 
-### 发版校验
-
-发版前请运行：
-
-```bash
-for file in js/*.js chrome-store/js/*.js pack-zip.js scripts/*.js; do node --check "$file"; done
-node scripts/build-chrome-store.js
-node pack-zip.js generic
-node pack-zip.js chrome
-node scripts/validate-release.js
-```
-
-校验脚本会检查版本一致性、打包文件是否存在、zip 是否包含当前文件内容，以及 `_locales/*/messages.json` 目录结构是否被正确保留。
-
 ## 项目结构
 
 ```text
