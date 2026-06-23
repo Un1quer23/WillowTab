@@ -1,8 +1,6 @@
-// Settings panel — custom background, wallpaper, font switching
 (() => {
   const SETTINGS_KEY = 'newtab-settings';
 
-  // Defaults
   const DEFAULTS = {
     bgMode: 'color',
     bgColor: '',
@@ -22,14 +20,12 @@
     enableSuggestions: true,
   };
 
-  // Font definitions for CSS
   const FONT_STACKS = {
     serif: "Georgia, 'Times New Roman', 'Songti SC', 'SimSun', serif",
     system: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif",
     mono: "'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', 'Microsoft YaHei', monospace",
   };
 
-  // Preset background colors
   const PRESET_COLORS = [
     { value: '#F5F5DC', get label() { return (window.__i18n && window.__i18n.t('color.beige')) || '米灰'; } },
     { value: '#bfbb98', get label() { return (window.__i18n && window.__i18n.t('color.sage')) || '鼠尾草'; } },
@@ -37,7 +33,6 @@
 
   let settings = { ...DEFAULTS };
 
-  // --- DOM refs ---
   const settingsBtn = document.getElementById('settings-btn');
   const panel = document.getElementById('settings-panel');
   const closeBtn = document.getElementById('settings-close');
@@ -107,22 +102,18 @@
     return (window.__i18n && window.__i18n.t(key, vars)) || key;
   }
 
-  // Detect effective theme (taking auto mode into account)
   function effectiveThemeIsDark() {
     const html = document.documentElement;
     if (html.getAttribute('data-theme') === 'dark') return true;
     if (html.getAttribute('data-theme') === 'light') return false;
-    // Auto mode: follow OS
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
-  // --- Load settings ---
   function loadSettings() {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        // Migrate old single wallpaper string to new format
         if (parsed.wallpaper && typeof parsed.wallpaper === 'string') {
           const id = generateId();
           const oldName = (window.__i18n && window.__i18n.t('wallpaper.oldWallpaper')) || '旧壁纸';
@@ -304,7 +295,6 @@
     wallpaperRotationTimer = setTimeout(() => rotateWallpaperIfDue(true), Math.min(delay, 2147483647));
   }
 
-  // Compress image to a reasonable size before storing
   function compressImage(dataUrl, maxWidth) {
     return new Promise((resolve) => {
       const img = new Image();
@@ -437,7 +427,6 @@
     return { brightness, complexity };
   }
 
-  // Analyze wallpaper brightness and texture for adaptive readability
   function analyzeWallpaperImage(dataUrl) {
     return new Promise((resolve) => {
       const img = new Image();
@@ -501,7 +490,6 @@
     });
   }
 
-  // --- Apply settings to page ---
   function applyBackground() {
     const token = ++wallpaperApplyToken;
     const root = document.documentElement;
@@ -515,7 +503,6 @@
     clearColorReadabilityVars();
     clearWallpaperAdaptiveVars();
 
-    // Wallpaper mode
     if (settings.bgMode === 'wallpaper' && settings.activeWallpaperId) {
       const active = settings.wallpapers.find((w) => w.id === settings.activeWallpaperId);
       if (active) {
@@ -570,7 +557,6 @@
       }
     }
 
-    // Color mode
     if (settings.bgMode === 'color' && !effectiveThemeIsDark()) {
       const color = settings.bgColor || '#F5F5DC';
       if (settings.bgColor) {
@@ -726,17 +712,13 @@
     const hasDarkColorSurface = document.body.dataset.colorReadable === 'light-text';
 
     if (hasWallpaper) {
-      // 壁纸模式用中性黑色阴影——图片颜色不可预测，暖色调会不协调
       root.style.setProperty('--input-shadow',
         `0 2px 8px rgba(0,0,0,${(0.25 * scale).toFixed(3)}), 0 4px 20px rgba(0,0,0,${(0.15 * scale).toFixed(3)})`);
-      // Button shadow
       root.style.setProperty('--shadow-sm', `0 2px 6px rgba(0,0,0,${(0.2 * scale).toFixed(3)})`);
       root.style.setProperty('--shadow-md', `0 4px 20px rgba(0,0,0,${(0.3 * scale).toFixed(3)})`);
       root.style.setProperty('--shadow-lg', `0 12px 40px rgba(0,0,0,${(0.4 * scale).toFixed(3)})`);
-      // Input focus shadow
       root.style.setProperty('--input-shadow-focus',
         `0 2px 8px rgba(0,0,0,${(0.15 * scale).toFixed(3)}), 0 6px 24px rgba(200,122,60,${(0.15 * scale).toFixed(3)})`);
-      // Text shadows
       root.style.setProperty('--text-shadow-time',
         `0 0 16px rgba(255,255,255,${(0.25 * scale).toFixed(3)}), 0 2px 8px rgba(0,0,0,${(0.5 * scale).toFixed(3)})`);
       root.style.setProperty('--text-shadow-greeting', `0 1px 6px rgba(0,0,0,${(0.4 * scale).toFixed(3)})`);
@@ -751,17 +733,13 @@
       root.style.setProperty('--text-shadow-time', `0 2px 10px rgba(0,0,0,${(0.35 * scale).toFixed(3)})`);
       root.style.setProperty('--text-shadow-greeting', `0 1px 6px rgba(0,0,0,${(0.28 * scale).toFixed(3)})`);
     } else {
-      // 纯色模式用暖棕阴影，与米白背景调色板融合
       root.style.setProperty('--input-shadow',
         `0 1px 3px rgba(44,36,22,${(0.06 * scale).toFixed(3)}), 0 4px 16px rgba(44,36,22,${(0.04 * scale).toFixed(3)})`);
-      // Button shadow
       root.style.setProperty('--shadow-sm', `0 1px 2px rgba(44,36,22,${(0.04 * scale).toFixed(3)})`);
       root.style.setProperty('--shadow-md', `0 4px 20px rgba(44,36,22,${(0.08 * scale).toFixed(3)})`);
       root.style.setProperty('--shadow-lg', `0 12px 40px rgba(44,36,22,${(0.12 * scale).toFixed(3)})`);
-      // Input focus shadow
       root.style.setProperty('--input-shadow-focus',
         `0 1px 3px rgba(44,36,22,${(0.08 * scale).toFixed(3)}), 0 6px 24px rgba(200,122,60,${(0.1 * scale).toFixed(3)})`);
-      // Text shadows
       root.style.setProperty('--text-shadow-time', `0 2px 8px rgba(0,0,0,${(0.15 * scale).toFixed(3)})`);
       root.style.setProperty('--text-shadow-greeting', `0 1px 4px rgba(0,0,0,${(0.1 * scale).toFixed(3)})`);
     }
@@ -812,7 +790,6 @@
     rotateWallpaperIfDue();
   }
 
-  // --- Settings panel ---
   function createOverlay() {
     settingsOverlay = document.createElement('div');
     settingsOverlay.className = 'panel-overlay';
@@ -855,7 +832,6 @@
     }
   }
 
-  // --- About panel ---
   function openAbout() {
     aboutPanel.removeAttribute('hidden');
     if (aboutOverlay) aboutOverlay.removeAttribute('hidden');
@@ -866,16 +842,13 @@
     if (aboutOverlay) aboutOverlay.setAttribute('hidden', '');
   }
 
-  // --- Sync UI with current settings ---
   function syncUI() {
     const isDark = effectiveThemeIsDark();
 
-    // Mode toggle
     modeToggle.querySelectorAll('.mode-option').forEach((opt) => {
       opt.classList.toggle('active', opt.dataset.mode === settings.bgMode);
     });
 
-    // Section visibility — hide irrelevant sections completely
     colorSection.hidden = (settings.bgMode !== 'color');
     if (!colorSection.hidden) {
       colorSection.classList.toggle('disabled', isDark);
@@ -888,45 +861,36 @@
     wallpaperSection.hidden = (settings.bgMode !== 'wallpaper');
     themeSection.hidden = (settings.bgMode === 'wallpaper');
 
-    // Color presets
     colorPresets.querySelectorAll('.color-swatch').forEach((swatch) => {
       swatch.classList.toggle('active', swatch.dataset.color === settings.bgColor);
     });
 
-    // Custom color inputs
     const color = settings.bgColor || '#F5F5DC';
     customColorPicker.value = color;
     customColorHex.value = settings.bgColor || '';
 
-    // Wallpaper gallery
     renderWallpaperGallery();
     syncWallpaperControls();
     updateWallpaperSummary();
 
-    // Theme options
     const currentTheme = window.__theme ? window.__theme.get() : 'auto';
     themeOptions.querySelectorAll('.theme-option').forEach((opt) => {
       opt.classList.toggle('active', opt.dataset.theme === currentTheme);
     });
-    // Shadow slider
     shadowSlider.value = settings.shadowStrength;
     shadowValue.textContent = settings.shadowStrength;
 
-    // Overlay slider
     overlaySlider.value = settings.overlayStrength;
     overlayValue.textContent = settings.overlayStrength;
 
-    // Font options
     fontOptions.querySelectorAll('.font-option').forEach((opt) => {
       opt.classList.toggle('active', opt.dataset.font === settings.font);
     });
 
-    // Radius options
     radiusOptions.querySelectorAll('.theme-option').forEach((opt) => {
       opt.classList.toggle('active', opt.dataset.radius === settings.radius);
     });
 
-    // Settings button position
     const btnPosOptions = document.getElementById('settings-btn-position-options');
     if (btnPosOptions) {
       btnPosOptions.querySelectorAll('.theme-option').forEach((opt) => {
@@ -934,7 +898,6 @@
       });
     }
 
-    // Tab title
     tabTitleInput.value = settings.tabTitle || '';
     syncUISuggestions();
   }
@@ -988,7 +951,6 @@
     wallpaperSummary.textContent = pieces.join(' · ');
   }
 
-  // Render wallpaper thumbnail gallery
   function renderWallpaperGallery() {
     wallpaperGallery.innerHTML = '';
     wallpaperGallery.classList.toggle('selecting', wallpaperSelectionMode);
@@ -1103,9 +1065,7 @@
     scheduleWallpaperRotation();
   }
 
-  // --- Events ---
 
-  // Mode toggle
   modeToggle.addEventListener('click', (e) => {
     const opt = e.target.closest('.mode-option');
     if (!opt) return;
@@ -1117,7 +1077,6 @@
     syncUI();
   });
 
-  // Theme options
   themeOptions.addEventListener('click', (e) => {
     const opt = e.target.closest('.theme-option');
     if (!opt) return;
@@ -1127,7 +1086,6 @@
     syncUI();
   });
 
-  // Color presets
   colorPresets.addEventListener('click', (e) => {
     const swatch = e.target.closest('.color-swatch');
     if (!swatch) return;
@@ -1139,7 +1097,6 @@
     syncUI();
   });
 
-  // Custom color picker
   customColorPicker.addEventListener('input', () => {
     settings.bgMode = 'color';
     settings.bgColor = customColorPicker.value;
@@ -1150,7 +1107,6 @@
     syncUI();
   });
 
-  // Custom color hex input
   customColorHex.addEventListener('change', () => {
     const val = customColorHex.value.trim();
     if (!/^#[0-9a-fA-F]{6}$/.test(val)) {
@@ -1208,7 +1164,6 @@
     }
 
     if (added > 0) {
-      // Auto-select first added if none active
       if (!settings.activeWallpaperId || !settings.wallpapers.find((w) => w.id === settings.activeWallpaperId)) {
         settings.activeWallpaperId = settings.wallpapers[settings.wallpapers.length - 1].id;
       }
@@ -1217,7 +1172,6 @@
       try {
         saveSettingsNow();
       } catch (_) {
-        // If save fails (quota), wallpapers were already cleared by saveSettings
       }
       applyBackground();
       syncUI();
@@ -1238,7 +1192,6 @@
     }
   }
 
-  // Wallpaper import
   wallpaperPhotoBtn.addEventListener('click', () => {
     wallpaperPhotoInput.click();
   });
@@ -1257,13 +1210,11 @@
     wallpaperFolderInput.value = '';
   });
 
-  // Wallpaper gallery interaction (switch / delete)
   wallpaperGallery.addEventListener('click', (e) => {
     const thumb = e.target.closest('.wallpaper-thumb');
     if (!thumb) return;
     const id = thumb.dataset.id;
 
-    // Delete button
     if (e.target.closest('.wallpaper-thumb-delete')) {
       removeWallpapers([id]);
       return;
@@ -1274,7 +1225,6 @@
       return;
     }
 
-    // Switch active wallpaper
     settings.activeWallpaperId = id;
     settings.bgMode = 'wallpaper';
     resetWallpaperRotationClock();
@@ -1396,7 +1346,6 @@
     });
   }
 
-  // Shadow strength slider
   shadowSlider.addEventListener('input', () => {
     settings.shadowStrength = parseInt(shadowSlider.value);
     shadowValue.textContent = settings.shadowStrength;
@@ -1404,7 +1353,6 @@
     saveSettings();
   });
 
-  // Overlay strength slider
   overlaySlider.addEventListener('input', () => {
     settings.overlayStrength = parseInt(overlaySlider.value);
     overlayValue.textContent = settings.overlayStrength;
@@ -1412,19 +1360,16 @@
     saveSettings();
   });
 
-  // Tab title input
   tabTitleInput.addEventListener('input', () => {
     settings.tabTitle = tabTitleInput.value.trim();
     applyTabTitle();
     saveSettings();
   });
 
-  // Suggestions toggle
   if (suggestionsToggle) {
     suggestionsToggle.addEventListener('click', handleSuggestionsToggle);
   }
 
-  // Keyboard
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (!aboutPanel.hasAttribute('hidden')) {
@@ -1438,11 +1383,9 @@
     }
   });
 
-  // --- Init ---
   loadSettings();
   const settingsReady = migrateWallpaperStorage().catch(() => {});
 
-  // Build color preset buttons
   PRESET_COLORS.forEach((c) => {
     const btn = document.createElement('button');
     btn.className = 'color-swatch';
@@ -1455,7 +1398,6 @@
     colorPresets.appendChild(btn);
   });
 
-  // Build font options
   const translate = (k) => (window.__i18n && window.__i18n.t(k)) || k;
   fontOptions.innerHTML = `
     <button class="font-option" data-font="serif">
@@ -1472,7 +1414,6 @@
     </button>
   `;
 
-  // Re-query after rebuilding
   const fontOptsContainer = document.getElementById('font-options');
   fontOptsContainer.addEventListener('click', (e) => {
     const opt = e.target.closest('.font-option');
@@ -1485,7 +1426,6 @@
     });
   });
 
-  // Radius options
   radiusOptions.addEventListener('click', (e) => {
     const opt = e.target.closest('.theme-option');
     if (!opt) return;
@@ -1497,7 +1437,6 @@
     });
   });
 
-  // Settings button position toggle
   const btnPosOptions = document.getElementById('settings-btn-position-options');
   if (btnPosOptions) {
     btnPosOptions.addEventListener('click', (e) => {
@@ -1510,17 +1449,14 @@
     });
   }
 
-  // Wire up events
   createOverlay();
   settingsBtn.addEventListener('click', openPanel);
   closeBtn.addEventListener('click', closePanel);
 
-  // About panel
   aboutBtn.addEventListener('click', openAbout);
   aboutClose.addEventListener('click', closeAbout);
   if (aboutOverlay) aboutOverlay.addEventListener('click', closeAbout);
 
-  // 监听 html data-theme 属性变化（包括 theme.js 延迟应用的情况），确保设置面板 UI 始终与当前主题同步
   const observer = new MutationObserver(() => {
     applyBackground();
     if (!panel.hasAttribute('hidden')) syncUI();
@@ -1541,7 +1477,6 @@
     }, 150);
   });
 
-  // Expose for search.js dropdown settings entry
   window.__settingsPanel = { open: openPanel };
 
   window.addEventListener('pagehide', () => {
@@ -1550,7 +1485,6 @@
     clearTimeout(resizeSyncTimer);
   });
 
-  // Apply on load
   settingsReady.finally(() => {
     applyAll();
   });

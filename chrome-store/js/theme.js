@@ -1,4 +1,3 @@
-// Theme detection and management — UI now in settings panel
 (() => {
   const STORAGE_KEY = 'theme';
   const html = document.documentElement;
@@ -19,13 +18,10 @@
     localStorage.setItem(STORAGE_KEY, theme);
   }
 
-  // Expose for settings.js
   window.__theme = { get: getTheme, set: applyTheme };
 
-  // Initialize
   applyTheme(getTheme());
 
-  // Listen for OS theme changes (only relevant in auto mode)
   mediaQuery.addEventListener('change', () => {
     if (getTheme() === 'auto') {
       html.removeAttribute('data-theme');

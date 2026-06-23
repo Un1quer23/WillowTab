@@ -1,4 +1,3 @@
-// Search engine dropdown + suggestions + form submission
 (() => {
   const ENGINES = [
     {
@@ -22,7 +21,6 @@
     },
     {
       id: 'baidu',
-      /* 百度需要 i18n：中文显示"百度"，英文显示"Baidu"；其他引擎名是专有名词，无需翻译 */
       get name() { return (window.__i18n && window.__i18n.t('engine.baidu')) || '百度'; },
       url: 'https://www.baidu.com/s?wd=',
       suggestUrl: 'https://www.baidu.com/sugrec?prod=pc&wd=',
@@ -79,7 +77,6 @@
     if (idx !== -1) activeIndex = idx;
   }
 
-  // --- Engine dropdown ---
   function renderEngineDropdown() {
     const items = ENGINES.map((engine, i) => `
       <li class="engine-dropdown-item ${i === activeIndex ? 'active' : ''} ${i === selectedEngineIndex ? 'keyboard-active' : ''}" data-index="${i}" role="menuitemradio" aria-checked="${i === activeIndex}">
@@ -135,7 +132,6 @@
     input.focus();
   }
 
-  // --- Suggestions ---
   function closeSuggestions() {
     suggestionsEl.hidden = true;
     suggestionsEl.innerHTML = '';
@@ -244,9 +240,7 @@
     }, 250);
   }
 
-  // --- Events ---
 
-  // Engine toggle
   toggle.addEventListener('click', (e) => {
     e.stopPropagation();
     if (engineDropdown.classList.contains('visible')) {
@@ -268,7 +262,6 @@
     selectEngine(parseInt(item.dataset.index, 10));
   });
 
-  // Suggestion clicks
   suggestionsEl.addEventListener('click', (e) => {
     const item = e.target.closest('.suggest-item');
     if (!item) return;
@@ -276,7 +269,6 @@
     doSearch(text);
   });
 
-  // Close dropdowns on outside click
   document.addEventListener('click', (e) => {
     if (engineDropdown.classList.contains('visible') &&
         !toggle.contains(e.target) && !engineDropdown.contains(e.target)) {
@@ -287,10 +279,8 @@
     }
   });
 
-  // Input events
   input.addEventListener('input', onInput);
 
-  // Keyboard
   document.addEventListener('keydown', (e) => {
     if (engineDropdown.classList.contains('visible')) {
       if (e.key === 'ArrowDown') {
@@ -312,7 +302,6 @@
       }
     }
 
-    // Escape
     if (e.key === 'Escape') {
       if (engineDropdown.classList.contains('visible')) {
         closeEngineDropdown();
@@ -325,7 +314,6 @@
       }
     }
 
-    // Arrow keys for suggestions
     if (!suggestionsEl.hidden) {
       const items = suggestionsEl.querySelectorAll('.suggest-item');
       if (e.key === 'ArrowDown') {
@@ -357,13 +345,11 @@
     }
   }
 
-  // Submit
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     doSearch(input.value);
   });
 
-  // Init
   renderEngineDropdown();
   updateToggleIcon();
 })();

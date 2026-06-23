@@ -1,4 +1,3 @@
-// IndexedDB-backed storage for large local assets such as wallpapers.
 (() => {
   const DB_NAME = 'willowtab-assets';
   const DB_VERSION = 1;
@@ -131,7 +130,6 @@
         delete next.wallpaperComplexity;
         changed = true;
       } catch (_) {
-        // Keep legacy data in localStorage if IndexedDB migration fails.
       }
     }
 

@@ -1,8 +1,6 @@
-// i18n — Simplified Chinese ↔ English
 (() => {
   const DICT = {
     'zh-CN': {
-      // Greetings
       'greeting.default': '你好',
       'greeting.深夜': '夜深了，注意休息',
       'greeting.早上好': '早上好',
@@ -11,16 +9,13 @@
       'greeting.下午好': '下午好',
       'greeting.晚上好': '晚上好',
 
-      // Search
       'search.placeholder': 'Think Different.',
       'search.input': '搜索关键词',
       'search.toggleEngine': '切换搜索引擎',
       'search.settings': '设置',
 
-      // Engine names
       'engine.baidu': '百度',
 
-      // Settings panel
       'settings.title': '设置',
       'settings.close': '关闭',
       'settings.back': '返回',
@@ -84,7 +79,6 @@
       'settings.suggestionsOn': '已开启',
       'settings.suggestionsOff': '已关闭',
 
-      // About
       'about.title': '关于 WillowTab',
       'about.close': '关闭',
       'about.description': 'WillowTab 是一个特别的浏览器新标签页拓展，致力于为您带来简洁高效的浏览器启动与搜索体验。',
@@ -93,30 +87,24 @@
       'about.github': 'GitHub',
       'about.license': '本程序为开源软件，遵循 GNU General Public License v3 协议。',
 
-      // Colors
       'color.beige': '米灰',
       'color.sage': '鼠尾草',
 
-      // Wallpaper
       'wallpaper.empty': '暂无壁纸，请选择文件夹添加',
       'wallpaper.delete': '删除',
       'wallpaper.oldWallpaper': '旧壁纸',
       'wallpaper.confirmClearAll': '确定要清空全部壁纸吗？此操作不可撤销。',
 
-      // Toast
       'toast.addedAndSkipped': '新增 {added} 张，跳过 {skipped} 张重复',
       'toast.allSkipped': '全部 {skipped} 张已存在，已跳过',
       'toast.wallpaperFailed': '有 {failed} 张壁纸无法保存，已有壁纸已保留',
       'toast.wallpaperDeleted': '已删除 {count} 张壁纸',
       'toast.wallpaperCleared': '已清空全部壁纸',
 
-      // Error
       'error.quotaExceeded': '存储空间不足，新的设置未能保存，已有壁纸已保留。',
 
-      // Hint
       'hint.darkColorDisabled': '仅在浅色模式下可用',
 
-      // Privacy Policy
       'privacy.title': 'WillowTab 隐私政策',
       'privacy.effectiveDate': '生效日期：2026年5月8日　|　最后更新：2026年6月13日',
       'privacy.section1.title': '一、引言',
@@ -161,7 +149,6 @@
       'privacy.section10.li2': 'GitHub：<a href="https://github.com/Un1quer23/WillowTab">github.com/Un1quer23/WillowTab</a>',
     },
     en: {
-      // Greetings
       'greeting.default': 'Hello',
       'greeting.深夜': 'Good night',
       'greeting.早上好': 'Good morning',
@@ -170,16 +157,13 @@
       'greeting.下午好': 'Good afternoon',
       'greeting.晚上好': 'Good evening',
 
-      // Search
       'search.placeholder': 'Think Different.',
       'search.input': 'Search query',
       'search.toggleEngine': 'Switch search engine',
       'search.settings': 'Settings',
 
-      // Engine names
       'engine.baidu': 'Baidu',
 
-      // Settings panel
       'settings.title': 'Settings',
       'settings.close': 'Close',
       'settings.back': 'Back',
@@ -243,7 +227,6 @@
       'settings.suggestionsOn': 'On',
       'settings.suggestionsOff': 'Off',
 
-      // About
       'about.title': 'About WillowTab',
       'about.close': 'Close',
       'about.description': 'WillowTab is a distinctive browser new tab extension designed to bring you a clean and efficient browser launch and search experience.',
@@ -252,30 +235,24 @@
       'about.github': 'GitHub',
       'about.license': 'This program is open source software, licensed under the GNU General Public License v3.',
 
-      // Colors
       'color.beige': 'Beige',
       'color.sage': 'Sage',
 
-      // Wallpaper
       'wallpaper.empty': 'No wallpapers. Select a folder to add some.',
       'wallpaper.delete': 'Delete',
       'wallpaper.oldWallpaper': 'Old Wallpaper',
       'wallpaper.confirmClearAll': 'Clear all wallpapers? This cannot be undone.',
 
-      // Toast
       'toast.addedAndSkipped': '{added} added, {skipped} duplicates skipped',
       'toast.allSkipped': 'All {skipped} already exist, skipped',
       'toast.wallpaperFailed': '{failed} wallpapers could not be saved. Existing wallpapers were kept.',
       'toast.wallpaperDeleted': '{count} wallpapers deleted',
       'toast.wallpaperCleared': 'All wallpapers cleared',
 
-      // Error
       'error.quotaExceeded': 'Storage full. New settings could not be saved. Existing wallpapers were kept.',
 
-      // Hint
       'hint.darkColorDisabled': 'Only available in light mode',
 
-      // Privacy Policy
       'privacy.title': 'WillowTab Privacy Policy',
       'privacy.effectiveDate': 'Effective: May 8, 2026  |  Last updated: June 13, 2026',
       'privacy.section1.title': 'I. Introduction',
@@ -321,7 +298,6 @@
     },
   };
 
-  // 只检查浏览器首选语言；非中文一律返回英文，不做 zh-TW/zh-HK 细分
   function detectLang() {
     const primary = navigator.language;
     if (primary && primary.startsWith('zh')) return 'zh-CN';
@@ -332,7 +308,6 @@
   window.__i18n = {
     get lang() { return state.lang; },
     set lang(v) { state.lang = v; },
-    // 回退链：当前语言 → 英语（最完整）→ 原始 key（兜底，避免显示 undefined）
     t(key, vars) {
       let text = (DICT[state.lang] && DICT[state.lang][key]) || DICT.en[key] || key;
       if (vars) {
@@ -344,7 +319,6 @@
     },
   };
 
-  // Apply translations to DOM on load
   function applyDOM() {
     document.querySelectorAll('[data-i18n]').forEach((el) => {
       el.textContent = window.__i18n.t(el.getAttribute('data-i18n'));
@@ -361,7 +335,6 @@
     document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
       el.setAttribute('aria-label', window.__i18n.t(el.getAttribute('data-i18n-aria')));
     });
-    // Set document.title if <html> has data-i18n-doctitle
     const doctitleKey = document.documentElement.getAttribute('data-i18n-doctitle');
     if (doctitleKey) {
       document.title = window.__i18n.t(doctitleKey);

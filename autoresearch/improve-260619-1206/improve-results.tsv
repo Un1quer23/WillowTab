@@ -1,0 +1,9 @@
+# metric_direction: higher_is_better
+# goal: 提升 WillowTab 的用户增长和留存，增加 Chrome Web Store 评分
+# icp: 使用 Chrome/Edge 浏览器、追求简洁高效新标签页的个人用户
+iteration	timestamp	category	research_question	status	insight_problem	confidence	classification
+1	2026-06-19 12:06	ICP challenges	What pain points do Chrome new tab extension users experience?	new	Users want clean new tabs without ads, data loss, or bloat	HIGH	new
+2	2026-06-19 12:06	Competitor gaps	How can WillowTab leverage China-accessibility and multi-engine search?	new	No new tab extension serves international users with regional search engines	HIGH	new
+3	2026-06-19 12:06	Market trends	How can WillowTab balance AI integration with privacy?	new	New tab extensions struggle to balance AI features with privacy commitments	HIGH	new
+4	2026-06-19 12:06	UX & experience	What is the optimal balance between minimalism and feature richness?	new	New tab extensions struggle balancing simplicity with differentiation features	HIGH	new
+5	2026-06-19 12:06	Revenue & growth	How can a free OSS extension maximize organic growth?	new	Free extensions struggle to rank without ratings, downloads, or monetization feedback loops	HIGH	new

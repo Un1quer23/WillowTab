@@ -1,4 +1,3 @@
-// Live clock and contextual greeting
 (() => {
   const timeEl = document.getElementById('time');
   const greetingEl = document.getElementById('greeting');

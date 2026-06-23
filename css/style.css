@@ -1,8 +1,4 @@
-/* ===============================================
-   WillowTab — Warm Refined Aesthetic
-   =============================================== */
 
-/* --- CSS Custom Properties (Light Theme) --- */
 :root {
   --bg-primary: #F5F5DC;
   --bg-secondary: color-mix(in srgb, var(--bg-primary) 88%, white);
@@ -41,7 +37,6 @@
   --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* --- Dark Theme --- */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-primary: #141311;
@@ -64,9 +59,6 @@
   }
 }
 
-/* --- 手动主题覆盖 ---
-   使用 html[data-theme] 选择器，特异性 (0,1,1) 高于
-   @media (prefers-color-scheme) (0,1,0)，确保手动选择始终生效。 */
 html[data-theme="light"] {
   --bg-primary: #F5F5DC;
   --bg-secondary: color-mix(in srgb, var(--bg-primary) 88%, white);
@@ -108,9 +100,6 @@ html[data-theme="dark"] {
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
-/* ===============================================
-   Reset & Base
-   =============================================== */
 *,
 *::before,
 *::after {
@@ -153,7 +142,6 @@ body {
   transition: background-color var(--transition-slow), color var(--transition-slow);
 }
 
-/* Custom background overrides */
 body.has-wallpaper {
   background-color: #1a1a1a;
   background-image: var(--wallpaper);
@@ -163,7 +151,6 @@ body.has-wallpaper {
   background-attachment: fixed;
 }
 
-/* Wallpaper overlay — dims the image for readability */
 body.has-wallpaper::before {
   content: '';
   position: fixed;
@@ -189,7 +176,6 @@ body.has-wallpaper .container {
   z-index: 1;
 }
 
-/* Frosted glass on UI elements when wallpaper is active */
 body.has-wallpaper .search-input {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -235,7 +221,6 @@ body.has-wallpaper .action-btn.icon-only {
   border-color: transparent;
 }
 
-/* 面板在壁纸模式下强制浅色主题：不透明的米白背景在任何壁纸上都能保证文字可读 */
 body.has-wallpaper .settings-panel,
 body.has-wallpaper .about-panel {
   --bg-primary: #F5F5DC;
@@ -258,7 +243,6 @@ body.has-wallpaper .about-panel {
   background: #F5F5DC;
 }
 
-/* Settings panel buttons use normal colors, not frosted glass */
 body.has-wallpaper .settings-panel .action-btn {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -334,7 +318,6 @@ body.has-wallpaper .engine-dropdown-item.active {
   color: var(--accent);
 }
 
-/* Text shadow for readability on any wallpaper */
 body.has-wallpaper .time-display {
   text-shadow: var(--text-shadow-time);
   color: var(--wallpaper-time-color, #f0ece0);
@@ -349,9 +332,6 @@ body.has-custom-bg {
   background-image: none;
 }
 
-/* ===============================================
-   Main Container
-   =============================================== */
 .container {
   display: flex;
   flex-direction: column;
@@ -390,9 +370,6 @@ body.has-custom-bg {
   to { opacity: 1; }
 }
 
-/* ===============================================
-   Clock Section
-   =============================================== */
 .clock-section {
   text-align: center;
   animation: fadeIn 0.6s ease 0.1s both;
@@ -419,9 +396,6 @@ body.has-custom-bg {
   letter-spacing: 0.01em;
 }
 
-/* ===============================================
-   Search Section
-   =============================================== */
 .search-section {
   width: 100%;
   display: flex;
@@ -431,7 +405,6 @@ body.has-custom-bg {
   animation: fadeIn 0.6s ease 0.2s both;
 }
 
-/* Engine Toggle — clickable search icon that cycles engines */
 .engine-toggle {
   position: absolute;
   left: 14px;
@@ -471,7 +444,6 @@ body.has-custom-bg {
   transform: rotate(-8deg);
 }
 
-/* Search submit button — mirrors engine-toggle on the right side */
 .search-submit {
   position: absolute;
   right: 14px;
@@ -511,7 +483,6 @@ body.has-custom-bg {
   transform: rotate(8deg);
 }
 
-/* Engine dropdown */
 .engine-dropdown {
   position: absolute;
   top: 100%;
@@ -542,7 +513,6 @@ body.has-custom-bg {
   align-items: center;
   gap: 10px;
   padding: 13px 12px;
-  /* 嵌套圆角：内部项比外层容器略小，保持视觉嵌套层次 */
   border-radius: calc(var(--radius-ui) * 0.7);
   cursor: pointer;
   color: var(--text-primary);
@@ -570,7 +540,6 @@ body.has-custom-bg {
   color: var(--accent);
 }
 
-/* Search Form */
 .search-form {
   width: 100%;
 }
@@ -617,7 +586,6 @@ body.has-custom-bg {
   color: var(--accent);
 }
 
-/* Suggestions-open state: merge input + dropdown into one continuous container */
 .search-input-wrapper.has-suggestions .search-input {
   border-radius: var(--radius-ui) var(--radius-ui) 0 0;
   border-color: var(--border-focus);
@@ -629,7 +597,6 @@ body.has-custom-bg {
   border-top-color: transparent;
 }
 
-/* Suggestions dropdown */
 .suggestions-dropdown {
   position: absolute;
   top: 100%;
@@ -673,7 +640,6 @@ body.has-custom-bg {
 }
 
 .suggest-item:last-child {
-  /* 底部圆角向内缩 1px，使高亮背景不超出外层容器的 1px 边框；max() 防止负值 */
   border-radius: 0 0 max(0px, calc(var(--radius-ui) - 1px)) max(0px, calc(var(--radius-ui) - 1px));
 }
 
@@ -690,9 +656,6 @@ body.has-custom-bg {
   white-space: nowrap;
 }
 
-/* ===============================================
-   Actions Section
-   =============================================== */
 .actions-section {
   position: fixed;
   left: 50%;
@@ -752,9 +715,6 @@ body.has-custom-bg {
   box-shadow: none;
 }
 
-/* ===============================================
-   Panel Overlay
-   =============================================== */
 .panel-overlay {
   position: fixed;
   inset: 0;
@@ -777,9 +737,6 @@ body.has-custom-bg {
   display: none;
 }
 
-/* ===============================================
-   Settings Panel
-   =============================================== */
 .settings-panel {
   position: fixed;
   top: 0;
@@ -854,7 +811,6 @@ body.has-custom-bg {
   opacity: 0.5;
 }
 
-/* Hint label for color settings in dark mode */
 #color-section.disabled::after {
   content: attr(data-hint);
   position: absolute;
@@ -887,7 +843,6 @@ body.has-custom-bg {
   margin-bottom: 8px;
 }
 
-/* Color presets */
 .color-presets {
   display: flex;
   gap: 8px;
@@ -919,7 +874,6 @@ body.has-custom-bg {
   box-shadow: 0 0 0 2px var(--accent-subtle);
 }
 
-/* Custom color picker row */
 .custom-color-row {
   display: flex;
   align-items: center;
@@ -1010,7 +964,6 @@ body.has-custom-bg {
   white-space: nowrap;
 }
 
-/* Tab Title */
 .tab-title-input {
   width: 100%;
   padding: 10px 14px;
@@ -1033,12 +986,10 @@ body.has-custom-bg {
   border-color: var(--border-focus);
 }
 
-/* Wallpaper */
 .wallpaper-input {
   display: none;
 }
 
-/* Overlay strength slider */
 .range-slider {
   width: 100%;
   height: 4px;
@@ -1075,7 +1026,6 @@ body.has-custom-bg {
   cursor: pointer;
 }
 
-/* Background mode toggle */
 .mode-toggle {
   display: flex;
   gap: 0;
@@ -1110,7 +1060,6 @@ body.has-custom-bg {
   color: #fff;
 }
 
-/* Subgroup — wraps color/wallpaper sections for mutual exclusion */
 .setting-subgroup {
   position: relative;
   transition: opacity var(--transition);
@@ -1126,7 +1075,6 @@ body.has-custom-bg {
   opacity: 0.35;
 }
 
-/* Theme options */
 .theme-options {
   display: flex;
   gap: 0;
@@ -1250,7 +1198,6 @@ body.has-custom-bg {
   color: #b83232;
 }
 
-/* Wallpaper gallery */
 .wallpaper-gallery {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1390,7 +1337,6 @@ body.has-custom-bg {
   background: rgba(220, 50, 50, 0.85);
 }
 
-/* Font options */
 .font-options {
   display: flex;
   flex-direction: column;
@@ -1441,12 +1387,10 @@ body.has-custom-bg {
   font-family: var(--font-body);
 }
 
-/* Hidden actions section (when settings btn moved to dropdown) */
 .actions-section.hidden {
   display: none;
 }
 
-/* Engine dropdown separator for settings entry */
 .engine-dropdown-separator {
   height: 0;
   margin: 4px 8px;
@@ -1454,14 +1398,10 @@ body.has-custom-bg {
   pointer-events: none;
 }
 
-/* Engine dropdown settings entry */
 .engine-dropdown-item.engine-dropdown-settings .engine-dropdown-check {
   color: var(--text-tertiary);
 }
 
-/* ===============================================
-   About Trigger (inside settings panel)
-   =============================================== */
 .about-entry {
   border-top: 1px solid var(--border);
   padding-top: 16px;
@@ -1502,9 +1442,6 @@ body.has-custom-bg {
   color: var(--accent);
 }
 
-/* ===============================================
-   About Modal Overlay
-   =============================================== */
 .about-overlay {
   position: fixed;
   inset: 0;
@@ -1517,9 +1454,6 @@ body.has-custom-bg {
   display: none;
 }
 
-/* ===============================================
-   About Modal Panel
-   =============================================== */
 .about-panel {
   position: fixed;
   top: 50%;
@@ -1632,9 +1566,6 @@ body.has-custom-bg {
   letter-spacing: 0.02em;
 }
 
-/* ===============================================
-   Responsive
-   =============================================== */
 @media (max-width: 480px) {
   .container {
     gap: 28px;
@@ -1667,9 +1598,6 @@ body.has-custom-bg {
   }
 }
 
-/* ===============================================
-   Toast Notification
-   =============================================== */
 .toast {
   position: fixed;
   top: 40px;
