@@ -9,7 +9,7 @@
       'greeting.下午好': '下午好',
       'greeting.晚上好': '晚上好',
 
-      'search.placeholder': 'Think Different.',
+      'search.motto': 'Think Different.',
       'search.input': '搜索关键词',
       'search.toggleEngine': '切换搜索引擎',
       'search.settings': '设置',
@@ -92,6 +92,11 @@
 
       'wallpaper.empty': '暂无壁纸，请选择文件夹添加',
       'wallpaper.delete': '删除',
+      'wallpaper.use': '使用壁纸 {name}',
+      'wallpaper.select': '选择壁纸 {name}',
+      'wallpaper.deleteNamed': '删除壁纸 {name}',
+      'wallpaper.movePrevious': '将壁纸 {name} 前移',
+      'wallpaper.moveNext': '将壁纸 {name} 后移',
       'wallpaper.oldWallpaper': '旧壁纸',
       'wallpaper.confirmClearAll': '确定要清空全部壁纸吗？此操作不可撤销。',
 
@@ -107,6 +112,10 @@
 
       'privacy.title': 'WillowTab 隐私政策',
       'privacy.effectiveDate': '生效日期：2026年5月8日　|　最后更新：2026年6月13日',
+      'privacy.effectiveLabel': '生效日期：',
+      'privacy.effectiveValue': '2026年5月8日',
+      'privacy.updatedLabel': '最后更新：',
+      'privacy.updatedValue': '2026年6月13日',
       'privacy.section1.title': '一、引言',
       'privacy.section1.p1': 'WillowTab（以下简称"本扩展"）是一款浏览器新标签页替换扩展，由个人开发者 Un1quer（以下简称"我们"）开发和维护。我们高度重视你的隐私和个人信息保护。',
       'privacy.section1.p2': '本隐私政策旨在向你说明本扩展如何处理你的信息，包括信息的收集、使用、存储和保护方式。请你仔细阅读本政策。安装或使用本扩展，即表示你同意本政策所述的信息处理方式。',
@@ -157,7 +166,7 @@
       'greeting.下午好': 'Good afternoon',
       'greeting.晚上好': 'Good evening',
 
-      'search.placeholder': 'Think Different.',
+      'search.motto': 'Think Different.',
       'search.input': 'Search query',
       'search.toggleEngine': 'Switch search engine',
       'search.settings': 'Settings',
@@ -240,6 +249,11 @@
 
       'wallpaper.empty': 'No wallpapers. Select a folder to add some.',
       'wallpaper.delete': 'Delete',
+      'wallpaper.use': 'Use wallpaper {name}',
+      'wallpaper.select': 'Select wallpaper {name}',
+      'wallpaper.deleteNamed': 'Delete wallpaper {name}',
+      'wallpaper.movePrevious': 'Move wallpaper {name} earlier',
+      'wallpaper.moveNext': 'Move wallpaper {name} later',
       'wallpaper.oldWallpaper': 'Old Wallpaper',
       'wallpaper.confirmClearAll': 'Clear all wallpapers? This cannot be undone.',
 
@@ -255,6 +269,10 @@
 
       'privacy.title': 'WillowTab Privacy Policy',
       'privacy.effectiveDate': 'Effective: May 8, 2026  |  Last updated: June 13, 2026',
+      'privacy.effectiveLabel': 'Effective: ',
+      'privacy.effectiveValue': 'May 8, 2026',
+      'privacy.updatedLabel': 'Last updated: ',
+      'privacy.updatedValue': 'June 13, 2026',
       'privacy.section1.title': 'I. Introduction',
       'privacy.section1.p1': 'WillowTab (hereinafter referred to as "the Extension") is a browser new tab replacement extension developed and maintained by individual developer Un1quer (hereinafter referred to as "we"). We highly value your privacy and the protection of your personal information.',
       'privacy.section1.p2': 'This Privacy Policy is intended to explain how the Extension handles your information, including collection, use, storage, and protection. Please read this policy carefully. By installing or using the Extension, you agree to the information handling practices described in this policy.',
@@ -320,6 +338,7 @@
   };
 
   function applyDOM() {
+    document.documentElement.lang = state.lang;
     document.querySelectorAll('[data-i18n]').forEach((el) => {
       el.textContent = window.__i18n.t(el.getAttribute('data-i18n'));
     });

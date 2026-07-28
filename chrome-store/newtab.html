@@ -18,15 +18,13 @@
     <main class="search-section">
       <form id="search-form" class="search-form" autocomplete="off">
         <div class="search-input-wrapper">
-          <button type="button" id="engine-toggle" class="engine-toggle" data-i18n-aria="search.toggleEngine" data-i18n-title="search.toggleEngine" aria-label="切换搜索引擎" title="切换搜索引擎" aria-haspopup="true" aria-expanded="false" aria-controls="engine-dropdown"></button>
+          <button type="button" id="engine-toggle" class="engine-toggle" data-i18n-aria="search.toggleEngine" data-i18n-title="search.toggleEngine" aria-label="切换搜索引擎" title="切换搜索引擎" aria-haspopup="menu" aria-expanded="false" aria-controls="engine-dropdown"></button>
           <ul id="engine-dropdown" class="engine-dropdown" role="menu"></ul>
           <label class="sr-only" for="search-input" data-i18n="search.input">搜索关键词</label>
           <input
             type="text"
             id="search-input"
             class="search-input"
-            data-i18n-placeholder="search.placeholder"
-            placeholder="Think Different."
             autofocus
             autocomplete="off"
             data-i18n-aria="search.input"
@@ -36,11 +34,14 @@
             aria-expanded="false"
             aria-controls="suggestions-dropdown"
           >
+          <span id="search-motto" class="search-motto" data-i18n="search.motto" aria-hidden="true">Think Different.</span>
           <button type="submit" id="search-submit" class="search-submit" aria-label="搜索" title="搜索">
-            <svg class="search-icon" viewBox="1.5 1.5 22 22" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <circle cx="11" cy="11" r="7"/>
-              <path d="M21 21l-4.35-4.35"/>
-            </svg>
+            <span class="search-control-visual" aria-hidden="true">
+              <svg class="search-icon" viewBox="1.5 1.5 22 22" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <circle cx="11" cy="11" r="7"/>
+                <path d="M21 21l-4.35-4.35"/>
+              </svg>
+            </span>
           </button>
           <ul id="suggestions-dropdown" class="suggestions-dropdown" role="listbox" hidden></ul>
         </div>
@@ -58,7 +59,7 @@
     </button>
   </footer>
 
-  <div id="settings-panel" class="settings-panel" hidden>
+  <div id="settings-panel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-panel-title" hidden>
     <div class="settings-panel-header">
       <button id="settings-back" class="action-btn small icon-only settings-back" data-i18n-aria="settings.back" aria-label="返回" hidden>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -79,7 +80,7 @@
 
         <div class="setting-row">
           <div class="setting-label" data-i18n="settings.bgMode">背景模式</div>
-          <div class="mode-toggle" id="mode-toggle">
+          <div class="mode-toggle" id="mode-toggle" role="radiogroup" data-i18n-aria="settings.bgMode" aria-label="背景模式">
             <button class="mode-option active" data-mode="color" data-i18n="settings.bgColorMode">纯色背景</button>
             <button class="mode-option" data-mode="wallpaper" data-i18n="settings.bgWallpaperMode">壁纸</button>
           </div>
@@ -122,7 +123,7 @@
 
       <section class="setting-group" id="theme-section">
         <h3 class="setting-group-title" data-i18n="settings.displayMode">显示模式</h3>
-        <div class="theme-options" id="theme-options">
+        <div class="theme-options" id="theme-options" role="radiogroup" data-i18n-aria="settings.displayMode" aria-label="显示模式">
           <button class="theme-option" data-theme="auto" data-i18n="settings.followSystem">跟随系统</button>
           <button class="theme-option" data-theme="dark" data-i18n="settings.dark">深色</button>
           <button class="theme-option" data-theme="light" data-i18n="settings.light">浅色</button>
@@ -131,7 +132,7 @@
 
       <section class="setting-group">
         <h3 class="setting-group-title" data-i18n="settings.font">字体</h3>
-        <div class="font-options" id="font-options">
+        <div class="font-options" id="font-options" role="radiogroup" data-i18n-aria="settings.font" aria-label="字体">
           <button class="font-option active" data-font="serif">
             <span class="font-preview" style="font-family: Georgia, 'Times New Roman', 'Songti SC', serif;">Aa</span>
             <span class="font-name" data-i18n="settings.fontSerif">衬线体</span>
@@ -149,7 +150,7 @@
 
       <section class="setting-group">
         <h3 class="setting-group-title" data-i18n="settings.radius">圆角</h3>
-        <div class="theme-options" id="radius-options">
+        <div class="theme-options" id="radius-options" role="radiogroup" data-i18n-aria="settings.radius" aria-label="圆角">
           <button class="theme-option active" data-radius="28px" data-i18n="settings.radiusCapsule">胶囊</button>
           <button class="theme-option" data-radius="12px" data-i18n="settings.radiusSlight">微圆</button>
           <button class="theme-option" data-radius="4px" data-i18n="settings.radiusSquare">方正</button>
@@ -158,7 +159,7 @@
 
       <section class="setting-group">
         <h3 class="setting-group-title" data-i18n="settings.settingsBtnPosition">设置按钮位置</h3>
-        <div class="theme-options" id="settings-btn-position-options">
+        <div class="theme-options" id="settings-btn-position-options" role="radiogroup" data-i18n-aria="settings.settingsBtnPosition" aria-label="设置按钮位置">
           <button class="theme-option active" data-position="footer" data-i18n="settings.btnPosFooter">搜索框底部</button>
           <button class="theme-option" data-position="dropdown" data-i18n="settings.btnPosDropdown">搜索引擎菜单</button>
         </div>
@@ -178,7 +179,7 @@
           <div class="setting-label">
             <span data-i18n="settings.suggestionsDesc">输入时显示搜索建议（需授权网络请求），建议开启。使用浏览器默认搜索时不支持搜索联想。</span>
           </div>
-          <button id="suggestions-toggle" class="action-btn small suggestions-toggle" data-enabled="false">Off</button>
+          <button id="suggestions-toggle" class="action-btn small suggestions-toggle" data-enabled="false" aria-pressed="false">Off</button>
         </div>
       </section>
 
@@ -200,7 +201,7 @@
 
         <div class="setting-row">
           <div class="setting-label" data-i18n="settings.wallpaperSurfaceMode">搜索框样式</div>
-          <div class="theme-options" id="wallpaper-surface-mode-options">
+          <div class="theme-options" id="wallpaper-surface-mode-options" role="radiogroup" data-i18n-aria="settings.wallpaperSurfaceMode" aria-label="搜索框样式">
             <button class="theme-option active" data-surface-mode="auto" data-i18n="settings.surfaceAuto">自适应</button>
             <button class="theme-option" data-surface-mode="light" data-i18n="settings.surfaceLight">浅色</button>
             <button class="theme-option" data-surface-mode="dark" data-i18n="settings.surfaceDark">深色</button>
@@ -216,7 +217,7 @@
       <section class="setting-group">
         <h3 class="setting-group-title" data-i18n="settings.wallpaperRotation">自动切换</h3>
         <div class="setting-row">
-          <div class="theme-options compact" id="wallpaper-rotation-options">
+          <div class="theme-options compact" id="wallpaper-rotation-options" role="radiogroup" data-i18n-aria="settings.wallpaperRotation" aria-label="自动切换">
             <button class="theme-option active" data-rotation="off" data-i18n="settings.rotationOff">关闭</button>
             <button class="theme-option" data-rotation="30m" data-i18n="settings.rotation30m">30分钟</button>
             <button class="theme-option" data-rotation="1h" data-i18n="settings.rotation1h">1小时</button>
@@ -227,7 +228,7 @@
 
         <div class="setting-row">
           <div class="setting-label" data-i18n="settings.wallpaperRotationMode">轮播模式</div>
-          <div class="theme-options" id="wallpaper-rotation-mode-options">
+          <div class="theme-options" id="wallpaper-rotation-mode-options" role="radiogroup" data-i18n-aria="settings.wallpaperRotationMode" aria-label="轮播模式">
             <button class="theme-option active" data-rotation-mode="sequence" data-i18n="settings.rotationSequence">顺序</button>
             <button class="theme-option" data-rotation-mode="random" data-i18n="settings.rotationRandom">随机</button>
           </div>
@@ -251,16 +252,16 @@
           <button id="wallpaper-clear-all-btn" class="action-btn small danger" data-i18n="settings.wallpaperClearAll" disabled>清空全部</button>
         </div>
 
-        <div class="wallpaper-gallery" id="wallpaper-gallery"></div>
+        <div class="wallpaper-gallery" id="wallpaper-gallery" role="list" data-i18n-aria="settings.wallpaperLibrary" aria-label="壁纸库"></div>
       </section>
     </div>
   </div>
 
-  <div id="about-overlay" class="about-overlay" hidden></div>
+  <div id="about-overlay" class="about-overlay" aria-hidden="true" hidden></div>
 
-  <div id="about-panel" class="about-panel" hidden>
+  <div id="about-panel" class="about-panel" role="dialog" aria-modal="true" aria-labelledby="about-panel-title" hidden>
     <div class="about-panel-header">
-      <h2 data-i18n="about.title">关于 WillowTab</h2>
+      <h2 id="about-panel-title" data-i18n="about.title">关于 WillowTab</h2>
       <button id="about-close" class="action-btn small icon-only" data-i18n-aria="about.close" aria-label="关闭">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <line x1="18" y1="6" x2="6" y2="18"/>
@@ -275,7 +276,7 @@
       <div class="about-info">
         <div class="about-row">
           <span class="about-label" data-i18n="about.version">版本</span>
-          <span class="about-value">v1.6.2</span>
+          <span class="about-value">v1.7.0</span>
         </div>
         <div class="about-row">
           <span class="about-label" data-i18n="about.author">作者</span>

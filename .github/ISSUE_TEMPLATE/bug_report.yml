@@ -10,8 +10,8 @@ body:
     id: willowtab-version
     attributes:
       label: WillowTab version
-      description: For example, v1.6.2.
-      placeholder: v1.6.2
+      description: For example, v1.7.0.
+      placeholder: v1.7.0
     validations:
       required: true
   - type: dropdown
@@ -60,4 +60,3 @@ body:
     attributes:
       label: Screenshots or console errors
       description: Optional. Remove private data before posting.
-

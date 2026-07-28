@@ -88,7 +88,13 @@
   let activeWallpaperData = '';
   let wallpaperSurfaceAnalysisToken = 0;
   let resizeSyncTimer = null;
+  let aboutReturnFocus = null;
   const selectedWallpaperIds = new Set();
+  const pendingHides = new Map();
+  const pageRegions = [
+    document.querySelector('.container'),
+    document.querySelector('.actions-section'),
+  ].filter(Boolean);
 
   const ROTATION_INTERVALS = {
     off: 0,
@@ -100,6 +106,118 @@
 
   function t(key, vars) {
     return (window.__i18n && window.__i18n.t(key, vars)) || key;
+  }
+
+  const FOCUSABLE_SELECTOR = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+
+  function getFocusableElements(container) {
+    return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR)).filter((element) => {
+      return !element.closest('[hidden], [inert]') && element.getClientRects().length > 0;
+    });
+  }
+
+  function trapFocus(event, container) {
+    if (event.key !== 'Tab') return;
+    const focusable = getFocusableElements(container);
+    if (!focusable.length) {
+      event.preventDefault();
+      container.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function setPageInert(inert) {
+    pageRegions.forEach((region) => { region.inert = inert; });
+  }
+
+  function focusWhenAvailable(element, fallback) {
+    const engineToggle = document.getElementById('engine-toggle');
+    const target = [element, fallback, engineToggle].find((candidate) => {
+      return candidate && candidate.isConnected && !candidate.closest('[hidden], [inert]') && candidate.getClientRects().length > 0;
+    });
+    if (target && typeof target.focus === 'function') target.focus();
+  }
+
+  function cancelPendingHide(element) {
+    const pending = pendingHides.get(element);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    element.removeEventListener('transitionend', pending.onEnd);
+    pendingHides.delete(element);
+  }
+
+  function hideAfterTransition(element, timeout, callback) {
+    cancelPendingHide(element);
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      element.removeEventListener('transitionend', onEnd);
+      pendingHides.delete(element);
+      callback();
+    };
+    const onEnd = (event) => {
+      if (event.target === element && ['opacity', 'transform'].includes(event.propertyName)) finish();
+    };
+    const timer = setTimeout(finish, timeout);
+    pendingHides.set(element, { timer, onEnd });
+    element.addEventListener('transitionend', onEnd);
+  }
+
+  function syncRadioOptions(container, selector, dataKey, selectedValue) {
+    if (!container) return;
+    const options = Array.from(container.querySelectorAll(selector));
+    let tabbableAssigned = false;
+    options.forEach((option) => {
+      const selected = option.dataset[dataKey] === selectedValue;
+      option.setAttribute('role', 'radio');
+      option.setAttribute('aria-checked', String(selected));
+      const tabbable = selected && !option.disabled;
+      option.tabIndex = tabbable ? 0 : -1;
+      if (tabbable) tabbableAssigned = true;
+      option.classList.toggle('active', selected);
+    });
+    if (!tabbableAssigned) {
+      const firstEnabled = options.find((option) => !option.disabled);
+      if (firstEnabled) firstEnabled.tabIndex = 0;
+    }
+  }
+
+  function enableRadioKeyboard(container, selector) {
+    if (!container) return;
+    container.addEventListener('keydown', (event) => {
+      const current = event.target.closest(selector);
+      if (!current) return;
+      const options = Array.from(container.querySelectorAll(selector)).filter((option) => !option.disabled);
+      const currentIndex = options.indexOf(current);
+      if (currentIndex < 0) return;
+      let nextIndex = currentIndex;
+      if (['ArrowRight', 'ArrowDown'].includes(event.key)) nextIndex = (currentIndex + 1) % options.length;
+      else if (['ArrowLeft', 'ArrowUp'].includes(event.key)) nextIndex = (currentIndex - 1 + options.length) % options.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = options.length - 1;
+      else return;
+      event.preventDefault();
+      options[nextIndex].focus();
+      options[nextIndex].click();
+    });
   }
 
   function effectiveThemeIsDark() {
@@ -354,6 +472,41 @@
     return (light + 0.05) / (dark + 0.05);
   }
 
+  function mixRgb(from, to, amount) {
+    return {
+      r: from.r + (to.r - from.r) * amount,
+      g: from.g + (to.g - from.g) * amount,
+      b: from.b + (to.b - from.b) * amount,
+    };
+  }
+
+  function rgbToHex(color) {
+    const channel = (value) => Math.round(value).toString(16).padStart(2, '0');
+    return `#${channel(color.r)}${channel(color.g)}${channel(color.b)}`;
+  }
+
+  function pickMutedReadableColor(surfaces, desired, endpoint, minimumContrast = 4.5) {
+    const isReadable = (candidate) => {
+      const candidateLuminance = relativeLuminance(candidate);
+      return surfaces.every((surface) => {
+        return contrastRatio(candidateLuminance, relativeLuminance(surface)) >= minimumContrast;
+      });
+    };
+
+    const roundedCandidate = (amount) => parseHexColor(rgbToHex(mixRgb(desired, endpoint, amount)));
+
+    if (isReadable(desired)) return rgbToHex(desired);
+
+    let low = 0;
+    let high = 1;
+    for (let i = 0; i < 20; i += 1) {
+      const middle = (low + high) / 2;
+      if (isReadable(roundedCandidate(middle))) high = middle;
+      else low = middle;
+    }
+    return rgbToHex(roundedCandidate(high));
+  }
+
   function clearColorReadabilityVars() {
     const root = document.documentElement;
     document.body.removeAttribute('data-color-readable');
@@ -362,6 +515,8 @@
     root.style.removeProperty('--text-primary');
     root.style.removeProperty('--text-secondary');
     root.style.removeProperty('--text-tertiary');
+    root.style.removeProperty('--motto-text');
+    root.style.removeProperty('--placeholder-text');
     root.style.removeProperty('--border');
     root.style.removeProperty('--input-bg');
   }
@@ -372,13 +527,34 @@
     const root = document.documentElement;
     const luminance = relativeLuminance(color);
     const useDarkText = contrastRatio(luminance, 0) >= contrastRatio(luminance, 1);
+    const white = { r: 255, g: 255, b: 255 };
+    const black = { r: 0, g: 0, b: 0 };
+    const inputSurface = mixRgb(color, white, useDarkText ? 0.5 : 0.12);
+    const mutedText = pickMutedReadableColor(
+      [color, inputSurface],
+      useDarkText ? parseHexColor('#6b6b60') : parseHexColor('#8f887e'),
+      useDarkText ? black : white,
+    );
+    const placeholderText = pickMutedReadableColor(
+      [inputSurface],
+      useDarkText ? parseHexColor('#727269') : parseHexColor('#8f887e'),
+      useDarkText ? black : white,
+    );
+    const mottoText = pickMutedReadableColor(
+      [inputSurface],
+      useDarkText ? parseHexColor('#918d83') : parseHexColor('#706b64'),
+      useDarkText ? black : white,
+      3.2,
+    );
     document.body.dataset.colorReadable = useDarkText ? 'dark-text' : 'light-text';
     if (useDarkText) {
       root.style.setProperty('--bg-secondary', `color-mix(in srgb, ${bgColor} 88%, white)`);
       root.style.setProperty('--bg-tertiary', `color-mix(in srgb, ${bgColor} 75%, white)`);
       root.style.setProperty('--text-primary', `color-mix(in srgb, ${bgColor} 20%, black)`);
       root.style.setProperty('--text-secondary', `color-mix(in srgb, ${bgColor} 40%, black)`);
-      root.style.setProperty('--text-tertiary', `color-mix(in srgb, ${bgColor} 65%, black)`);
+      root.style.setProperty('--text-tertiary', mutedText);
+      root.style.setProperty('--motto-text', mottoText);
+      root.style.setProperty('--placeholder-text', placeholderText);
       root.style.setProperty('--border', `color-mix(in srgb, ${bgColor} 75%, black)`);
       root.style.setProperty('--input-bg', `color-mix(in srgb, ${bgColor} 50%, white)`);
       return;
@@ -388,7 +564,9 @@
     root.style.setProperty('--bg-tertiary', `color-mix(in srgb, ${bgColor} 72%, white)`);
     root.style.setProperty('--text-primary', '#f3eddf');
     root.style.setProperty('--text-secondary', 'rgba(243, 237, 223, 0.78)');
-    root.style.setProperty('--text-tertiary', 'rgba(243, 237, 223, 0.58)');
+    root.style.setProperty('--text-tertiary', mutedText);
+    root.style.setProperty('--motto-text', mottoText);
+    root.style.setProperty('--placeholder-text', placeholderText);
     root.style.setProperty('--border', 'rgba(255, 255, 255, 0.24)');
     root.style.setProperty('--input-bg', 'rgba(255, 255, 255, 0.12)');
   }
@@ -572,6 +750,7 @@
   function clearWallpaperAdaptiveVars() {
     const root = document.documentElement;
     root.style.removeProperty('--wallpaper-text-color');
+    root.style.removeProperty('--wallpaper-motto-text');
     root.style.removeProperty('--wallpaper-time-color');
     root.style.removeProperty('--wallpaper-greeting-color');
     root.style.removeProperty('--wallpaper-input-bg');
@@ -579,6 +758,36 @@
     root.style.removeProperty('--wallpaper-button-hover-bg');
     root.style.removeProperty('--wallpaper-surface-border');
     root.style.removeProperty('--wallpaper-protection-bg');
+  }
+
+  function applyWallpaperMottoColor(textColor, inputSurfaceColor, inputAlpha, surfaceBrightness) {
+    const primaryText = parseHexColor(textColor);
+    if (!primaryText) return inputAlpha;
+    const tone = Math.min(1, Math.max(0, surfaceBrightness)) * 255;
+    const wallpaperSurface = { r: tone, g: tone, b: tone };
+    const primaryLuminance = relativeLuminance(primaryText);
+    const contrastAt = (alpha) => {
+      const surface = mixRgb(wallpaperSurface, inputSurfaceColor, alpha);
+      return contrastRatio(primaryLuminance, relativeLuminance(surface));
+    };
+    let resolvedInputAlpha = inputAlpha;
+    const targetPrimaryContrast = 5.5;
+    if (contrastAt(inputAlpha) < targetPrimaryContrast && contrastAt(1) >= targetPrimaryContrast) {
+      let low = inputAlpha;
+      let high = 1;
+      for (let i = 0; i < 20; i += 1) {
+        const middle = (low + high) / 2;
+        if (contrastAt(middle) >= targetPrimaryContrast) high = middle;
+        else low = middle;
+      }
+      resolvedInputAlpha = high;
+    }
+    const inputSurface = mixRgb(wallpaperSurface, inputSurfaceColor, resolvedInputAlpha);
+    const useDarkText = relativeLuminance(primaryText) < relativeLuminance(inputSurface);
+    const desired = parseHexColor(useDarkText ? '#918d83' : '#706b64');
+    const motto = pickMutedReadableColor([inputSurface], desired, primaryText, 3.2);
+    document.documentElement.style.setProperty('--wallpaper-motto-text', motto);
+    return resolvedInputAlpha;
   }
 
   function updateWallpaperPresentation() {
@@ -642,8 +851,15 @@
         const inputAlpha = Math.min(0.3, 0.16 + surfaceBoost * 0.55);
         const buttonAlpha = Math.min(0.28, 0.14 + surfaceBoost * 0.45);
         const buttonHoverAlpha = Math.min(0.36, 0.24 + surfaceBoost * 0.45);
-        root.style.setProperty('--wallpaper-text-color', adaptiveLightSurface ? '#272016' : '#f3eddf');
-        root.style.setProperty('--wallpaper-input-bg', `rgba(255,255,255,${inputAlpha.toFixed(3)})`);
+        const textColor = adaptiveLightSurface ? '#272016' : '#f3eddf';
+        const resolvedInputAlpha = applyWallpaperMottoColor(
+          textColor,
+          { r: 255, g: 255, b: 255 },
+          inputAlpha,
+          surfaceEffective,
+        );
+        root.style.setProperty('--wallpaper-text-color', textColor);
+        root.style.setProperty('--wallpaper-input-bg', `rgba(255,255,255,${resolvedInputAlpha.toFixed(3)})`);
         root.style.setProperty('--wallpaper-button-bg', `rgba(255,255,255,${buttonAlpha.toFixed(3)})`);
         root.style.setProperty('--wallpaper-button-hover-bg', `rgba(255,255,255,${buttonHoverAlpha.toFixed(3)})`);
         root.style.setProperty('--wallpaper-surface-border', 'rgba(255,255,255,0.2)');
@@ -658,8 +874,14 @@
         const buttonHoverAlpha = veryDark
           ? Math.min(0.56, 0.42 + surfaceBoost * 0.75)
           : Math.min(0.58, 0.46 + surfaceBoost * 0.65);
+        const resolvedInputAlpha = applyWallpaperMottoColor(
+          '#f3eddf',
+          { r: 18, g: 16, b: 14 },
+          inputAlpha,
+          surfaceEffective,
+        );
         root.style.setProperty('--wallpaper-text-color', '#f3eddf');
-        root.style.setProperty('--wallpaper-input-bg', `rgba(18,16,14,${inputAlpha.toFixed(3)})`);
+        root.style.setProperty('--wallpaper-input-bg', `rgba(18,16,14,${resolvedInputAlpha.toFixed(3)})`);
         root.style.setProperty('--wallpaper-button-bg', `rgba(18,16,14,${buttonAlpha.toFixed(3)})`);
         root.style.setProperty('--wallpaper-button-hover-bg', `rgba(18,16,14,${buttonHoverAlpha.toFixed(3)})`);
         root.style.setProperty('--wallpaper-surface-border', 'rgba(255,255,255,0.24)');
@@ -668,16 +890,29 @@
     }
 
     if (surfaceMode === 'light') {
-      root.style.setProperty('--wallpaper-text-color', adaptiveLightSurface ? '#272016' : '#f3eddf');
-      root.style.setProperty('--wallpaper-input-bg', 'rgba(255,255,255,0.16)');
+      const textColor = adaptiveLightSurface ? '#272016' : '#f3eddf';
+      const inputAlpha = applyWallpaperMottoColor(
+        textColor,
+        { r: 255, g: 255, b: 255 },
+        0.16,
+        surfaceEffective,
+      );
+      root.style.setProperty('--wallpaper-text-color', textColor);
+      root.style.setProperty('--wallpaper-input-bg', `rgba(255,255,255,${inputAlpha.toFixed(3)})`);
       root.style.setProperty('--wallpaper-button-bg', 'rgba(255,255,255,0.14)');
       root.style.setProperty('--wallpaper-button-hover-bg', 'rgba(255,255,255,0.24)');
       root.style.setProperty('--wallpaper-surface-border', 'rgba(255,255,255,0.2)');
       return;
     }
     if (surfaceMode === 'dark') {
+      const inputAlpha = applyWallpaperMottoColor(
+        '#f3eddf',
+        { r: 18, g: 16, b: 14 },
+        0.38,
+        surfaceEffective,
+      );
       root.style.setProperty('--wallpaper-text-color', '#f3eddf');
-      root.style.setProperty('--wallpaper-input-bg', 'rgba(18,16,14,0.38)');
+      root.style.setProperty('--wallpaper-input-bg', `rgba(18,16,14,${inputAlpha.toFixed(3)})`);
       root.style.setProperty('--wallpaper-button-bg', 'rgba(18,16,14,0.32)');
       root.style.setProperty('--wallpaper-button-hover-bg', 'rgba(18,16,14,0.48)');
       root.style.setProperty('--wallpaper-surface-border', 'rgba(255,255,255,0.24)');
@@ -685,14 +920,27 @@
     }
 
     if (effective < 0.4) {
+      const inputAlpha = applyWallpaperMottoColor(
+        '#e8e2d4',
+        { r: 255, g: 255, b: 255 },
+        0.18,
+        effective,
+      );
       root.style.setProperty('--wallpaper-text-color', '#e8e2d4');
-      root.style.setProperty('--wallpaper-input-bg', 'rgba(255,255,255,0.18)');
+      root.style.setProperty('--wallpaper-input-bg', `rgba(255,255,255,${inputAlpha.toFixed(3)})`);
     } else if (effective < 0.6) {
+      const inputAlpha = applyWallpaperMottoColor(
+        '#f0ece0',
+        { r: 255, g: 255, b: 255 },
+        0.18,
+        effective,
+      );
       root.style.setProperty('--wallpaper-text-color', '#f0ece0');
-      root.style.setProperty('--wallpaper-input-bg', 'rgba(255,255,255,0.18)');
+      root.style.setProperty('--wallpaper-input-bg', `rgba(255,255,255,${inputAlpha.toFixed(3)})`);
     } else {
       root.style.removeProperty('--wallpaper-text-color');
       root.style.removeProperty('--wallpaper-input-bg');
+      applyWallpaperMottoColor('#272016', { r: 255, g: 255, b: 255 }, 0.15, effective);
     }
   }
 
@@ -793,6 +1041,7 @@
   function syncUISuggestions() {
     if (!suggestionsToggle) return;
     suggestionsToggle.dataset.enabled = settings.enableSuggestions ? 'true' : 'false';
+    suggestionsToggle.setAttribute('aria-pressed', String(settings.enableSuggestions));
     const t = (key) => (window.__i18n && window.__i18n.t(key)) || key;
     suggestionsToggle.textContent = settings.enableSuggestions
       ? t('settings.suggestionsOn')
@@ -814,6 +1063,7 @@
   function createOverlay() {
     settingsOverlay = document.createElement('div');
     settingsOverlay.className = 'panel-overlay';
+    settingsOverlay.setAttribute('aria-hidden', 'true');
     settingsOverlay.setAttribute('hidden', '');
     document.body.appendChild(settingsOverlay);
     settingsOverlay.addEventListener('click', closePanel);
@@ -821,6 +1071,7 @@
 
   function setSettingsView(view) {
     settingsPanelView = view === 'wallpaper' ? 'wallpaper' : 'main';
+    panel.scrollTop = 0;
     const isWallpaperView = settingsPanelView === 'wallpaper';
     if (mainSettingsView) mainSettingsView.hidden = isWallpaperView;
     if (wallpaperSettingsView) wallpaperSettingsView.hidden = !isWallpaperView;
@@ -831,59 +1082,108 @@
     if (isWallpaperView) {
       syncUI();
     }
+    const activeView = isWallpaperView ? wallpaperSettingsView : mainSettingsView;
+    if (activeView) activeView.scrollTop = 0;
   }
 
-  function openPanel() {
-    lastFocusedBeforePanel = document.activeElement;
+  function openPanel(returnFocus = document.activeElement) {
+    cancelPendingHide(panel);
+    lastFocusedBeforePanel = returnFocus;
+    panel.classList.remove('is-closing');
+    if (settingsOverlay) settingsOverlay.classList.remove('is-closing');
     panel.removeAttribute('hidden');
     if (settingsOverlay) settingsOverlay.removeAttribute('hidden');
+    setPageInert(true);
     setSettingsView('main');
     syncUI();
-    closeBtn.focus();
+    requestAnimationFrame(() => {
+      panel.classList.add('is-open');
+      if (settingsOverlay) settingsOverlay.classList.add('is-open');
+      closeBtn.focus();
+    });
   }
 
   function closePanel() {
-    panel.setAttribute('hidden', '');
-    if (settingsOverlay) settingsOverlay.setAttribute('hidden', '');
-    setSettingsView('main');
-    if (lastFocusedBeforePanel && typeof lastFocusedBeforePanel.focus === 'function' && document.contains(lastFocusedBeforePanel)) {
-      lastFocusedBeforePanel.focus();
-    } else if (settingsBtn) {
-      settingsBtn.focus();
+    if (panel.hasAttribute('hidden')) return;
+    panel.classList.add('is-closing');
+    panel.classList.remove('is-open');
+    if (settingsOverlay) {
+      settingsOverlay.classList.add('is-closing');
+      settingsOverlay.classList.remove('is-open');
     }
+    const timeout = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 170 : 270;
+    hideAfterTransition(panel, timeout, () => {
+      panel.setAttribute('hidden', '');
+      panel.classList.remove('is-closing');
+      if (settingsOverlay) {
+        settingsOverlay.setAttribute('hidden', '');
+        settingsOverlay.classList.remove('is-closing');
+      }
+      setSettingsView('main');
+      setPageInert(false);
+      focusWhenAvailable(lastFocusedBeforePanel, settingsBtn);
+    });
   }
 
   function openAbout() {
+    cancelPendingHide(aboutPanel);
+    aboutReturnFocus = document.activeElement;
+    panel.inert = true;
+    aboutPanel.classList.remove('is-closing');
+    if (aboutOverlay) aboutOverlay.classList.remove('is-closing');
     aboutPanel.removeAttribute('hidden');
     if (aboutOverlay) aboutOverlay.removeAttribute('hidden');
+    requestAnimationFrame(() => {
+      aboutPanel.classList.add('is-open');
+      if (aboutOverlay) aboutOverlay.classList.add('is-open');
+      aboutClose.focus();
+    });
   }
 
   function closeAbout() {
-    aboutPanel.setAttribute('hidden', '');
-    if (aboutOverlay) aboutOverlay.setAttribute('hidden', '');
+    if (aboutPanel.hasAttribute('hidden')) return;
+    aboutPanel.classList.add('is-closing');
+    aboutPanel.classList.remove('is-open');
+    if (aboutOverlay) {
+      aboutOverlay.classList.add('is-closing');
+      aboutOverlay.classList.remove('is-open');
+    }
+    const timeout = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 170 : 230;
+    hideAfterTransition(aboutPanel, timeout, () => {
+      aboutPanel.setAttribute('hidden', '');
+      aboutPanel.classList.remove('is-closing');
+      if (aboutOverlay) {
+        aboutOverlay.setAttribute('hidden', '');
+        aboutOverlay.classList.remove('is-closing');
+      }
+      panel.inert = false;
+      focusWhenAvailable(aboutReturnFocus, aboutBtn);
+    });
   }
 
   function syncUI() {
     const isDark = effectiveThemeIsDark();
 
-    modeToggle.querySelectorAll('.mode-option').forEach((opt) => {
-      opt.classList.toggle('active', opt.dataset.mode === settings.bgMode);
-    });
+    syncRadioOptions(modeToggle, '.mode-option', 'mode', settings.bgMode);
 
     colorSection.hidden = (settings.bgMode !== 'color');
-    if (!colorSection.hidden) {
-      colorSection.classList.toggle('disabled', isDark);
-      if (isDark) {
-        colorSection.setAttribute('data-hint', (window.__i18n && window.__i18n.t('hint.darkColorDisabled')) || '仅在浅色模式下可用');
-      } else {
-        colorSection.removeAttribute('data-hint');
-      }
+    colorSection.classList.toggle('disabled', isDark);
+    colorSection.setAttribute('aria-disabled', String(isDark));
+    colorSection.querySelectorAll('button, input').forEach((control) => {
+      control.disabled = isDark;
+    });
+    if (isDark) {
+      colorSection.setAttribute('data-hint', (window.__i18n && window.__i18n.t('hint.darkColorDisabled')) || '仅在浅色模式下可用');
+    } else {
+      colorSection.removeAttribute('data-hint');
     }
     wallpaperSection.hidden = (settings.bgMode !== 'wallpaper');
     themeSection.hidden = (settings.bgMode === 'wallpaper');
 
     colorPresets.querySelectorAll('.color-swatch').forEach((swatch) => {
-      swatch.classList.toggle('active', swatch.dataset.color === settings.bgColor);
+      const selected = swatch.dataset.color === settings.bgColor;
+      swatch.classList.toggle('active', selected);
+      swatch.setAttribute('aria-pressed', String(selected));
     });
 
     const color = settings.bgColor || '#F5F5DC';
@@ -895,28 +1195,19 @@
     updateWallpaperSummary();
 
     const currentTheme = window.__theme ? window.__theme.get() : 'auto';
-    themeOptions.querySelectorAll('.theme-option').forEach((opt) => {
-      opt.classList.toggle('active', opt.dataset.theme === currentTheme);
-    });
+    syncRadioOptions(themeOptions, '.theme-option', 'theme', currentTheme);
     shadowSlider.value = settings.shadowStrength;
     shadowValue.textContent = settings.shadowStrength;
 
     overlaySlider.value = settings.overlayStrength;
     overlayValue.textContent = settings.overlayStrength;
 
-    fontOptions.querySelectorAll('.font-option').forEach((opt) => {
-      opt.classList.toggle('active', opt.dataset.font === settings.font);
-    });
-
-    radiusOptions.querySelectorAll('.theme-option').forEach((opt) => {
-      opt.classList.toggle('active', opt.dataset.radius === settings.radius);
-    });
+    syncRadioOptions(fontOptions, '.font-option', 'font', settings.font);
+    syncRadioOptions(radiusOptions, '.theme-option', 'radius', settings.radius);
 
     const btnPosOptions = document.getElementById('settings-btn-position-options');
     if (btnPosOptions) {
-      btnPosOptions.querySelectorAll('.theme-option').forEach((opt) => {
-        opt.classList.toggle('active', opt.dataset.position === settings.settingsBtnPosition);
-      });
+      syncRadioOptions(btnPosOptions, '.theme-option', 'position', settings.settingsBtnPosition);
     }
 
     tabTitleInput.value = settings.tabTitle || '';
@@ -931,23 +1222,21 @@
       wallpaperReadabilityToggle.checked = settings.wallpaperReadability;
     }
     if (wallpaperSurfaceModeOptions) {
-      wallpaperSurfaceModeOptions.querySelectorAll('.theme-option').forEach((opt) => {
-        opt.classList.toggle('active', opt.dataset.surfaceMode === settings.wallpaperSurfaceMode);
-      });
+      syncRadioOptions(wallpaperSurfaceModeOptions, '.theme-option', 'surfaceMode', settings.wallpaperSurfaceMode);
     }
     if (wallpaperRotationOptions) {
       wallpaperRotationOptions.querySelectorAll('.theme-option').forEach((opt) => {
         const disabled = opt.dataset.rotation !== 'off' && !canUseRotation;
         opt.disabled = disabled;
-        opt.classList.toggle('active', opt.dataset.rotation === settings.wallpaperRotation);
       });
+      syncRadioOptions(wallpaperRotationOptions, '.theme-option', 'rotation', settings.wallpaperRotation);
     }
     if (wallpaperRotationModeOptions) {
       const enabled = canUseRotation && settings.wallpaperRotation !== 'off';
       wallpaperRotationModeOptions.querySelectorAll('.theme-option').forEach((opt) => {
         opt.disabled = !enabled;
-        opt.classList.toggle('active', opt.dataset.rotationMode === settings.wallpaperRotationMode);
       });
+      syncRadioOptions(wallpaperRotationModeOptions, '.theme-option', 'rotationMode', settings.wallpaperRotationMode);
     }
     if (wallpaperSelectModeBtn) {
       wallpaperSelectModeBtn.disabled = !settings.wallpapers.length;
@@ -984,13 +1273,24 @@
       wallpaperGallery.appendChild(empty);
       return;
     }
-    settings.wallpapers.forEach((w) => {
+    settings.wallpapers.forEach((w, index) => {
       const thumb = document.createElement('div');
       thumb.className = 'wallpaper-thumb'
         + (w.id === settings.activeWallpaperId ? ' active' : '')
         + (selectedWallpaperIds.has(w.id) ? ' selected' : '');
       thumb.dataset.id = w.id;
+      thumb.setAttribute('role', 'listitem');
       thumb.draggable = !wallpaperSelectionMode;
+
+      const mainButton = document.createElement('button');
+      mainButton.className = 'wallpaper-thumb-main';
+      mainButton.type = 'button';
+      mainButton.dataset.wallpaperAction = 'activate';
+      const pressed = wallpaperSelectionMode
+        ? selectedWallpaperIds.has(w.id)
+        : w.id === settings.activeWallpaperId;
+      mainButton.setAttribute('aria-pressed', String(pressed));
+      mainButton.setAttribute('aria-label', t(wallpaperSelectionMode ? 'wallpaper.select' : 'wallpaper.use', { name: w.name }));
 
       const img = document.createElement('img');
       img.alt = w.name;
@@ -1012,13 +1312,36 @@
       selectedMark.className = 'wallpaper-thumb-select';
       selectedMark.textContent = selectedWallpaperIds.has(w.id) ? '✓' : '';
 
+      const actions = document.createElement('div');
+      actions.className = 'wallpaper-thumb-actions';
+
+      const previousBtn = document.createElement('button');
+      previousBtn.className = 'wallpaper-thumb-action';
+      previousBtn.type = 'button';
+      previousBtn.dataset.wallpaperAction = 'move-previous';
+      previousBtn.textContent = '←';
+      previousBtn.disabled = index === 0;
+      previousBtn.setAttribute('aria-label', t('wallpaper.movePrevious', { name: w.name }));
+
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'wallpaper-thumb-action';
+      nextBtn.type = 'button';
+      nextBtn.dataset.wallpaperAction = 'move-next';
+      nextBtn.textContent = '→';
+      nextBtn.disabled = index === settings.wallpapers.length - 1;
+      nextBtn.setAttribute('aria-label', t('wallpaper.moveNext', { name: w.name }));
+
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'wallpaper-thumb-delete';
       deleteBtn.type = 'button';
-      deleteBtn.title = (window.__i18n && window.__i18n.t('wallpaper.delete')) || '删除';
+      deleteBtn.dataset.wallpaperAction = 'delete';
+      deleteBtn.title = t('wallpaper.delete');
+      deleteBtn.setAttribute('aria-label', t('wallpaper.deleteNamed', { name: w.name }));
       deleteBtn.textContent = '×';
 
-      thumb.append(img, selectedMark, name, deleteBtn);
+      mainButton.append(img, selectedMark, name);
+      actions.append(previousBtn, nextBtn, deleteBtn);
+      thumb.append(mainButton, actions);
       wallpaperGallery.appendChild(thumb);
     });
   }
@@ -1064,6 +1387,12 @@
       thumb.classList.toggle('selected', selectedWallpaperIds.has(id));
       const mark = thumb.querySelector('.wallpaper-thumb-select');
       if (mark) mark.textContent = selectedWallpaperIds.has(id) ? '✓' : '';
+      const mainButton = thumb.querySelector('.wallpaper-thumb-main');
+      if (mainButton) {
+        const wallpaper = settings.wallpapers.find((item) => item.id === id);
+        mainButton.setAttribute('aria-pressed', String(selectedWallpaperIds.has(id)));
+        if (wallpaper) mainButton.setAttribute('aria-label', t('wallpaper.select', { name: wallpaper.name }));
+      }
     }
     syncWallpaperControls();
   }
@@ -1085,6 +1414,30 @@
     saveSettingsNow();
     renderWallpaperGallery();
     scheduleWallpaperRotation();
+  }
+
+  function focusWallpaperAfterRender(id) {
+    requestAnimationFrame(() => {
+      const mainButton = wallpaperGallery.querySelector(`.wallpaper-thumb[data-id="${CSS.escape(id)}"] .wallpaper-thumb-main`);
+      if (mainButton) mainButton.focus();
+    });
+  }
+
+  function moveWallpaper(id, direction) {
+    const from = settings.wallpapers.findIndex((wallpaper) => wallpaper.id === id);
+    const target = from + direction;
+    if (from < 0 || target < 0 || target >= settings.wallpapers.length) return;
+    reorderWallpapers(id, settings.wallpapers[target].id);
+    focusWallpaperAfterRender(id);
+  }
+
+  function removeWallpaperAndRestoreFocus(id) {
+    const index = settings.wallpapers.findIndex((wallpaper) => wallpaper.id === id);
+    if (index < 0) return;
+    removeWallpapers([id]);
+    const next = settings.wallpapers[Math.min(index, settings.wallpapers.length - 1)];
+    if (next) focusWallpaperAfterRender(next.id);
+    else requestAnimationFrame(() => wallpaperPhotoBtn.focus());
   }
 
 
@@ -1236,11 +1589,22 @@
     const thumb = e.target.closest('.wallpaper-thumb');
     if (!thumb) return;
     const id = thumb.dataset.id;
+    const action = e.target.closest('[data-wallpaper-action]')?.dataset.wallpaperAction;
 
-    if (e.target.closest('.wallpaper-thumb-delete')) {
-      removeWallpapers([id]);
+    if (action === 'delete') {
+      removeWallpaperAndRestoreFocus(id);
       return;
     }
+    if (action === 'move-previous') {
+      moveWallpaper(id, -1);
+      return;
+    }
+    if (action === 'move-next') {
+      moveWallpaper(id, 1);
+      return;
+    }
+
+    if (action !== 'activate') return;
 
     if (wallpaperSelectionMode) {
       toggleWallpaperSelection(id);
@@ -1257,7 +1621,7 @@
 
   wallpaperGallery.addEventListener('dragstart', (e) => {
     const thumb = e.target.closest('.wallpaper-thumb');
-    if (!thumb || wallpaperSelectionMode) {
+    if (!thumb || wallpaperSelectionMode || e.target.closest('.wallpaper-thumb-actions')) {
       e.preventDefault();
       return;
     }
@@ -1393,6 +1757,11 @@
   }
 
   document.addEventListener('keydown', (e) => {
+    if (!aboutPanel.hasAttribute('hidden')) {
+      trapFocus(e, aboutPanel);
+    } else if (!panel.hasAttribute('hidden')) {
+      trapFocus(e, panel);
+    }
     if (e.key === 'Escape') {
       if (!aboutPanel.hasAttribute('hidden')) {
         closeAbout();
@@ -1443,9 +1812,7 @@
     settings.font = opt.dataset.font;
     saveSettings();
     applyFont();
-    fontOptsContainer.querySelectorAll('.font-option').forEach((o) => {
-      o.classList.toggle('active', o.dataset.font === settings.font);
-    });
+    syncUI();
   });
 
   radiusOptions.addEventListener('click', (e) => {
@@ -1454,9 +1821,7 @@
     settings.radius = opt.dataset.radius;
     saveSettings();
     applyRadius();
-    radiusOptions.querySelectorAll('.theme-option').forEach((o) => {
-      o.classList.toggle('active', o.dataset.radius === settings.radius);
-    });
+    syncUI();
   });
 
   const btnPosOptions = document.getElementById('settings-btn-position-options');
@@ -1471,8 +1836,19 @@
     });
   }
 
+  [
+    [modeToggle, '.mode-option'],
+    [themeOptions, '.theme-option'],
+    [fontOptions, '.font-option'],
+    [radiusOptions, '.theme-option'],
+    [btnPosOptions, '.theme-option'],
+    [wallpaperSurfaceModeOptions, '.theme-option'],
+    [wallpaperRotationOptions, '.theme-option'],
+    [wallpaperRotationModeOptions, '.theme-option'],
+  ].forEach(([container, selector]) => enableRadioKeyboard(container, selector));
+
   createOverlay();
-  settingsBtn.addEventListener('click', openPanel);
+  settingsBtn.addEventListener('click', () => openPanel(settingsBtn));
   closeBtn.addEventListener('click', closePanel);
 
   aboutBtn.addEventListener('click', openAbout);

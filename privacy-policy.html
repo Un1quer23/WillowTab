@@ -12,13 +12,18 @@
   ul { padding-left: 20px; }
   li { margin-bottom: 6px; }
   a { color: #1a73e8; }
-  .update-date { color: #888; font-size: 14px; }
+  .update-date { color: #666; font-size: 14px; }
+  .update-date time { white-space: nowrap; }
 </style>
 </head>
 <body>
 
 <h1 data-i18n="privacy.title">WillowTab 隐私政策</h1>
-<p class="update-date" data-i18n="privacy.effectiveDate">生效日期：2026年5月8日　|　最后更新：2026年6月13日</p>
+<p class="update-date">
+  <span data-i18n="privacy.effectiveLabel">生效日期：</span><time datetime="2026-05-08" data-i18n="privacy.effectiveValue">2026年5月8日</time>
+  <span aria-hidden="true">　|　</span>
+  <span data-i18n="privacy.updatedLabel">最后更新：</span><time datetime="2026-06-13" data-i18n="privacy.updatedValue">2026年6月13日</time>
+</p>
 
 <h2 data-i18n="privacy.section1.title">一、引言</h2>
 <p data-i18n="privacy.section1.p1">WillowTab（以下简称"本扩展"）是一款浏览器新标签页替换扩展，由个人开发者 Un1quer（以下简称"我们"）开发和维护。我们高度重视你的隐私和个人信息保护。</p>
