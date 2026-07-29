@@ -32,9 +32,12 @@
   --text-shadow-greeting: 0 1px 4px rgba(0, 0, 0, 0.1);
   --wallpaper-text-color: var(--text-primary);
   --wallpaper-motto-text: var(--motto-text);
+  --wallpaper-surface-blur: 16px;
   --wallpaper-input-bg: rgba(255, 255, 255, 0.15);
   --wallpaper-button-bg: rgba(255, 255, 255, 0.15);
   --wallpaper-button-hover-bg: rgba(255, 255, 255, 0.25);
+  --wallpaper-menu-selected-bg: rgba(245, 245, 220, 0.76);
+  --wallpaper-menu-selected-text: #68401f;
   --wallpaper-surface-border: rgba(255, 255, 255, 0.2);
   --wallpaper-protection-bg: rgba(0, 0, 0, 0);
   --radius-sm: 8px;
@@ -226,8 +229,8 @@ body.has-wallpaper .container {
 }
 
 body.has-wallpaper .search-input {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(var(--wallpaper-surface-blur));
+  -webkit-backdrop-filter: blur(var(--wallpaper-surface-blur));
   background: var(--wallpaper-input-bg);
   border-color: var(--wallpaper-surface-border);
   color: var(--wallpaper-text-color);
@@ -276,8 +279,10 @@ body.has-wallpaper .action-btn.icon-only {
 
 body.has-custom-bg .settings-panel,
 body.has-custom-bg .about-panel,
+body.has-custom-bg .wallpaper-confirm-dialog,
 body.has-wallpaper .settings-panel,
-body.has-wallpaper .about-panel {
+body.has-wallpaper .about-panel,
+body.has-wallpaper .wallpaper-confirm-dialog {
   --bg-primary: #F5F5DC;
   --bg-secondary: color-mix(in srgb, var(--bg-primary) 88%, white);
   --bg-tertiary: color-mix(in srgb, var(--bg-primary) 75%, white);
@@ -304,7 +309,8 @@ body.has-wallpaper .about-panel {
   background: #F5F5DC;
 }
 
-body.has-wallpaper .settings-panel .action-btn {
+body.has-wallpaper .settings-panel .action-btn,
+body.has-wallpaper .wallpaper-confirm-dialog .action-btn {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   background: var(--input-bg);
@@ -313,7 +319,8 @@ body.has-wallpaper .settings-panel .action-btn {
   box-shadow: none;
 }
 
-body.has-wallpaper .settings-panel .action-btn:hover {
+body.has-wallpaper .settings-panel .action-btn:hover,
+body.has-wallpaper .wallpaper-confirm-dialog .action-btn:hover {
   background: var(--accent-subtle);
   color: var(--text-primary);
   border-color: var(--accent);
@@ -340,8 +347,8 @@ body.has-wallpaper .about-panel .action-btn.icon-only:hover {
 }
 
 body.has-wallpaper .suggestions-dropdown {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(var(--wallpaper-surface-blur));
+  -webkit-backdrop-filter: blur(var(--wallpaper-surface-blur));
   background: var(--wallpaper-input-bg);
   color: var(--wallpaper-text-color);
 }
@@ -361,8 +368,15 @@ body.has-wallpaper .suggest-icon {
 }
 
 body.has-wallpaper .engine-dropdown {
+  backdrop-filter: blur(var(--wallpaper-surface-blur));
+  -webkit-backdrop-filter: blur(var(--wallpaper-surface-blur));
   background: var(--wallpaper-input-bg);
+  border-color: var(--wallpaper-surface-border);
   color: var(--wallpaper-text-color);
+}
+
+body.has-wallpaper .engine-dropdown-separator {
+  border-top-color: var(--wallpaper-surface-border);
 }
 
 body.has-wallpaper .engine-dropdown-item {
@@ -375,8 +389,8 @@ body.has-wallpaper .engine-dropdown-item:focus-visible {
 }
 
 body.has-wallpaper .engine-dropdown-item.active {
-  background: var(--wallpaper-button-hover-bg);
-  color: var(--accent);
+  background: var(--wallpaper-menu-selected-bg);
+  color: var(--wallpaper-menu-selected-text);
 }
 
 body.has-wallpaper .time-display {
@@ -581,11 +595,6 @@ body.has-custom-bg {
 
 .engine-dropdown-name {
   flex: 1;
-}
-
-.engine-dropdown-check {
-  flex-shrink: 0;
-  color: var(--accent);
 }
 
 .search-form {
@@ -857,8 +866,9 @@ body.has-custom-bg {
 .settings-panel-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 24px 24px 16px;
+  gap: 4px;
+  min-height: 72px;
+  padding: 16px 18px 12px;
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
   background: var(--bg-primary);
@@ -869,8 +879,14 @@ body.has-custom-bg {
   flex: 1;
   font-size: 1.3rem;
   font-weight: 400;
+  line-height: 1.35;
   color: var(--text-primary);
   letter-spacing: -0.01em;
+}
+
+html[lang="zh-CN"] .settings-panel-header h2 {
+  font-family: "Songti SC", "STSong", "华文宋体", "SimSun", serif;
+  letter-spacing: 0;
 }
 
 .settings-back[hidden] {
@@ -1063,6 +1079,16 @@ body.has-custom-bg {
   color: var(--text-tertiary);
   font-size: 0.78rem;
   white-space: nowrap;
+}
+
+.settings-inline-hint {
+  margin: 6px 4px 0;
+  color: var(--text-tertiary);
+  font-size: 0.76rem;
+}
+
+.settings-inline-hint[hidden] {
+  display: none;
 }
 
 .tab-title-input {
@@ -1307,183 +1333,460 @@ body.has-custom-bg {
   background: #fff;
 }
 
-.wallpaper-toolbar {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 6px 0 12px;
+.wallpaper-settings-content {
+  padding-top: 0;
 }
 
-.wallpaper-import-row {
+.wallpaper-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 4;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 -24px 18px;
+  padding: 0 24px;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
+}
+
+.wallpaper-tab {
+  position: relative;
+  min-height: 48px;
+  padding: 10px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: color var(--duration-fast) ease, background-color var(--duration-fast) ease;
+}
+
+.wallpaper-tab::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: transparent;
+  transition: background-color var(--duration-fast) ease;
+}
+
+.wallpaper-tab.active {
+  color: var(--accent);
+}
+
+.wallpaper-tab.active::after {
+  background: var(--accent);
+}
+
+.wallpaper-tab-panel[hidden] {
+  display: none;
+}
+
+.wallpaper-tab-panel:focus {
+  outline: none;
+}
+
+.wallpaper-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
   gap: 8px;
-  margin-bottom: 12px;
+  min-height: 44px;
+  margin-bottom: 14px;
 }
 
-.wallpaper-import-row .action-btn {
-  justify-content: center;
-  min-width: 0;
-}
-
-.wallpaper-toolbar .action-btn {
-  justify-content: center;
-  min-width: 0;
-  padding-inline: 10px;
+.wallpaper-library-count {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
   white-space: nowrap;
 }
 
-.wallpaper-toolbar .danger:not(:disabled):hover {
-  border-color: rgba(190, 57, 57, 0.75);
-  color: #b83232;
+.wallpaper-toolbar-action {
+  min-height: 44px;
+  justify-content: center;
+  padding-inline: 16px;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.wallpaper-toolbar-action:hover {
+  color: var(--accent);
+  box-shadow: none;
+}
+
+.wallpaper-library-actions {
+  display: grid;
+  flex: 1 1 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.wallpaper-library-actions[hidden],
+.wallpaper-manage-toolbar[hidden] {
+  display: none;
+}
+
+.wallpaper-add-menu-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.wallpaper-add-btn {
+  width: 100%;
+  min-width: 0;
+}
+
+.wallpaper-manage-entry {
+  width: 100%;
+  min-width: 0;
+}
+
+.wallpaper-add-btn span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wallpaper-add-menu {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 6px);
+  right: 0;
+  width: max-content;
+  min-width: 144px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 360px) {
+  .wallpaper-library-header {
+    gap: 6px;
+  }
+
+  .wallpaper-library-actions {
+    gap: 6px;
+  }
+
+  .wallpaper-library-count {
+    flex: 0 1 auto;
+    max-width: 64px;
+    overflow: hidden;
+    font-size: 0.8rem;
+    text-overflow: ellipsis;
+  }
+
+  .wallpaper-toolbar-action {
+    padding-inline: 10px;
+    font-size: 0.76rem;
+  }
+
+}
+
+.wallpaper-add-menu[hidden] {
+  display: none;
+}
+
+.wallpaper-add-menu button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: calc(var(--radius-sm) * 0.75);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.86rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wallpaper-add-menu button:hover,
+.wallpaper-add-menu button:focus-visible {
+  background: var(--accent-subtle);
+}
+
+.wallpaper-manage-toolbar {
+  margin-bottom: 14px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+}
+
+.wallpaper-selected-count {
+  min-height: 24px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.wallpaper-manage-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.wallpaper-manage-actions .action-btn {
+  min-width: 0;
+  padding-inline: 8px;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.wallpaper-manage-actions .danger:not(:disabled):hover,
+.wallpaper-confirm-actions .danger:not(:disabled):hover {
+  border-color: rgba(174, 57, 45, 0.8);
+  color: #9f3028;
+  background: rgba(174, 57, 45, 0.08);
 }
 
 .wallpaper-gallery {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-  padding-right: 4px;
+  gap: 12px 10px;
+  padding: 1px 3px 4px 1px;
 }
 
 .wallpaper-empty {
   grid-column: 1 / -1;
-  padding: 8px;
+  min-height: 150px;
+  padding: 28px 18px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
   color: var(--text-tertiary);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
   text-align: center;
+  display: grid;
+  place-items: center;
 }
 
 .wallpaper-thumb {
   position: relative;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  min-width: 0;
+  padding: 2px;
   border: var(--selection-stroke-width) solid transparent;
-  transition: border-color var(--transition-fast);
-  background: var(--bg-secondary);
+  border-radius: calc(var(--radius-sm) + 3px);
+  background: transparent;
+  transition: border-color var(--duration-fast) ease, opacity var(--duration-fast) ease;
 }
 
 .wallpaper-thumb-main {
+  display: block;
+  width: 100%;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.wallpaper-thumb-visual {
   position: relative;
   display: block;
   width: 100%;
   aspect-ratio: 16 / 10;
-  padding: 0;
   overflow: hidden;
-  border: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   background: var(--bg-secondary);
-  color: inherit;
-  cursor: pointer;
-}
-
-.wallpaper-thumb.dragging {
-  opacity: 0.45;
-}
-
-.wallpaper-thumb.drag-over {
-  border-color: var(--accent);
-  box-shadow: none;
-}
-
-.wallpaper-thumb.active {
-  border-color: var(--selection-stroke-color);
-  box-shadow: none;
-}
-
-.wallpaper-thumb.selected {
-  border-color: #2f7d61;
-  box-shadow: none;
-}
-
-.wallpaper-thumb.active.selected {
-  border-color: var(--selection-stroke-color);
-  box-shadow: none;
-}
-
-.wallpaper-thumb-select {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: rgba(0, 0, 0, 0.46);
-  color: #fff;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.wallpaper-gallery.selecting .wallpaper-thumb-select {
-  display: flex;
-}
-
-.wallpaper-thumb.selected .wallpaper-thumb-select {
-  background: #2f7d61;
-  border-color: #2f7d61;
 }
 
 .wallpaper-thumb-main img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
 }
 
 .wallpaper-thumb-name {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 3px 6px;
-  background: rgba(0, 0, 0, 0.55);
-  color: #ddd;
-  font-size: 0.65rem;
+  display: block;
+  padding: 7px 3px 3px;
+  color: var(--text-secondary);
+  font-size: 0.76rem;
   font-family: var(--font-body);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.wallpaper-thumb-actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(44px, 1fr));
-  gap: 2px;
-  padding: 2px;
-  background: var(--bg-secondary);
+.wallpaper-thumb-select {
+  position: absolute;
+  z-index: 4;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  accent-color: var(--accent);
+  pointer-events: none;
+  opacity: 0;
 }
 
-.wallpaper-thumb-action,
-.wallpaper-thumb-delete {
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: calc(var(--radius-sm) * 0.6);
+.wallpaper-gallery.selecting .wallpaper-thumb-select {
+  opacity: 1;
+}
+
+.wallpaper-thumb.active {
+  border-color: var(--accent);
+}
+
+.wallpaper-thumb.selected {
+  border-style: dashed;
+  border-color: var(--text-secondary);
+}
+
+.wallpaper-thumb.active.selected {
+  border-color: var(--accent);
+}
+
+.wallpaper-reorder-handle {
+  position: absolute;
+  z-index: 3;
+  right: 4px;
+  bottom: 31px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: 0;
-  background: rgba(0, 0, 0, 0.55);
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: #fff;
-  font-size: 14px;
   line-height: 1;
-  cursor: pointer;
+  cursor: grab;
+}
+
+.wallpaper-reorder-handle-label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background-color var(--duration-fast) ease, opacity var(--duration-fast) ease;
+  min-width: 34px;
+  min-height: 24px;
+  padding: 3px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(30, 28, 24, 0.6);
+  font-family: var(--font-body);
+  font-size: 0.66rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.16);
 }
 
-.wallpaper-thumb-action:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+.wallpaper-gallery.selecting .wallpaper-reorder-handle {
+  display: inline-flex;
 }
 
-.wallpaper-gallery.selecting .wallpaper-thumb-actions {
+.wallpaper-reorder-handle:active {
+  cursor: grabbing;
+}
+
+.wallpaper-thumb.dragging {
+  opacity: 0.42;
+}
+
+.wallpaper-thumb.drag-before::before,
+.wallpaper-thumb.drag-after::after {
+  content: '';
+  position: absolute;
+  z-index: 5;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.wallpaper-thumb.drag-before::before {
+  left: -6px;
+}
+
+.wallpaper-thumb.drag-after::after {
+  right: -6px;
+}
+
+.wallpaper-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 103;
+  background: rgba(0, 0, 0, 0.24);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-modal-in) var(--ease-out);
+}
+
+.wallpaper-confirm-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wallpaper-confirm-overlay.is-closing,
+.wallpaper-confirm-dialog.is-closing {
+  transition-duration: var(--duration-modal-out);
+}
+
+.wallpaper-confirm-overlay[hidden],
+.wallpaper-confirm-dialog[hidden] {
   display: none;
 }
 
-.wallpaper-thumb-delete:hover {
-  background: rgba(220, 50, 50, 0.85);
+.wallpaper-confirm-dialog {
+  position: fixed;
+  z-index: 104;
+  top: 50%;
+  left: 50%;
+  width: min(360px, calc(100vw - 32px));
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.97);
+  transition: opacity var(--duration-modal-in) var(--ease-out), transform var(--duration-modal-in) var(--ease-out);
+}
+
+.wallpaper-confirm-dialog.is-open {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.wallpaper-confirm-dialog h2 {
+  margin-bottom: 10px;
+  font-size: 1.08rem;
+  font-weight: 500;
+}
+
+.wallpaper-confirm-dialog p {
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.wallpaper-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
 }
 
 .font-options {
@@ -1546,10 +1849,6 @@ body.has-custom-bg {
   margin: 4px 8px;
   border-top: 1px solid var(--border);
   pointer-events: none;
-}
-
-.engine-dropdown-item.engine-dropdown-settings .engine-dropdown-check {
-  color: var(--text-tertiary);
 }
 
 .about-entry {
@@ -1839,7 +2138,8 @@ input:not(.search-input):not(.custom-color-hex):not(.tab-title-input):focus-visi
   border-radius: var(--radius-full);
 }
 
-.wallpaper-thumb-main:focus-visible {
+.wallpaper-thumb-main:focus-visible,
+.wallpaper-reorder-handle:focus-visible {
   outline-offset: calc(-1 * var(--focus-ring-width));
 }
 
@@ -1859,7 +2159,7 @@ input:not(.search-input):not(.custom-color-hex):not(.tab-title-input):focus-visi
     transform: scale(1.03);
   }
 
-  .wallpaper-thumb:hover {
+  .wallpaper-thumb:not(.selected):hover {
     border-color: var(--accent);
   }
 }
@@ -1867,6 +2167,24 @@ input:not(.search-input):not(.custom-color-hex):not(.tab-title-input):focus-visi
 @media (max-width: 360px) {
   .wallpaper-gallery {
     grid-template-columns: 1fr;
+  }
+
+  .wallpaper-thumb.drag-before::before,
+  .wallpaper-thumb.drag-after::after {
+    right: 4px;
+    left: 4px;
+    width: auto;
+    height: 2px;
+  }
+
+  .wallpaper-thumb.drag-before::before {
+    top: -6px;
+    bottom: auto;
+  }
+
+  .wallpaper-thumb.drag-after::after {
+    top: auto;
+    bottom: -6px;
   }
 }
 
@@ -1921,6 +2239,8 @@ input:not(.search-input):not(.custom-color-hex):not(.tab-title-input):focus-visi
   .settings-panel,
   .about-overlay,
   .about-panel,
+  .wallpaper-confirm-overlay,
+  .wallpaper-confirm-dialog,
   .action-btn,
   .engine-toggle,
   .search-submit,
@@ -1942,6 +2262,11 @@ input:not(.search-input):not(.custom-color-hex):not(.tab-title-input):focus-visi
 
   .about-panel,
   .about-panel.is-open {
+    transform: translate(-50%, -50%);
+  }
+
+  .wallpaper-confirm-dialog,
+  .wallpaper-confirm-dialog.is-open {
     transform: translate(-50%, -50%);
   }
 

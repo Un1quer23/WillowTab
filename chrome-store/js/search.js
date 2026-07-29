@@ -83,7 +83,6 @@
       <li role="none">
         <button type="button" class="engine-dropdown-item ${i === activeIndex ? 'active' : ''}" data-index="${i}" role="menuitemradio" aria-checked="${i === activeIndex}" tabindex="-1">
           <span class="engine-dropdown-name">${engine.name}</span>
-          ${i === activeIndex ? '<svg class="engine-dropdown-check" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
         </button>
       </li>
     `).join('');
