@@ -50,11 +50,11 @@ Google Chrome 用户建议直接从 Chrome Web Store 安装：
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-下载 `WillowTab-v1.6.2.zip`，也就是适用于 Chromium 系浏览器的通用版。
+下载 `WillowTab-v1.7.1.zip`，也就是适用于 Chromium 系浏览器的通用版。
 
 手动安装步骤：
 
-1. 下载 `WillowTab-v1.6.2.zip`。
+1. 下载 `WillowTab-v1.7.1.zip`。
 2. 解压到本地文件夹。
 3. 打开浏览器扩展管理页面，例如 `chrome://extensions`。
 4. 启用“开发者模式”。
@@ -62,7 +62,7 @@ Google Chrome 用户建议直接从 Chrome Web Store 安装：
 
 ### Chrome Web Store Package / Chrome 商店特供包
 
-`WillowTab-for-Chrome-v1.6.2.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
+`WillowTab-for-Chrome-v1.7.1.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
 
 ## 项目结构
 

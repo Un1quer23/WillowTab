@@ -13,7 +13,7 @@
     settingsBtnPosition: 'footer',
     tabTitle: '',
     wallpaperReadability: true,
-    wallpaperSurfaceMode: 'auto',
+    wallpaperSurfaceMode: 'light',
     wallpaperRotation: 'off',
     wallpaperRotationMode: 'sequence',
     lastWallpaperRotationAt: 0,
@@ -46,6 +46,14 @@
   const wallpaperSection = document.getElementById('wallpaper-section');
   const wallpaperOpenBtn = document.getElementById('wallpaper-open-btn');
   const wallpaperSummary = document.getElementById('wallpaper-summary');
+  const wallpaperModeHint = document.getElementById('wallpaper-mode-hint');
+  const wallpaperTabs = document.getElementById('wallpaper-tabs');
+  const wallpaperLibraryPanel = document.getElementById('wallpaper-library-panel');
+  const wallpaperPreferencesPanel = document.getElementById('wallpaper-preferences-panel');
+  const wallpaperLibraryCount = document.getElementById('wallpaper-library-count');
+  const wallpaperAddBtn = document.getElementById('wallpaper-add-btn');
+  const wallpaperAddLabel = document.getElementById('wallpaper-add-label');
+  const wallpaperAddMenu = document.getElementById('wallpaper-add-menu');
   const wallpaperPhotoBtn = document.getElementById('wallpaper-photo-btn');
   const wallpaperPhotoInput = document.getElementById('wallpaper-photo-input');
   const wallpaperFolderBtn = document.getElementById('wallpaper-folder-btn');
@@ -56,8 +64,18 @@
   const wallpaperRotationOptions = document.getElementById('wallpaper-rotation-options');
   const wallpaperRotationModeOptions = document.getElementById('wallpaper-rotation-mode-options');
   const wallpaperSelectModeBtn = document.getElementById('wallpaper-select-mode-btn');
+  const wallpaperManageToolbar = document.getElementById('wallpaper-manage-toolbar');
+  const wallpaperSelectedCount = document.getElementById('wallpaper-selected-count');
+  const wallpaperSelectAllBtn = document.getElementById('wallpaper-select-all-btn');
   const wallpaperDeleteSelectedBtn = document.getElementById('wallpaper-delete-selected-btn');
-  const wallpaperClearAllBtn = document.getElementById('wallpaper-clear-all-btn');
+  const wallpaperManageDoneBtn = document.getElementById('wallpaper-manage-done-btn');
+  const wallpaperReorderStatus = document.getElementById('wallpaper-reorder-status');
+  const wallpaperConfirmOverlay = document.getElementById('wallpaper-confirm-overlay');
+  const wallpaperConfirmDialog = document.getElementById('wallpaper-confirm-dialog');
+  const wallpaperConfirmTitle = document.getElementById('wallpaper-confirm-title');
+  const wallpaperConfirmMessage = document.getElementById('wallpaper-confirm-message');
+  const wallpaperConfirmCancel = document.getElementById('wallpaper-confirm-cancel');
+  const wallpaperConfirmSubmit = document.getElementById('wallpaper-confirm-submit');
   const overlaySlider = document.getElementById('overlay-slider');
   const overlayValue = document.getElementById('overlay-value');
   const shadowSlider = document.getElementById('shadow-slider');
@@ -84,11 +102,24 @@
   let wallpaperRotationTimer = null;
   let wallpaperSelectionMode = false;
   let draggedWallpaperId = '';
+  let draggedWallpaperBoundary = -1;
+  let wallpaperSubView = 'library';
+  let wallpaperImportInProgress = false;
+  let wallpaperImportProgress = { current: 0, total: 0 };
+  let pendingWallpaperDeleteIds = [];
+  let wallpaperDeleteReturnFocus = null;
+  let wallpaperDeleteInProgress = false;
   let settingsPanelView = 'main';
   let activeWallpaperData = '';
   let wallpaperSurfaceAnalysisToken = 0;
   let resizeSyncTimer = null;
+  let aboutReturnFocus = null;
   const selectedWallpaperIds = new Set();
+  const pendingHides = new Map();
+  const pageRegions = [
+    document.querySelector('.container'),
+    document.querySelector('.actions-section'),
+  ].filter(Boolean);
 
   const ROTATION_INTERVALS = {
     off: 0,
@@ -100,6 +131,118 @@
 
   function t(key, vars) {
     return (window.__i18n && window.__i18n.t(key, vars)) || key;
+  }
+
+  const FOCUSABLE_SELECTOR = [
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(',');
+
+  function getFocusableElements(container) {
+    return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR)).filter((element) => {
+      return !element.closest('[hidden], [inert]') && element.getClientRects().length > 0;
+    });
+  }
+
+  function trapFocus(event, container) {
+    if (event.key !== 'Tab') return;
+    const focusable = getFocusableElements(container);
+    if (!focusable.length) {
+      event.preventDefault();
+      container.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function setPageInert(inert) {
+    pageRegions.forEach((region) => { region.inert = inert; });
+  }
+
+  function focusWhenAvailable(element, fallback) {
+    const engineToggle = document.getElementById('engine-toggle');
+    const target = [element, fallback, engineToggle].find((candidate) => {
+      return candidate && candidate.isConnected && !candidate.closest('[hidden], [inert]') && candidate.getClientRects().length > 0;
+    });
+    if (target && typeof target.focus === 'function') target.focus();
+  }
+
+  function cancelPendingHide(element) {
+    const pending = pendingHides.get(element);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    element.removeEventListener('transitionend', pending.onEnd);
+    pendingHides.delete(element);
+  }
+
+  function hideAfterTransition(element, timeout, callback) {
+    cancelPendingHide(element);
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      element.removeEventListener('transitionend', onEnd);
+      pendingHides.delete(element);
+      callback();
+    };
+    const onEnd = (event) => {
+      if (event.target === element && ['opacity', 'transform'].includes(event.propertyName)) finish();
+    };
+    const timer = setTimeout(finish, timeout);
+    pendingHides.set(element, { timer, onEnd });
+    element.addEventListener('transitionend', onEnd);
+  }
+
+  function syncRadioOptions(container, selector, dataKey, selectedValue) {
+    if (!container) return;
+    const options = Array.from(container.querySelectorAll(selector));
+    let tabbableAssigned = false;
+    options.forEach((option) => {
+      const selected = option.dataset[dataKey] === selectedValue;
+      option.setAttribute('role', 'radio');
+      option.setAttribute('aria-checked', String(selected));
+      const tabbable = selected && !option.disabled;
+      option.tabIndex = tabbable ? 0 : -1;
+      if (tabbable) tabbableAssigned = true;
+      option.classList.toggle('active', selected);
+    });
+    if (!tabbableAssigned) {
+      const firstEnabled = options.find((option) => !option.disabled);
+      if (firstEnabled) firstEnabled.tabIndex = 0;
+    }
+  }
+
+  function enableRadioKeyboard(container, selector) {
+    if (!container) return;
+    container.addEventListener('keydown', (event) => {
+      const current = event.target.closest(selector);
+      if (!current) return;
+      const options = Array.from(container.querySelectorAll(selector)).filter((option) => !option.disabled);
+      const currentIndex = options.indexOf(current);
+      if (currentIndex < 0) return;
+      let nextIndex = currentIndex;
+      if (['ArrowRight', 'ArrowDown'].includes(event.key)) nextIndex = (currentIndex + 1) % options.length;
+      else if (['ArrowLeft', 'ArrowUp'].includes(event.key)) nextIndex = (currentIndex - 1 + options.length) % options.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = options.length - 1;
+      else return;
+      event.preventDefault();
+      options[nextIndex].focus();
+      options[nextIndex].click();
+    });
   }
 
   function effectiveThemeIsDark() {
@@ -150,7 +293,7 @@
       settings.wallpaperRotationMode = 'sequence';
     }
     if (!['auto', 'light', 'dark'].includes(settings.wallpaperSurfaceMode)) {
-      settings.wallpaperSurfaceMode = 'auto';
+      settings.wallpaperSurfaceMode = 'light';
     }
     settings.wallpaperReadability = settings.wallpaperReadability !== false;
     settings.lastWallpaperRotationAt = Number(settings.lastWallpaperRotationAt) || 0;
@@ -354,6 +497,41 @@
     return (light + 0.05) / (dark + 0.05);
   }
 
+  function mixRgb(from, to, amount) {
+    return {
+      r: from.r + (to.r - from.r) * amount,
+      g: from.g + (to.g - from.g) * amount,
+      b: from.b + (to.b - from.b) * amount,
+    };
+  }
+
+  function rgbToHex(color) {
+    const channel = (value) => Math.round(value).toString(16).padStart(2, '0');
+    return `#${channel(color.r)}${channel(color.g)}${channel(color.b)}`;
+  }
+
+  function pickMutedReadableColor(surfaces, desired, endpoint, minimumContrast = 4.5) {
+    const isReadable = (candidate) => {
+      const candidateLuminance = relativeLuminance(candidate);
+      return surfaces.every((surface) => {
+        return contrastRatio(candidateLuminance, relativeLuminance(surface)) >= minimumContrast;
+      });
+    };
+
+    const roundedCandidate = (amount) => parseHexColor(rgbToHex(mixRgb(desired, endpoint, amount)));
+
+    if (isReadable(desired)) return rgbToHex(desired);
+
+    let low = 0;
+    let high = 1;
+    for (let i = 0; i < 20; i += 1) {
+      const middle = (low + high) / 2;
+      if (isReadable(roundedCandidate(middle))) high = middle;
+      else low = middle;
+    }
+    return rgbToHex(roundedCandidate(high));
+  }
+
   function clearColorReadabilityVars() {
     const root = document.documentElement;
     document.body.removeAttribute('data-color-readable');
@@ -362,8 +540,12 @@
     root.style.removeProperty('--text-primary');
     root.style.removeProperty('--text-secondary');
     root.style.removeProperty('--text-tertiary');
+    root.style.removeProperty('--motto-text');
+    root.style.removeProperty('--placeholder-text');
     root.style.removeProperty('--border');
     root.style.removeProperty('--input-bg');
+    root.style.removeProperty('--segment-selected-text');
+    root.style.removeProperty('--segment-selected-stroke');
   }
 
   function applyColorReadabilityVars(bgColor) {
@@ -372,13 +554,46 @@
     const root = document.documentElement;
     const luminance = relativeLuminance(color);
     const useDarkText = contrastRatio(luminance, 0) >= contrastRatio(luminance, 1);
+    const white = { r: 255, g: 255, b: 255 };
+    const black = { r: 0, g: 0, b: 0 };
+    const inputSurface = mixRgb(color, white, useDarkText ? 0.5 : 0.12);
+    const mutedText = pickMutedReadableColor(
+      [color, inputSurface],
+      useDarkText ? parseHexColor('#6b6b60') : parseHexColor('#8f887e'),
+      useDarkText ? black : white,
+    );
+    const placeholderText = pickMutedReadableColor(
+      [inputSurface],
+      useDarkText ? parseHexColor('#727269') : parseHexColor('#8f887e'),
+      useDarkText ? black : white,
+    );
+    const mottoText = pickMutedReadableColor(
+      [inputSurface],
+      useDarkText ? parseHexColor('#918d83') : parseHexColor('#706b64'),
+      useDarkText ? black : white,
+      3.2,
+    );
     document.body.dataset.colorReadable = useDarkText ? 'dark-text' : 'light-text';
+    root.style.setProperty(
+      '--segment-selected-text',
+      useDarkText
+        ? 'color-mix(in srgb, var(--text-primary) 72%, var(--accent))'
+        : 'color-mix(in srgb, var(--text-primary) 82%, var(--accent))',
+    );
+    root.style.setProperty(
+      '--segment-selected-stroke',
+      useDarkText
+        ? 'color-mix(in srgb, var(--accent) 72%, black)'
+        : 'color-mix(in srgb, var(--accent) 58%, white)',
+    );
     if (useDarkText) {
       root.style.setProperty('--bg-secondary', `color-mix(in srgb, ${bgColor} 88%, white)`);
       root.style.setProperty('--bg-tertiary', `color-mix(in srgb, ${bgColor} 75%, white)`);
       root.style.setProperty('--text-primary', `color-mix(in srgb, ${bgColor} 20%, black)`);
       root.style.setProperty('--text-secondary', `color-mix(in srgb, ${bgColor} 40%, black)`);
-      root.style.setProperty('--text-tertiary', `color-mix(in srgb, ${bgColor} 65%, black)`);
+      root.style.setProperty('--text-tertiary', mutedText);
+      root.style.setProperty('--motto-text', mottoText);
+      root.style.setProperty('--placeholder-text', placeholderText);
       root.style.setProperty('--border', `color-mix(in srgb, ${bgColor} 75%, black)`);
       root.style.setProperty('--input-bg', `color-mix(in srgb, ${bgColor} 50%, white)`);
       return;
@@ -388,7 +603,9 @@
     root.style.setProperty('--bg-tertiary', `color-mix(in srgb, ${bgColor} 72%, white)`);
     root.style.setProperty('--text-primary', '#f3eddf');
     root.style.setProperty('--text-secondary', 'rgba(243, 237, 223, 0.78)');
-    root.style.setProperty('--text-tertiary', 'rgba(243, 237, 223, 0.58)');
+    root.style.setProperty('--text-tertiary', mutedText);
+    root.style.setProperty('--motto-text', mottoText);
+    root.style.setProperty('--placeholder-text', placeholderText);
     root.style.setProperty('--border', 'rgba(255, 255, 255, 0.24)');
     root.style.setProperty('--input-bg', 'rgba(255, 255, 255, 0.12)');
   }
@@ -572,13 +789,83 @@
   function clearWallpaperAdaptiveVars() {
     const root = document.documentElement;
     root.style.removeProperty('--wallpaper-text-color');
+    root.style.removeProperty('--wallpaper-motto-text');
     root.style.removeProperty('--wallpaper-time-color');
     root.style.removeProperty('--wallpaper-greeting-color');
     root.style.removeProperty('--wallpaper-input-bg');
     root.style.removeProperty('--wallpaper-button-bg');
     root.style.removeProperty('--wallpaper-button-hover-bg');
+    root.style.removeProperty('--wallpaper-menu-selected-bg');
+    root.style.removeProperty('--wallpaper-menu-selected-text');
     root.style.removeProperty('--wallpaper-surface-border');
     root.style.removeProperty('--wallpaper-protection-bg');
+  }
+
+  function applyWallpaperMottoColor(textColor, inputSurfaceColor, inputAlpha, surfaceBrightness) {
+    const primaryText = parseHexColor(textColor);
+    if (!primaryText) return inputAlpha;
+    const tone = Math.min(1, Math.max(0, surfaceBrightness)) * 255;
+    const wallpaperSurface = { r: tone, g: tone, b: tone };
+    const primaryLuminance = relativeLuminance(primaryText);
+    const contrastAt = (alpha) => {
+      const surface = mixRgb(wallpaperSurface, inputSurfaceColor, alpha);
+      return contrastRatio(primaryLuminance, relativeLuminance(surface));
+    };
+    let resolvedInputAlpha = inputAlpha;
+    const targetPrimaryContrast = 5.5;
+    if (contrastAt(inputAlpha) < targetPrimaryContrast && contrastAt(1) >= targetPrimaryContrast) {
+      let low = inputAlpha;
+      let high = 1;
+      for (let i = 0; i < 20; i += 1) {
+        const middle = (low + high) / 2;
+        if (contrastAt(middle) >= targetPrimaryContrast) high = middle;
+        else low = middle;
+      }
+      resolvedInputAlpha = high;
+    }
+    const inputSurface = mixRgb(wallpaperSurface, inputSurfaceColor, resolvedInputAlpha);
+    const useDarkText = relativeLuminance(primaryText) < relativeLuminance(inputSurface);
+    const desired = parseHexColor(useDarkText ? '#918d83' : '#706b64');
+    const motto = pickMutedReadableColor([inputSurface], desired, primaryText, 3.2);
+    document.documentElement.style.setProperty('--wallpaper-motto-text', motto);
+    return resolvedInputAlpha;
+  }
+
+  function applyWallpaperMenuSelectionColors(
+    surfaceBrightness,
+    menuSurfaceColor,
+    menuSurfaceAlpha,
+    selectedSurfaceColor,
+    selectedSurfaceAlpha,
+    selectedTextColor,
+  ) {
+    const root = document.documentElement;
+    const tone = Math.min(1, Math.max(0, surfaceBrightness)) * 255;
+    const wallpaperSurface = { r: tone, g: tone, b: tone };
+    const menuSurface = mixRgb(wallpaperSurface, menuSurfaceColor, menuSurfaceAlpha);
+    const selectedText = parseHexColor(selectedTextColor) || parseHexColor('#f3eddf');
+    const textLuminance = relativeLuminance(selectedText);
+    const contrastAt = (alpha) => contrastRatio(
+      textLuminance,
+      relativeLuminance(mixRgb(menuSurface, selectedSurfaceColor, alpha)),
+    );
+    let resolvedSelectedAlpha = selectedSurfaceAlpha;
+    if (contrastAt(resolvedSelectedAlpha) < 4.5) {
+      let low = resolvedSelectedAlpha;
+      let high = 1;
+      for (let i = 0; i < 20; i += 1) {
+        const middle = (low + high) / 2;
+        if (contrastAt(middle) >= 4.5) high = middle;
+        else low = middle;
+      }
+      resolvedSelectedAlpha = high;
+    }
+
+    root.style.setProperty(
+      '--wallpaper-menu-selected-bg',
+      `rgba(${Math.round(selectedSurfaceColor.r)},${Math.round(selectedSurfaceColor.g)},${Math.round(selectedSurfaceColor.b)},${resolvedSelectedAlpha.toFixed(3)})`,
+    );
+    root.style.setProperty('--wallpaper-menu-selected-text', rgbToHex(selectedText));
   }
 
   function updateWallpaperPresentation() {
@@ -618,7 +905,7 @@
     clearWallpaperAdaptiveVars();
     const effective = brightness * (1 - settings.overlayStrength / 100);
     const lightSurface = brightness >= 0.62 || effective >= 0.52;
-    const surfaceMode = settings.wallpaperSurfaceMode || 'auto';
+    const surfaceMode = settings.wallpaperSurfaceMode || 'light';
     const surfaceBrightness = surfaceAnalysis ? surfaceAnalysis.brightness : brightness;
     const surfaceEffective = surfaceBrightness * (1 - settings.overlayStrength / 100);
     const adaptiveLightSurface = surfaceBrightness >= 0.62 || surfaceEffective >= 0.5;
@@ -642,10 +929,25 @@
         const inputAlpha = Math.min(0.3, 0.16 + surfaceBoost * 0.55);
         const buttonAlpha = Math.min(0.28, 0.14 + surfaceBoost * 0.45);
         const buttonHoverAlpha = Math.min(0.36, 0.24 + surfaceBoost * 0.45);
-        root.style.setProperty('--wallpaper-text-color', adaptiveLightSurface ? '#272016' : '#f3eddf');
-        root.style.setProperty('--wallpaper-input-bg', `rgba(255,255,255,${inputAlpha.toFixed(3)})`);
+        const textColor = adaptiveLightSurface ? '#272016' : '#f3eddf';
+        const resolvedInputAlpha = applyWallpaperMottoColor(
+          textColor,
+          { r: 255, g: 255, b: 255 },
+          inputAlpha,
+          surfaceEffective,
+        );
+        root.style.setProperty('--wallpaper-text-color', textColor);
+        root.style.setProperty('--wallpaper-input-bg', `rgba(255,255,255,${resolvedInputAlpha.toFixed(3)})`);
         root.style.setProperty('--wallpaper-button-bg', `rgba(255,255,255,${buttonAlpha.toFixed(3)})`);
         root.style.setProperty('--wallpaper-button-hover-bg', `rgba(255,255,255,${buttonHoverAlpha.toFixed(3)})`);
+        applyWallpaperMenuSelectionColors(
+          surfaceEffective,
+          { r: 255, g: 255, b: 255 },
+          resolvedInputAlpha,
+          { r: 245, g: 245, b: 220 },
+          0.76,
+          '#68401f',
+        );
         root.style.setProperty('--wallpaper-surface-border', 'rgba(255,255,255,0.2)');
       } else {
         const veryDark = surfaceEffective < 0.36;
@@ -658,41 +960,121 @@
         const buttonHoverAlpha = veryDark
           ? Math.min(0.56, 0.42 + surfaceBoost * 0.75)
           : Math.min(0.58, 0.46 + surfaceBoost * 0.65);
+        const resolvedInputAlpha = applyWallpaperMottoColor(
+          '#f3eddf',
+          { r: 18, g: 16, b: 14 },
+          inputAlpha,
+          surfaceEffective,
+        );
         root.style.setProperty('--wallpaper-text-color', '#f3eddf');
-        root.style.setProperty('--wallpaper-input-bg', `rgba(18,16,14,${inputAlpha.toFixed(3)})`);
+        root.style.setProperty('--wallpaper-input-bg', `rgba(18,16,14,${resolvedInputAlpha.toFixed(3)})`);
         root.style.setProperty('--wallpaper-button-bg', `rgba(18,16,14,${buttonAlpha.toFixed(3)})`);
         root.style.setProperty('--wallpaper-button-hover-bg', `rgba(18,16,14,${buttonHoverAlpha.toFixed(3)})`);
+        applyWallpaperMenuSelectionColors(
+          surfaceEffective,
+          { r: 18, g: 16, b: 14 },
+          resolvedInputAlpha,
+          { r: 18, g: 16, b: 14 },
+          buttonHoverAlpha,
+          '#f3eddf',
+        );
         root.style.setProperty('--wallpaper-surface-border', 'rgba(255,255,255,0.24)');
       }
       return;
     }
 
     if (surfaceMode === 'light') {
-      root.style.setProperty('--wallpaper-text-color', adaptiveLightSurface ? '#272016' : '#f3eddf');
-      root.style.setProperty('--wallpaper-input-bg', 'rgba(255,255,255,0.16)');
+      const textColor = adaptiveLightSurface ? '#272016' : '#f3eddf';
+      const inputAlpha = applyWallpaperMottoColor(
+        textColor,
+        { r: 255, g: 255, b: 255 },
+        0.16,
+        surfaceEffective,
+      );
+      root.style.setProperty('--wallpaper-text-color', textColor);
+      root.style.setProperty('--wallpaper-input-bg', `rgba(255,255,255,${inputAlpha.toFixed(3)})`);
       root.style.setProperty('--wallpaper-button-bg', 'rgba(255,255,255,0.14)');
       root.style.setProperty('--wallpaper-button-hover-bg', 'rgba(255,255,255,0.24)');
+      applyWallpaperMenuSelectionColors(
+        surfaceEffective,
+        { r: 255, g: 255, b: 255 },
+        inputAlpha,
+        { r: 245, g: 245, b: 220 },
+        0.76,
+        '#68401f',
+      );
       root.style.setProperty('--wallpaper-surface-border', 'rgba(255,255,255,0.2)');
       return;
     }
     if (surfaceMode === 'dark') {
+      const inputAlpha = applyWallpaperMottoColor(
+        '#f3eddf',
+        { r: 18, g: 16, b: 14 },
+        0.38,
+        surfaceEffective,
+      );
       root.style.setProperty('--wallpaper-text-color', '#f3eddf');
-      root.style.setProperty('--wallpaper-input-bg', 'rgba(18,16,14,0.38)');
+      root.style.setProperty('--wallpaper-input-bg', `rgba(18,16,14,${inputAlpha.toFixed(3)})`);
       root.style.setProperty('--wallpaper-button-bg', 'rgba(18,16,14,0.32)');
       root.style.setProperty('--wallpaper-button-hover-bg', 'rgba(18,16,14,0.48)');
+      applyWallpaperMenuSelectionColors(
+        surfaceEffective,
+        { r: 18, g: 16, b: 14 },
+        inputAlpha,
+        { r: 18, g: 16, b: 14 },
+        0.48,
+        '#f3eddf',
+      );
       root.style.setProperty('--wallpaper-surface-border', 'rgba(255,255,255,0.24)');
       return;
     }
 
     if (effective < 0.4) {
+      const inputAlpha = applyWallpaperMottoColor(
+        '#e8e2d4',
+        { r: 255, g: 255, b: 255 },
+        0.18,
+        effective,
+      );
       root.style.setProperty('--wallpaper-text-color', '#e8e2d4');
-      root.style.setProperty('--wallpaper-input-bg', 'rgba(255,255,255,0.18)');
+      root.style.setProperty('--wallpaper-input-bg', `rgba(255,255,255,${inputAlpha.toFixed(3)})`);
+      applyWallpaperMenuSelectionColors(
+        surfaceEffective,
+        { r: 255, g: 255, b: 255 },
+        inputAlpha,
+        { r: 245, g: 245, b: 220 },
+        0.76,
+        '#68401f',
+      );
     } else if (effective < 0.6) {
+      const inputAlpha = applyWallpaperMottoColor(
+        '#f0ece0',
+        { r: 255, g: 255, b: 255 },
+        0.18,
+        effective,
+      );
       root.style.setProperty('--wallpaper-text-color', '#f0ece0');
-      root.style.setProperty('--wallpaper-input-bg', 'rgba(255,255,255,0.18)');
+      root.style.setProperty('--wallpaper-input-bg', `rgba(255,255,255,${inputAlpha.toFixed(3)})`);
+      applyWallpaperMenuSelectionColors(
+        surfaceEffective,
+        { r: 255, g: 255, b: 255 },
+        inputAlpha,
+        { r: 245, g: 245, b: 220 },
+        0.76,
+        '#68401f',
+      );
     } else {
       root.style.removeProperty('--wallpaper-text-color');
       root.style.removeProperty('--wallpaper-input-bg');
+      applyWallpaperMottoColor('#272016', { r: 255, g: 255, b: 255 }, 0.15, effective);
+      applyWallpaperMenuSelectionColors(
+        surfaceEffective,
+        { r: 255, g: 255, b: 255 },
+        0.15,
+        { r: 245, g: 245, b: 220 },
+        0.76,
+        '#68401f',
+      );
     }
   }
 
@@ -773,6 +1155,7 @@
   function syncUISuggestions() {
     if (!suggestionsToggle) return;
     suggestionsToggle.dataset.enabled = settings.enableSuggestions ? 'true' : 'false';
+    suggestionsToggle.setAttribute('aria-pressed', String(settings.enableSuggestions));
     suggestionsToggle.textContent = settings.enableSuggestions
       ? t('settings.suggestionsOn')
       : t('settings.suggestionsOff');
@@ -793,14 +1176,55 @@
   function createOverlay() {
     settingsOverlay = document.createElement('div');
     settingsOverlay.className = 'panel-overlay';
+    settingsOverlay.setAttribute('aria-hidden', 'true');
     settingsOverlay.setAttribute('hidden', '');
     document.body.appendChild(settingsOverlay);
     settingsOverlay.addEventListener('click', closePanel);
   }
 
+  function closeWallpaperAddMenu(restoreFocus = false) {
+    if (!wallpaperAddMenu || !wallpaperAddBtn) return;
+    wallpaperAddMenu.hidden = true;
+    wallpaperAddBtn.setAttribute('aria-expanded', 'false');
+    if (restoreFocus && !wallpaperAddBtn.disabled) wallpaperAddBtn.focus();
+  }
+
+  function openWallpaperAddMenu(focusIndex = 0) {
+    if (!wallpaperAddMenu || !wallpaperAddBtn || wallpaperAddBtn.disabled) return;
+    wallpaperAddMenu.hidden = false;
+    wallpaperAddBtn.setAttribute('aria-expanded', 'true');
+    const items = getFocusableElements(wallpaperAddMenu);
+    const target = items[Math.max(0, Math.min(focusIndex, items.length - 1))];
+    if (target) target.focus();
+  }
+
+  function setWallpaperSubView(view, focusTab = false) {
+    const nextView = view === 'preferences' ? 'preferences' : 'library';
+    if (wallpaperSubView !== nextView) setWallpaperSelectionMode(false);
+    wallpaperSubView = nextView;
+    closeWallpaperAddMenu(false);
+    if (wallpaperLibraryPanel) wallpaperLibraryPanel.hidden = nextView !== 'library';
+    if (wallpaperPreferencesPanel) wallpaperPreferencesPanel.hidden = nextView !== 'preferences';
+    if (wallpaperTabs) {
+      wallpaperTabs.querySelectorAll('[role="tab"]').forEach((tab) => {
+        const selected = tab.dataset.wallpaperTab === nextView;
+        tab.classList.toggle('active', selected);
+        tab.setAttribute('aria-selected', String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        if (selected && focusTab) tab.focus();
+      });
+    }
+    if (wallpaperSettingsView) wallpaperSettingsView.scrollTop = 0;
+  }
+
   function setSettingsView(view) {
     settingsPanelView = view === 'wallpaper' ? 'wallpaper' : 'main';
+    panel.scrollTop = 0;
     const isWallpaperView = settingsPanelView === 'wallpaper';
+    if (!isWallpaperView) {
+      setWallpaperSelectionMode(false);
+      closeWallpaperAddMenu(false);
+    }
     if (mainSettingsView) mainSettingsView.hidden = isWallpaperView;
     if (wallpaperSettingsView) wallpaperSettingsView.hidden = !isWallpaperView;
     if (backBtn) backBtn.hidden = !isWallpaperView;
@@ -808,61 +1232,162 @@
       panelTitle.textContent = isWallpaperView ? t('settings.wallpaperSettings') : t('settings.title');
     }
     if (isWallpaperView) {
+      setWallpaperSubView('library');
       syncUI();
     }
+    const activeView = isWallpaperView ? wallpaperSettingsView : mainSettingsView;
+    if (activeView) activeView.scrollTop = 0;
   }
 
-  function openPanel() {
-    lastFocusedBeforePanel = document.activeElement;
+  function openPanel(returnFocus = document.activeElement) {
+    cancelPendingHide(panel);
+    lastFocusedBeforePanel = returnFocus;
+    panel.classList.remove('is-closing');
+    if (settingsOverlay) settingsOverlay.classList.remove('is-closing');
     panel.removeAttribute('hidden');
     if (settingsOverlay) settingsOverlay.removeAttribute('hidden');
+    setPageInert(true);
     setSettingsView('main');
     syncUI();
-    closeBtn.focus();
+    requestAnimationFrame(() => {
+      panel.classList.add('is-open');
+      if (settingsOverlay) settingsOverlay.classList.add('is-open');
+      closeBtn.focus();
+    });
   }
 
   function closePanel() {
-    panel.setAttribute('hidden', '');
-    if (settingsOverlay) settingsOverlay.setAttribute('hidden', '');
-    setSettingsView('main');
-    if (lastFocusedBeforePanel && typeof lastFocusedBeforePanel.focus === 'function' && document.contains(lastFocusedBeforePanel)) {
-      lastFocusedBeforePanel.focus();
-    } else if (settingsBtn) {
-      settingsBtn.focus();
+    if (panel.hasAttribute('hidden')) return;
+    setWallpaperSelectionMode(false);
+    closeWallpaperAddMenu(false);
+    panel.classList.add('is-closing');
+    panel.classList.remove('is-open');
+    if (settingsOverlay) {
+      settingsOverlay.classList.add('is-closing');
+      settingsOverlay.classList.remove('is-open');
     }
+    const timeout = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 170 : 270;
+    hideAfterTransition(panel, timeout, () => {
+      panel.setAttribute('hidden', '');
+      panel.classList.remove('is-closing');
+      if (settingsOverlay) {
+        settingsOverlay.setAttribute('hidden', '');
+        settingsOverlay.classList.remove('is-closing');
+      }
+      setSettingsView('main');
+      setPageInert(false);
+      focusWhenAvailable(lastFocusedBeforePanel, settingsBtn);
+    });
   }
 
   function openAbout() {
+    cancelPendingHide(aboutPanel);
+    aboutReturnFocus = document.activeElement;
+    panel.inert = true;
+    aboutPanel.classList.remove('is-closing');
+    if (aboutOverlay) aboutOverlay.classList.remove('is-closing');
     aboutPanel.removeAttribute('hidden');
     if (aboutOverlay) aboutOverlay.removeAttribute('hidden');
+    requestAnimationFrame(() => {
+      aboutPanel.classList.add('is-open');
+      if (aboutOverlay) aboutOverlay.classList.add('is-open');
+      aboutClose.focus();
+    });
   }
 
   function closeAbout() {
-    aboutPanel.setAttribute('hidden', '');
-    if (aboutOverlay) aboutOverlay.setAttribute('hidden', '');
+    if (aboutPanel.hasAttribute('hidden')) return;
+    aboutPanel.classList.add('is-closing');
+    aboutPanel.classList.remove('is-open');
+    if (aboutOverlay) {
+      aboutOverlay.classList.add('is-closing');
+      aboutOverlay.classList.remove('is-open');
+    }
+    const timeout = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 170 : 230;
+    hideAfterTransition(aboutPanel, timeout, () => {
+      aboutPanel.setAttribute('hidden', '');
+      aboutPanel.classList.remove('is-closing');
+      if (aboutOverlay) {
+        aboutOverlay.setAttribute('hidden', '');
+        aboutOverlay.classList.remove('is-closing');
+      }
+      panel.inert = false;
+      focusWhenAvailable(aboutReturnFocus, aboutBtn);
+    });
+  }
+
+  function openWallpaperDeleteConfirm(ids, returnFocus = document.activeElement) {
+    const validIds = Array.from(new Set(ids)).filter((id) => settings.wallpapers.some((item) => item.id === id));
+    if (!validIds.length || wallpaperDeleteInProgress) return;
+    cancelPendingHide(wallpaperConfirmDialog);
+    pendingWallpaperDeleteIds = validIds;
+    wallpaperDeleteReturnFocus = returnFocus;
+    panel.inert = true;
+    wallpaperConfirmTitle.textContent = t('wallpaper.confirmDeleteTitle');
+    wallpaperConfirmMessage.textContent = t('wallpaper.confirmDeleteMessage', { count: validIds.length });
+    wallpaperConfirmSubmit.textContent = t('wallpaper.confirmDeleteSubmit');
+    wallpaperConfirmCancel.disabled = false;
+    wallpaperConfirmSubmit.disabled = false;
+    wallpaperConfirmDialog.classList.remove('is-closing');
+    wallpaperConfirmOverlay.classList.remove('is-closing');
+    wallpaperConfirmDialog.removeAttribute('hidden');
+    wallpaperConfirmOverlay.removeAttribute('hidden');
+    requestAnimationFrame(() => {
+      wallpaperConfirmDialog.classList.add('is-open');
+      wallpaperConfirmOverlay.classList.add('is-open');
+      wallpaperConfirmCancel.focus();
+    });
+  }
+
+  function closeWallpaperDeleteConfirm(restoreFocus = true) {
+    if (wallpaperConfirmDialog.hasAttribute('hidden') || wallpaperDeleteInProgress) return;
+    wallpaperConfirmDialog.classList.add('is-closing');
+    wallpaperConfirmDialog.classList.remove('is-open');
+    wallpaperConfirmOverlay.classList.add('is-closing');
+    wallpaperConfirmOverlay.classList.remove('is-open');
+    const timeout = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 170 : 230;
+    hideAfterTransition(wallpaperConfirmDialog, timeout, () => {
+      wallpaperConfirmDialog.setAttribute('hidden', '');
+      wallpaperConfirmOverlay.setAttribute('hidden', '');
+      wallpaperConfirmDialog.classList.remove('is-closing');
+      wallpaperConfirmOverlay.classList.remove('is-closing');
+      panel.inert = false;
+      pendingWallpaperDeleteIds = [];
+      if (restoreFocus) focusWhenAvailable(wallpaperDeleteReturnFocus, wallpaperAddBtn);
+      wallpaperDeleteReturnFocus = null;
+    });
   }
 
   function syncUI() {
     const isDark = effectiveThemeIsDark();
+    const hasWallpapers = settings.wallpapers.length > 0;
+    const wallpaperModeOption = modeToggle.querySelector('[data-mode="wallpaper"]');
+    if (wallpaperModeOption) {
+      wallpaperModeOption.disabled = !hasWallpapers;
+      wallpaperModeOption.setAttribute('aria-disabled', String(!hasWallpapers));
+    }
+    if (wallpaperModeHint) wallpaperModeHint.hidden = hasWallpapers;
 
-    modeToggle.querySelectorAll('.mode-option').forEach((opt) => {
-      opt.classList.toggle('active', opt.dataset.mode === settings.bgMode);
-    });
+    syncRadioOptions(modeToggle, '.mode-option', 'mode', settings.bgMode);
 
     colorSection.hidden = (settings.bgMode !== 'color');
-    if (!colorSection.hidden) {
-      colorSection.classList.toggle('disabled', isDark);
-      if (isDark) {
-        colorSection.setAttribute('data-hint', (window.__i18n && window.__i18n.t('hint.darkColorDisabled')) || '仅在浅色模式下可用');
-      } else {
-        colorSection.removeAttribute('data-hint');
-      }
+    colorSection.classList.toggle('disabled', isDark);
+    colorSection.setAttribute('aria-disabled', String(isDark));
+    colorSection.querySelectorAll('button, input').forEach((control) => {
+      control.disabled = isDark;
+    });
+    if (isDark) {
+      colorSection.setAttribute('data-hint', (window.__i18n && window.__i18n.t('hint.darkColorDisabled')) || '仅在浅色模式下可用');
+    } else {
+      colorSection.removeAttribute('data-hint');
     }
-    wallpaperSection.hidden = (settings.bgMode !== 'wallpaper');
+    wallpaperSection.hidden = false;
     themeSection.hidden = (settings.bgMode === 'wallpaper');
 
     colorPresets.querySelectorAll('.color-swatch').forEach((swatch) => {
-      swatch.classList.toggle('active', swatch.dataset.color === settings.bgColor);
+      const selected = swatch.dataset.color === settings.bgColor;
+      swatch.classList.toggle('active', selected);
+      swatch.setAttribute('aria-pressed', String(selected));
     });
 
     const color = settings.bgColor || '#F5F5DC';
@@ -874,28 +1399,19 @@
     updateWallpaperSummary();
 
     const currentTheme = window.__theme ? window.__theme.get() : 'auto';
-    themeOptions.querySelectorAll('.theme-option').forEach((opt) => {
-      opt.classList.toggle('active', opt.dataset.theme === currentTheme);
-    });
+    syncRadioOptions(themeOptions, '.theme-option', 'theme', currentTheme);
     shadowSlider.value = settings.shadowStrength;
     shadowValue.textContent = settings.shadowStrength;
 
     overlaySlider.value = settings.overlayStrength;
-    overlayValue.textContent = settings.overlayStrength;
+    overlayValue.textContent = `${settings.overlayStrength}%`;
 
-    fontOptions.querySelectorAll('.font-option').forEach((opt) => {
-      opt.classList.toggle('active', opt.dataset.font === settings.font);
-    });
-
-    radiusOptions.querySelectorAll('.theme-option').forEach((opt) => {
-      opt.classList.toggle('active', opt.dataset.radius === settings.radius);
-    });
+    syncRadioOptions(fontOptions, '.font-option', 'font', settings.font);
+    syncRadioOptions(radiusOptions, '.theme-option', 'radius', settings.radius);
 
     const btnPosOptions = document.getElementById('settings-btn-position-options');
     if (btnPosOptions) {
-      btnPosOptions.querySelectorAll('.theme-option').forEach((opt) => {
-        opt.classList.toggle('active', opt.dataset.position === settings.settingsBtnPosition);
-      });
+      syncRadioOptions(btnPosOptions, '.theme-option', 'position', settings.settingsBtnPosition);
     }
 
     tabTitleInput.value = settings.tabTitle || '';
@@ -905,39 +1421,62 @@
   function syncWallpaperControls() {
     reconcileWallpaperState();
     const canUseRotation = hasEnoughWallpapersForRotation();
+    const wallpaperCount = settings.wallpapers.length;
+    const allSelected = wallpaperCount > 0 && selectedWallpaperIds.size === wallpaperCount;
     if (wallpaperReadabilityToggle) {
       wallpaperReadabilityToggle.checked = settings.wallpaperReadability;
     }
     if (wallpaperSurfaceModeOptions) {
-      wallpaperSurfaceModeOptions.querySelectorAll('.theme-option').forEach((opt) => {
-        opt.classList.toggle('active', opt.dataset.surfaceMode === settings.wallpaperSurfaceMode);
-      });
+      syncRadioOptions(wallpaperSurfaceModeOptions, '.theme-option', 'surfaceMode', settings.wallpaperSurfaceMode);
     }
     if (wallpaperRotationOptions) {
       wallpaperRotationOptions.querySelectorAll('.theme-option').forEach((opt) => {
         const disabled = opt.dataset.rotation !== 'off' && !canUseRotation;
         opt.disabled = disabled;
-        opt.classList.toggle('active', opt.dataset.rotation === settings.wallpaperRotation);
       });
+      syncRadioOptions(wallpaperRotationOptions, '.theme-option', 'rotation', settings.wallpaperRotation);
     }
     if (wallpaperRotationModeOptions) {
       const enabled = canUseRotation && settings.wallpaperRotation !== 'off';
       wallpaperRotationModeOptions.querySelectorAll('.theme-option').forEach((opt) => {
         opt.disabled = !enabled;
-        opt.classList.toggle('active', opt.dataset.rotationMode === settings.wallpaperRotationMode);
       });
+      syncRadioOptions(wallpaperRotationModeOptions, '.theme-option', 'rotationMode', settings.wallpaperRotationMode);
     }
     if (wallpaperSelectModeBtn) {
-      wallpaperSelectModeBtn.disabled = !settings.wallpapers.length;
-      wallpaperSelectModeBtn.textContent = wallpaperSelectionMode
-        ? t('settings.wallpaperSelectionDone')
-        : t('settings.wallpaperSelect');
+      wallpaperSelectModeBtn.disabled = !wallpaperCount || wallpaperImportInProgress;
+      wallpaperSelectModeBtn.hidden = wallpaperSelectionMode;
+      wallpaperSelectModeBtn.textContent = t('settings.wallpaperSelect');
+    }
+    if (wallpaperLibraryCount) {
+      wallpaperLibraryCount.textContent = t('settings.wallpaperCount', { count: wallpaperCount });
+    }
+    if (wallpaperAddBtn) {
+      wallpaperAddBtn.disabled = wallpaperImportInProgress || wallpaperSelectionMode;
+    }
+    if (wallpaperAddLabel) {
+      wallpaperAddLabel.textContent = wallpaperImportInProgress
+        ? t('settings.wallpaperImporting', wallpaperImportProgress)
+        : t('settings.addWallpaper');
+    }
+    [wallpaperPhotoBtn, wallpaperFolderBtn].forEach((button) => {
+      if (button) button.disabled = wallpaperImportInProgress;
+    });
+    const libraryActions = wallpaperAddBtn ? wallpaperAddBtn.closest('.wallpaper-library-actions') : null;
+    if (libraryActions) libraryActions.hidden = wallpaperSelectionMode;
+    if (wallpaperManageToolbar) wallpaperManageToolbar.hidden = !wallpaperSelectionMode;
+    if (wallpaperSelectedCount) {
+      wallpaperSelectedCount.textContent = t('settings.wallpaperSelectedCount', { count: selectedWallpaperIds.size });
+    }
+    if (wallpaperSelectAllBtn) {
+      wallpaperSelectAllBtn.disabled = !wallpaperSelectionMode || wallpaperImportInProgress || wallpaperDeleteInProgress;
+      wallpaperSelectAllBtn.textContent = t(allSelected ? 'settings.wallpaperUnselectAll' : 'settings.wallpaperSelectAll');
     }
     if (wallpaperDeleteSelectedBtn) {
-      wallpaperDeleteSelectedBtn.disabled = selectedWallpaperIds.size === 0;
+      wallpaperDeleteSelectedBtn.disabled = selectedWallpaperIds.size === 0 || wallpaperImportInProgress || wallpaperDeleteInProgress;
     }
-    if (wallpaperClearAllBtn) {
-      wallpaperClearAllBtn.disabled = settings.wallpapers.length === 0;
+    if (wallpaperManageDoneBtn) {
+      wallpaperManageDoneBtn.disabled = wallpaperImportInProgress || wallpaperDeleteInProgress;
     }
   }
 
@@ -955,23 +1494,36 @@
     wallpaperGallery.innerHTML = '';
     wallpaperGallery.classList.toggle('selecting', wallpaperSelectionMode);
     if (!settings.wallpapers.length) {
-      const emptyText = (window.__i18n && window.__i18n.t('wallpaper.empty')) || '暂无壁纸，请选择文件夹添加';
       const empty = document.createElement('div');
       empty.className = 'wallpaper-empty';
-      empty.textContent = emptyText;
+      empty.textContent = t('wallpaper.empty');
       wallpaperGallery.appendChild(empty);
       return;
     }
-    settings.wallpapers.forEach((w) => {
+    settings.wallpapers.forEach((w, index) => {
       const thumb = document.createElement('div');
       thumb.className = 'wallpaper-thumb'
         + (w.id === settings.activeWallpaperId ? ' active' : '')
         + (selectedWallpaperIds.has(w.id) ? ' selected' : '');
       thumb.dataset.id = w.id;
-      thumb.draggable = !wallpaperSelectionMode;
+      thumb.setAttribute('role', 'listitem');
+
+      const mainButton = document.createElement('button');
+      mainButton.className = 'wallpaper-thumb-main';
+      mainButton.type = 'button';
+      mainButton.dataset.wallpaperAction = 'activate';
+      const pressed = wallpaperSelectionMode
+        ? selectedWallpaperIds.has(w.id)
+        : w.id === settings.activeWallpaperId;
+      mainButton.setAttribute('aria-pressed', String(pressed));
+      const selectionLabel = selectedWallpaperIds.has(w.id) ? 'wallpaper.unselect' : 'wallpaper.select';
+      mainButton.setAttribute('aria-label', t(wallpaperSelectionMode ? selectionLabel : 'wallpaper.use', { name: w.name }));
+
+      const visual = document.createElement('span');
+      visual.className = 'wallpaper-thumb-visual';
 
       const img = document.createElement('img');
-      img.alt = w.name;
+      img.alt = '';
       img.loading = 'lazy';
       if (w.data) img.src = w.data;
       if (wallpaperAssets) {
@@ -986,49 +1538,85 @@
       name.className = 'wallpaper-thumb-name';
       name.textContent = w.name;
 
-      const selectedMark = document.createElement('span');
+      const selectedMark = document.createElement('input');
+      selectedMark.type = 'checkbox';
       selectedMark.className = 'wallpaper-thumb-select';
-      selectedMark.textContent = selectedWallpaperIds.has(w.id) ? '✓' : '';
+      selectedMark.checked = selectedWallpaperIds.has(w.id);
+      selectedMark.tabIndex = -1;
+      selectedMark.setAttribute('aria-hidden', 'true');
 
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'wallpaper-thumb-delete';
-      deleteBtn.type = 'button';
-      deleteBtn.title = (window.__i18n && window.__i18n.t('wallpaper.delete')) || '删除';
-      deleteBtn.textContent = '×';
+      const reorderHandle = document.createElement('button');
+      reorderHandle.className = 'wallpaper-reorder-handle';
+      reorderHandle.type = 'button';
+      reorderHandle.dataset.wallpaperAction = 'reorder';
+      reorderHandle.draggable = wallpaperSelectionMode;
+      const reorderHandleLabel = document.createElement('span');
+      reorderHandleLabel.className = 'wallpaper-reorder-handle-label';
+      reorderHandleLabel.textContent = t('wallpaper.reorderHandle');
+      reorderHandle.appendChild(reorderHandleLabel);
+      reorderHandle.setAttribute('aria-label', t('wallpaper.reorder', {
+        name: w.name,
+        position: index + 1,
+        total: settings.wallpapers.length,
+      }));
 
-      thumb.append(img, selectedMark, name, deleteBtn);
+      visual.prepend(img);
+      mainButton.append(visual, name);
+      thumb.append(mainButton, selectedMark, reorderHandle);
       wallpaperGallery.appendChild(thumb);
     });
   }
 
-  function removeWallpapers(ids) {
-    const removeIds = new Set(ids);
-    if (!removeIds.size) return 0;
-    const removedCount = settings.wallpapers.filter((w) => removeIds.has(w.id)).length;
-    settings.wallpapers = settings.wallpapers.filter((w) => !removeIds.has(w.id));
-    removeIds.forEach((id) => {
-      selectedWallpaperIds.delete(id);
-      if (wallpaperAssets) wallpaperAssets.remove(id).catch(() => {});
-    });
-    reconcileWallpaperState();
+  async function removeWallpapers(ids) {
+    const requestedIds = new Set(ids);
+    const originalWallpapers = [...settings.wallpapers];
+    const requestedWallpapers = originalWallpapers.filter((item) => requestedIds.has(item.id));
+    const removedIds = new Set();
+    let failedCount = 0;
+
+    for (const item of requestedWallpapers) {
+      try {
+        if (wallpaperAssets) {
+          await wallpaperAssets.remove(item.id);
+        } else if (!item.data) {
+          throw new Error('Wallpaper storage is unavailable');
+        }
+        removedIds.add(item.id);
+      } catch (_) {
+        failedCount += 1;
+      }
+    }
+
+    if (!removedIds.size) {
+      return { deletedCount: 0, failedCount };
+    }
+
+    const activeIndex = originalWallpapers.findIndex((item) => item.id === settings.activeWallpaperId);
+    const activeWasRemoved = removedIds.has(settings.activeWallpaperId);
+    settings.wallpapers = originalWallpapers.filter((item) => !removedIds.has(item.id));
+    removedIds.forEach((id) => selectedWallpaperIds.delete(id));
+
+    if (activeWasRemoved) {
+      const next = originalWallpapers.slice(activeIndex + 1).find((item) => !removedIds.has(item.id));
+      const previous = originalWallpapers.slice(0, activeIndex).reverse().find((item) => !removedIds.has(item.id));
+      settings.activeWallpaperId = (next || previous || {}).id || '';
+    }
+
     if (!settings.wallpapers.length) {
       wallpaperSelectionMode = false;
+      selectedWallpaperIds.clear();
+      settings.activeWallpaperId = '';
+      settings.bgMode = 'color';
       settings.wallpaperRotation = 'off';
       settings.lastWallpaperRotationAt = Date.now();
     }
+
+    reconcileWallpaperState();
     saveSettingsNow();
     applyBackground();
     syncUI();
     scheduleWallpaperRotation();
-    return removedCount;
-  }
-
-  function clearAllWallpapers() {
-    if (!settings.wallpapers.length) return;
-    if (!window.confirm(t('wallpaper.confirmClearAll'))) return;
-    const ids = settings.wallpapers.map((w) => w.id);
-    removeWallpapers(ids);
-    showToast(t('toast.wallpaperCleared'));
+    return { deletedCount: removedIds.size, failedCount };
   }
 
   function toggleWallpaperSelection(id) {
@@ -1041,28 +1629,102 @@
     if (thumb) {
       thumb.classList.toggle('selected', selectedWallpaperIds.has(id));
       const mark = thumb.querySelector('.wallpaper-thumb-select');
-      if (mark) mark.textContent = selectedWallpaperIds.has(id) ? '✓' : '';
+      if (mark) mark.checked = selectedWallpaperIds.has(id);
+      const mainButton = thumb.querySelector('.wallpaper-thumb-main');
+      if (mainButton) {
+        const wallpaper = settings.wallpapers.find((item) => item.id === id);
+        mainButton.setAttribute('aria-pressed', String(selectedWallpaperIds.has(id)));
+        if (wallpaper) {
+          mainButton.setAttribute('aria-label', t(selectedWallpaperIds.has(id) ? 'wallpaper.unselect' : 'wallpaper.select', { name: wallpaper.name }));
+        }
+      }
     }
     syncWallpaperControls();
   }
 
   function setWallpaperSelectionMode(enabled) {
-    wallpaperSelectionMode = enabled && settings.wallpapers.length > 0;
+    wallpaperSelectionMode = Boolean(enabled && settings.wallpapers.length > 0 && !wallpaperImportInProgress);
     selectedWallpaperIds.clear();
+    closeWallpaperAddMenu(false);
     renderWallpaperGallery();
     syncWallpaperControls();
   }
 
-  function reorderWallpapers(draggedId, targetId) {
-    if (!draggedId || !targetId || draggedId === targetId) return;
-    const from = settings.wallpapers.findIndex((w) => w.id === draggedId);
-    const to = settings.wallpapers.findIndex((w) => w.id === targetId);
-    if (from < 0 || to < 0) return;
+  function announceWallpaperPosition(id, position) {
+    if (!wallpaperReorderStatus) return;
+    const wallpaper = settings.wallpapers.find((item) => item.id === id);
+    if (!wallpaper) return;
+    wallpaperReorderStatus.textContent = '';
+    requestAnimationFrame(() => {
+      wallpaperReorderStatus.textContent = t('wallpaper.reorderPosition', {
+        name: wallpaper.name,
+        position: position + 1,
+        total: settings.wallpapers.length,
+      });
+    });
+  }
+
+  function focusWallpaperHandleAfterRender(id) {
+    requestAnimationFrame(() => {
+      const handle = wallpaperGallery.querySelector(`.wallpaper-thumb[data-id="${CSS.escape(id)}"] .wallpaper-reorder-handle`);
+      if (handle) handle.focus();
+    });
+  }
+
+  function reorderWallpaperToIndex(id, targetIndex, restoreHandleFocus = false) {
+    const from = settings.wallpapers.findIndex((item) => item.id === id);
+    if (from < 0) return from;
+    const to = Math.max(0, Math.min(targetIndex, settings.wallpapers.length - 1));
+    if (from === to) return from;
     const [item] = settings.wallpapers.splice(from, 1);
     settings.wallpapers.splice(to, 0, item);
     saveSettingsNow();
     renderWallpaperGallery();
     scheduleWallpaperRotation();
+    announceWallpaperPosition(id, to);
+    if (restoreHandleFocus) focusWallpaperHandleAfterRender(id);
+    return to;
+  }
+
+  function reorderWallpaperAtBoundary(id, boundaryIndex) {
+    const from = settings.wallpapers.findIndex((item) => item.id === id);
+    if (from < 0) return from;
+    let target = Math.max(0, Math.min(boundaryIndex, settings.wallpapers.length));
+    if (from < target) target -= 1;
+    return reorderWallpaperToIndex(id, target, false);
+  }
+
+  function clearWallpaperDragIndicators() {
+    wallpaperGallery.querySelectorAll('.dragging, .drag-before, .drag-after').forEach((thumb) => {
+      thumb.classList.remove('dragging', 'drag-before', 'drag-after');
+    });
+    draggedWallpaperBoundary = -1;
+  }
+
+  async function executeWallpaperDelete() {
+    if (wallpaperDeleteInProgress || !pendingWallpaperDeleteIds.length) return;
+    wallpaperDeleteInProgress = true;
+    wallpaperConfirmCancel.disabled = true;
+    wallpaperConfirmSubmit.disabled = true;
+    wallpaperConfirmSubmit.textContent = t('wallpaper.deleting');
+    syncWallpaperControls();
+    const result = await removeWallpapers(pendingWallpaperDeleteIds);
+    wallpaperDeleteInProgress = false;
+    selectedWallpaperIds.clear();
+    if (settings.wallpapers.length) {
+      wallpaperSelectionMode = true;
+    } else {
+      wallpaperSelectionMode = false;
+    }
+    renderWallpaperGallery();
+    syncWallpaperControls();
+    wallpaperConfirmCancel.disabled = false;
+    wallpaperConfirmSubmit.disabled = false;
+    closeWallpaperDeleteConfirm(true);
+    showToast(t('toast.wallpaperDeleteResult', {
+      deleted: result.deletedCount,
+      failed: result.failedCount,
+    }));
   }
 
 
@@ -1122,18 +1784,46 @@
     syncUI();
   });
 
-  async function importWallpaperFiles(fileList) {
-    const files = Array.from(fileList || []).filter((f) =>
-      /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(f.name) || /^image\//i.test(f.type || '')
-    );
-    if (!files.length) return;
+  function isWallpaperFile(file) {
+    return /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(file.name) || /^image\//i.test(file.type || '');
+  }
 
-    let added = 0;
-    let skipped = 0;
+  function normalizedWallpaperName(name) {
+    return String(name || '').trim().toLocaleLowerCase();
+  }
+
+  async function importWallpaperFiles(fileList, source) {
+    if (wallpaperImportInProgress) return;
+    const selectedFiles = Array.from(fileList || []);
+    if (!selectedFiles.length) return;
+
+    const naturalSort = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    let files = selectedFiles.filter(isWallpaperFile);
+    if (source === 'folder') {
+      files = files.sort((a, b) => naturalSort.compare(a.webkitRelativePath || a.name, b.webkitRelativePath || b.name));
+    }
+
+    const wasEmpty = settings.wallpapers.length === 0;
+    const previousActiveId = settings.activeWallpaperId;
+    const previousBgMode = settings.bgMode;
+    const singlePhotoImport = source === 'photo' && files.length === 1;
+    const existingNames = new Set(settings.wallpapers.map((item) => normalizedWallpaperName(item.name)));
+    const addedIds = [];
+    let skipped = selectedFiles.length - files.length;
     let failed = 0;
-    for (const file of files) {
-      if (settings.wallpapers.some((w) => w.name === file.name)) {
-        skipped++;
+
+    wallpaperImportInProgress = true;
+    wallpaperImportProgress = { current: 0, total: files.length };
+    closeWallpaperAddMenu(false);
+    syncWallpaperControls();
+
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
+      wallpaperImportProgress = { current: index + 1, total: files.length };
+      syncWallpaperControls();
+      const normalizedName = normalizedWallpaperName(file.name);
+      if (existingNames.has(normalizedName)) {
+        skipped += 1;
         continue;
       }
       try {
@@ -1143,7 +1833,7 @@
           reader.onerror = () => resolve(null);
           reader.readAsDataURL(file);
         });
-        if (!dataUrl) continue;
+        if (!dataUrl) throw new Error('Failed to read wallpaper');
         const compressed = await compressImage(dataUrl, 1920);
         const analysis = await analyzeWallpaperImage(compressed);
         const id = generateId();
@@ -1154,71 +1844,118 @@
           name: file.name,
           brightness: analysis.brightness,
           complexity: analysis.complexity,
-          createdAt: Date.now(),
+          createdAt: Date.now() + index,
         });
         settings.wallpapers.push(meta);
-        added++;
+        existingNames.add(normalizedName);
+        addedIds.push(meta.id);
       } catch (_) {
-        failed++;
+        failed += 1;
       }
     }
 
-    if (added > 0) {
-      if (!settings.activeWallpaperId || !settings.wallpapers.find((w) => w.id === settings.activeWallpaperId)) {
-        settings.activeWallpaperId = settings.wallpapers[settings.wallpapers.length - 1].id;
+    if (addedIds.length) {
+      const shouldActivateImported = wasEmpty || (singlePhotoImport && addedIds.length === 1);
+      if (shouldActivateImported) {
+        settings.activeWallpaperId = addedIds[0];
+        settings.bgMode = 'wallpaper';
+        resetWallpaperRotationClock();
+      } else {
+        settings.activeWallpaperId = settings.wallpapers.some((item) => item.id === previousActiveId)
+          ? previousActiveId
+          : settings.wallpapers[0].id;
+        settings.bgMode = previousBgMode;
       }
-      settings.bgMode = 'wallpaper';
-      resetWallpaperRotationClock();
-      try {
-        saveSettingsNow();
-      } catch (_) {
-      }
+      saveSettingsNow();
       applyBackground();
-      syncUI();
       scheduleWallpaperRotation();
     }
 
-    if (skipped > 0) {
-      const tWallpaper = (k, vars) => (window.__i18n && window.__i18n.t(k, vars)) || k;
-      const msg = added > 0
-        ? tWallpaper('toast.addedAndSkipped', { added, skipped })
-        : tWallpaper('toast.allSkipped', { skipped });
-      showToast(msg);
-    }
-
-    if (failed > 0) {
-      const tWallpaper = (k, vars) => (window.__i18n && window.__i18n.t(k, vars)) || k;
-      showToast(tWallpaper('toast.wallpaperFailed', { failed }));
-    }
+    wallpaperImportInProgress = false;
+    wallpaperImportProgress = { current: 0, total: 0 };
+    syncUI();
+    showToast(t('toast.wallpaperImportResult', {
+      added: addedIds.length,
+      skipped,
+      failed,
+    }));
   }
 
+  wallpaperAddBtn.addEventListener('click', () => {
+    if (wallpaperAddMenu.hidden) openWallpaperAddMenu(0);
+    else closeWallpaperAddMenu(true);
+  });
+
+  wallpaperAddBtn.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      openWallpaperAddMenu(0);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      openWallpaperAddMenu(getFocusableElements(wallpaperAddMenu).length - 1);
+    }
+  });
+
+  wallpaperAddMenu.addEventListener('keydown', (event) => {
+    const items = getFocusableElements(wallpaperAddMenu);
+    const currentIndex = items.indexOf(document.activeElement);
+    let nextIndex = currentIndex;
+    if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % items.length;
+    else if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + items.length) % items.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = items.length - 1;
+    else if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeWallpaperAddMenu(true);
+      return;
+    } else if (event.key === 'Tab') {
+      closeWallpaperAddMenu(false);
+      return;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    if (items[nextIndex]) items[nextIndex].focus();
+  });
+
   wallpaperPhotoBtn.addEventListener('click', () => {
+    closeWallpaperAddMenu(true);
     wallpaperPhotoInput.click();
   });
 
   wallpaperPhotoInput.addEventListener('change', async () => {
-    await importWallpaperFiles(wallpaperPhotoInput.files);
+    const files = wallpaperPhotoInput.files;
+    if (files && files.length) await importWallpaperFiles(files, 'photo');
     wallpaperPhotoInput.value = '';
+    focusWhenAvailable(wallpaperAddBtn, wallpaperSelectModeBtn);
   });
 
   wallpaperFolderBtn.addEventListener('click', () => {
+    closeWallpaperAddMenu(true);
     wallpaperFolderInput.click();
   });
 
   wallpaperFolderInput.addEventListener('change', async () => {
-    await importWallpaperFiles(wallpaperFolderInput.files);
+    const files = wallpaperFolderInput.files;
+    if (files && files.length) await importWallpaperFiles(files, 'folder');
     wallpaperFolderInput.value = '';
+    focusWhenAvailable(wallpaperAddBtn, wallpaperSelectModeBtn);
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!wallpaperAddMenu.hidden && !event.target.closest('.wallpaper-add-menu-wrap')) {
+      closeWallpaperAddMenu(false);
+    }
   });
 
   wallpaperGallery.addEventListener('click', (e) => {
     const thumb = e.target.closest('.wallpaper-thumb');
     if (!thumb) return;
     const id = thumb.dataset.id;
+    const action = e.target.closest('[data-wallpaper-action]')?.dataset.wallpaperAction;
 
-    if (e.target.closest('.wallpaper-thumb-delete')) {
-      removeWallpapers([id]);
-      return;
-    }
+    if (action !== 'activate') return;
 
     if (wallpaperSelectionMode) {
       toggleWallpaperSelection(id);
@@ -1233,9 +1970,27 @@
     syncUI();
   });
 
+  wallpaperGallery.addEventListener('keydown', (event) => {
+    const handle = event.target.closest('.wallpaper-reorder-handle');
+    if (!handle || !wallpaperSelectionMode) return;
+    const thumb = handle.closest('.wallpaper-thumb');
+    const id = thumb ? thumb.dataset.id : '';
+    const from = settings.wallpapers.findIndex((item) => item.id === id);
+    if (from < 0) return;
+    let target = from;
+    if (['ArrowLeft', 'ArrowUp'].includes(event.key)) target = Math.max(0, from - 1);
+    else if (['ArrowRight', 'ArrowDown'].includes(event.key)) target = Math.min(settings.wallpapers.length - 1, from + 1);
+    else if (event.key === 'Home') target = 0;
+    else if (event.key === 'End') target = settings.wallpapers.length - 1;
+    else return;
+    event.preventDefault();
+    reorderWallpaperToIndex(id, target, true);
+  });
+
   wallpaperGallery.addEventListener('dragstart', (e) => {
-    const thumb = e.target.closest('.wallpaper-thumb');
-    if (!thumb || wallpaperSelectionMode) {
+    const handle = e.target.closest('.wallpaper-reorder-handle');
+    const thumb = handle ? handle.closest('.wallpaper-thumb') : null;
+    if (!thumb || !wallpaperSelectionMode || wallpaperImportInProgress) {
       e.preventDefault();
       return;
     }
@@ -1249,27 +2004,34 @@
     const thumb = e.target.closest('.wallpaper-thumb');
     if (!thumb || !draggedWallpaperId || thumb.dataset.id === draggedWallpaperId) return;
     e.preventDefault();
-    thumb.classList.add('drag-over');
+    wallpaperGallery.querySelectorAll('.drag-before, .drag-after').forEach((item) => item.classList.remove('drag-before', 'drag-after'));
+    const rect = thumb.getBoundingClientRect();
+    const columns = getComputedStyle(wallpaperGallery).gridTemplateColumns.split(/\s+/).length;
+    const after = columns === 1 ? e.clientY >= rect.top + rect.height / 2 : e.clientX >= rect.left + rect.width / 2;
+    thumb.classList.add(after ? 'drag-after' : 'drag-before');
+    const targetIndex = settings.wallpapers.findIndex((item) => item.id === thumb.dataset.id);
+    draggedWallpaperBoundary = targetIndex + (after ? 1 : 0);
+    e.dataTransfer.dropEffect = 'move';
   });
 
   wallpaperGallery.addEventListener('dragleave', (e) => {
     const thumb = e.target.closest('.wallpaper-thumb');
-    if (thumb) thumb.classList.remove('drag-over');
+    if (thumb && !thumb.contains(e.relatedTarget)) thumb.classList.remove('drag-before', 'drag-after');
   });
 
   wallpaperGallery.addEventListener('drop', (e) => {
-    const thumb = e.target.closest('.wallpaper-thumb');
-    if (!thumb || !draggedWallpaperId) return;
+    if (!draggedWallpaperId || draggedWallpaperBoundary < 0) return;
     e.preventDefault();
-    thumb.classList.remove('drag-over');
-    reorderWallpapers(draggedWallpaperId, thumb.dataset.id);
+    const movedId = draggedWallpaperId;
+    const boundary = draggedWallpaperBoundary;
+    draggedWallpaperId = '';
+    clearWallpaperDragIndicators();
+    reorderWallpaperAtBoundary(movedId, boundary);
   });
 
   wallpaperGallery.addEventListener('dragend', () => {
     draggedWallpaperId = '';
-    wallpaperGallery.querySelectorAll('.dragging, .drag-over').forEach((thumb) => {
-      thumb.classList.remove('dragging', 'drag-over');
-    });
+    clearWallpaperDragIndicators();
   });
 
   if (wallpaperReadabilityToggle) {
@@ -1315,22 +2077,56 @@
 
   if (wallpaperSelectModeBtn) {
     wallpaperSelectModeBtn.addEventListener('click', () => {
-      setWallpaperSelectionMode(!wallpaperSelectionMode);
+      setWallpaperSelectionMode(true);
+    });
+  }
+
+  if (wallpaperSelectAllBtn) {
+    wallpaperSelectAllBtn.addEventListener('click', () => {
+      const allSelected = settings.wallpapers.length > 0 && selectedWallpaperIds.size === settings.wallpapers.length;
+      selectedWallpaperIds.clear();
+      if (!allSelected) settings.wallpapers.forEach((item) => selectedWallpaperIds.add(item.id));
+      renderWallpaperGallery();
+      syncWallpaperControls();
     });
   }
 
   if (wallpaperDeleteSelectedBtn) {
     wallpaperDeleteSelectedBtn.addEventListener('click', () => {
-      const ids = Array.from(selectedWallpaperIds);
-      const count = removeWallpapers(ids);
-      setWallpaperSelectionMode(false);
-      if (count > 0) showToast(t('toast.wallpaperDeleted', { count }));
+      openWallpaperDeleteConfirm(Array.from(selectedWallpaperIds), wallpaperDeleteSelectedBtn);
     });
   }
 
-  if (wallpaperClearAllBtn) {
-    wallpaperClearAllBtn.addEventListener('click', clearAllWallpapers);
+  if (wallpaperManageDoneBtn) {
+    wallpaperManageDoneBtn.addEventListener('click', () => {
+      setWallpaperSelectionMode(false);
+      focusWhenAvailable(wallpaperSelectModeBtn, wallpaperAddBtn);
+    });
   }
+
+  if (wallpaperTabs) {
+    wallpaperTabs.addEventListener('click', (event) => {
+      const tab = event.target.closest('[role="tab"]');
+      if (tab) setWallpaperSubView(tab.dataset.wallpaperTab, false);
+    });
+    wallpaperTabs.addEventListener('keydown', (event) => {
+      const tabs = Array.from(wallpaperTabs.querySelectorAll('[role="tab"]'));
+      const currentIndex = tabs.indexOf(event.target.closest('[role="tab"]'));
+      if (currentIndex < 0) return;
+      let nextIndex = currentIndex;
+      if (['ArrowRight', 'ArrowDown'].includes(event.key)) nextIndex = (currentIndex + 1) % tabs.length;
+      else if (['ArrowLeft', 'ArrowUp'].includes(event.key)) nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = tabs.length - 1;
+      else return;
+      event.preventDefault();
+      setWallpaperSubView(tabs[nextIndex].dataset.wallpaperTab, true);
+    });
+  }
+
+  wallpaperConfirmCancel.addEventListener('click', () => closeWallpaperDeleteConfirm(true));
+  wallpaperConfirmSubmit.addEventListener('click', executeWallpaperDelete);
+  wallpaperConfirmOverlay.addEventListener('click', () => closeWallpaperDeleteConfirm(true));
 
   if (wallpaperOpenBtn) {
     wallpaperOpenBtn.addEventListener('click', () => {
@@ -1355,7 +2151,7 @@
 
   overlaySlider.addEventListener('input', () => {
     settings.overlayStrength = parseInt(overlaySlider.value);
-    overlayValue.textContent = settings.overlayStrength;
+    overlayValue.textContent = `${settings.overlayStrength}%`;
     updateWallpaperPresentation();
     saveSettings();
   });
@@ -1371,9 +2167,23 @@
   }
 
   document.addEventListener('keydown', (e) => {
+    if (!wallpaperConfirmDialog.hasAttribute('hidden')) {
+      trapFocus(e, wallpaperConfirmDialog);
+    } else if (!aboutPanel.hasAttribute('hidden')) {
+      trapFocus(e, aboutPanel);
+    } else if (!panel.hasAttribute('hidden')) {
+      trapFocus(e, panel);
+    }
     if (e.key === 'Escape') {
-      if (!aboutPanel.hasAttribute('hidden')) {
+      if (!wallpaperConfirmDialog.hasAttribute('hidden')) {
+        closeWallpaperDeleteConfirm(true);
+      } else if (!aboutPanel.hasAttribute('hidden')) {
         closeAbout();
+      } else if (!wallpaperAddMenu.hidden) {
+        closeWallpaperAddMenu(true);
+      } else if (!panel.hasAttribute('hidden') && settingsPanelView === 'wallpaper' && wallpaperSelectionMode) {
+        setWallpaperSelectionMode(false);
+        focusWhenAvailable(wallpaperSelectModeBtn, wallpaperAddBtn);
       } else if (!panel.hasAttribute('hidden') && settingsPanelView === 'wallpaper') {
         setSettingsView('main');
         if (wallpaperOpenBtn && !wallpaperSection.hidden) wallpaperOpenBtn.focus();
@@ -1421,9 +2231,7 @@
     settings.font = opt.dataset.font;
     saveSettings();
     applyFont();
-    fontOptsContainer.querySelectorAll('.font-option').forEach((o) => {
-      o.classList.toggle('active', o.dataset.font === settings.font);
-    });
+    syncUI();
   });
 
   radiusOptions.addEventListener('click', (e) => {
@@ -1432,9 +2240,7 @@
     settings.radius = opt.dataset.radius;
     saveSettings();
     applyRadius();
-    radiusOptions.querySelectorAll('.theme-option').forEach((o) => {
-      o.classList.toggle('active', o.dataset.radius === settings.radius);
-    });
+    syncUI();
   });
 
   const btnPosOptions = document.getElementById('settings-btn-position-options');
@@ -1449,8 +2255,19 @@
     });
   }
 
+  [
+    [modeToggle, '.mode-option'],
+    [themeOptions, '.theme-option'],
+    [fontOptions, '.font-option'],
+    [radiusOptions, '.theme-option'],
+    [btnPosOptions, '.theme-option'],
+    [wallpaperSurfaceModeOptions, '.theme-option'],
+    [wallpaperRotationOptions, '.theme-option'],
+    [wallpaperRotationModeOptions, '.theme-option'],
+  ].forEach(([container, selector]) => enableRadioKeyboard(container, selector));
+
   createOverlay();
-  settingsBtn.addEventListener('click', openPanel);
+  settingsBtn.addEventListener('click', () => openPanel(settingsBtn));
   closeBtn.addEventListener('click', closePanel);
 
   aboutBtn.addEventListener('click', openAbout);

@@ -56,10 +56,11 @@
   const suggestionsEl = document.getElementById('suggestions-dropdown');
   const form = document.getElementById('search-form');
   const input = document.getElementById('search-input');
+  const motto = document.getElementById('search-motto');
   const wrapper = document.querySelector('.search-input-wrapper');
 
   let activeIndex = 0;
-  let selectedEngineIndex = 0;
+  let selectedMenuIndex = 0;
   let selectedSuggestIndex = -1;
   let abortController = null;
 
@@ -71,45 +72,61 @@
 
   function renderEngineDropdown() {
     const items = ENGINES.map((engine, i) => `
-      <li class="engine-dropdown-item ${i === activeIndex ? 'active' : ''} ${i === selectedEngineIndex ? 'keyboard-active' : ''}" data-index="${i}" role="menuitemradio" aria-checked="${i === activeIndex}">
-        <span class="engine-dropdown-name">${engine.name}</span>
-        ${i === activeIndex ? '<svg class="engine-dropdown-check" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+      <li role="none">
+        <button type="button" class="engine-dropdown-item ${i === activeIndex ? 'active' : ''}" data-index="${i}" role="menuitemradio" aria-checked="${i === activeIndex}" tabindex="-1">
+          <span class="engine-dropdown-name">${engine.name}</span>
+        </button>
       </li>
     `).join('');
 
     const suffix = document.body.dataset.settingsBtnPosition === 'dropdown' ? `
-      <li class="engine-dropdown-separator"></li>
-      <li class="engine-dropdown-item engine-dropdown-settings" data-action="settings" role="menuitem">
-        <span class="engine-dropdown-name">${(window.__i18n && window.__i18n.t('search.settings')) || '设置'}</span>
+      <li class="engine-dropdown-separator" role="separator"></li>
+      <li role="none">
+        <button type="button" class="engine-dropdown-item engine-dropdown-settings" data-action="settings" role="menuitem" tabindex="-1">
+          <span class="engine-dropdown-name">${(window.__i18n && window.__i18n.t('search.settings')) || '设置'}</span>
+        </button>
       </li>
     ` : '';
 
     engineDropdown.innerHTML = items + suffix;
   }
 
-  function openEngineDropdown() {
+  function getEngineMenuItems() {
+    return Array.from(engineDropdown.querySelectorAll('[role="menuitemradio"], [role="menuitem"]'));
+  }
+
+  function focusEngineMenuItem(index) {
+    const items = getEngineMenuItems();
+    if (!items.length) return;
+    selectedMenuIndex = (index + items.length) % items.length;
+    items.forEach((item, itemIndex) => {
+      item.tabIndex = itemIndex === selectedMenuIndex ? 0 : -1;
+    });
+    items[selectedMenuIndex].focus();
+  }
+
+  function openEngineDropdown(source = 'pointer', focusIndex = activeIndex) {
     closeSuggestions();
-    selectedEngineIndex = activeIndex;
+    selectedMenuIndex = focusIndex;
     renderEngineDropdown();
+    engineDropdown.dataset.openSource = source;
     engineDropdown.classList.add('visible');
     toggle.setAttribute('aria-expanded', 'true');
+    setTimeout(() => {
+      if (engineDropdown.classList.contains('visible')) focusEngineMenuItem(selectedMenuIndex);
+    }, source === 'keyboard' ? 0 : 50);
   }
 
   function closeEngineDropdown() {
     engineDropdown.classList.remove('visible');
     toggle.setAttribute('aria-expanded', 'false');
-  }
-
-  function updateEngineKeyboardHighlight() {
-    engineDropdown.querySelectorAll('.engine-dropdown-item[data-index]').forEach((item) => {
-      item.classList.toggle('keyboard-active', parseInt(item.dataset.index, 10) === selectedEngineIndex);
-    });
+    getEngineMenuItems().forEach((item) => { item.tabIndex = -1; });
   }
 
   function updateToggleIcon() {
     const engine = ENGINES[activeIndex];
     if (!engine.logo) return;
-    toggle.innerHTML = engine.logo;
+    toggle.innerHTML = `<span class="search-control-visual" aria-hidden="true">${engine.logo}</span>`;
     const svg = toggle.querySelector('svg');
     if (svg) {
       svg.classList.add('engine-icon', engine.iconClass);
@@ -210,7 +227,12 @@
   }
 
   let debounceTimer = null;
+  function syncMottoVisibility() {
+    if (motto) motto.hidden = input.value.length > 0;
+  }
+
   function onInput() {
+    syncMottoVisibility();
     clearTimeout(debounceTimer);
     const query = input.value.trim();
 
@@ -234,20 +256,55 @@
     if (engineDropdown.classList.contains('visible')) {
       closeEngineDropdown();
     } else {
-      openEngineDropdown();
+      openEngineDropdown(e.detail === 0 ? 'keyboard' : 'pointer');
     }
+  });
+
+  toggle.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    openEngineDropdown('keyboard', e.key === 'ArrowDown' ? 0 : -1);
   });
 
   engineDropdown.addEventListener('click', (e) => {
     const settingsItem = e.target.closest('.engine-dropdown-settings');
     if (settingsItem) {
       closeEngineDropdown();
-      if (window.__settingsPanel) window.__settingsPanel.open();
+      toggle.focus();
+      if (window.__settingsPanel) window.__settingsPanel.open(toggle);
       return;
     }
     const item = e.target.closest('.engine-dropdown-item');
     if (!item) return;
     selectEngine(parseInt(item.dataset.index, 10));
+  });
+
+  engineDropdown.addEventListener('keydown', (e) => {
+    if (!engineDropdown.classList.contains('visible')) return;
+    const items = getEngineMenuItems();
+    const currentIndex = Math.max(0, items.indexOf(document.activeElement));
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusEngineMenuItem(currentIndex + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusEngineMenuItem(currentIndex - 1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      focusEngineMenuItem(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      focusEngineMenuItem(items.length - 1);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      document.activeElement.click();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closeEngineDropdown();
+      toggle.focus();
+    } else if (e.key === 'Tab') {
+      closeEngineDropdown();
+    }
   });
 
   suggestionsEl.addEventListener('click', (e) => {
@@ -270,32 +327,7 @@
   input.addEventListener('input', onInput);
 
   document.addEventListener('keydown', (e) => {
-    if (engineDropdown.classList.contains('visible')) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectedEngineIndex = (selectedEngineIndex + 1) % ENGINES.length;
-        updateEngineKeyboardHighlight();
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        selectedEngineIndex = (selectedEngineIndex - 1 + ENGINES.length) % ENGINES.length;
-        updateEngineKeyboardHighlight();
-        return;
-      }
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        selectEngine(selectedEngineIndex);
-        return;
-      }
-    }
-
     if (e.key === 'Escape') {
-      if (engineDropdown.classList.contains('visible')) {
-        closeEngineDropdown();
-        input.focus();
-        return;
-      }
       if (!suggestionsEl.hidden) {
         closeSuggestions();
         return;
@@ -340,4 +372,5 @@
 
   renderEngineDropdown();
   updateToggleIcon();
+  syncMottoVisibility();
 })();
