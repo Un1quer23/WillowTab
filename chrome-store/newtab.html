@@ -6,6 +6,9 @@
   <meta name="color-scheme" content="light dark">
   <title>WillowTab</title>
   <link rel="icon" type="image/png" sizes="16x16" href="icons/ntp16.png">
+  <script src="js/color.js"></script>
+  <script src="js/wallpaper-color.js"></script>
+  <script src="js/theme.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -99,6 +102,10 @@
               <input type="color" id="custom-color-picker" class="custom-color-picker" data-i18n-aria="settings.customColorPicker" aria-label="自选颜色">
               <label class="sr-only" for="custom-color-hex" data-i18n="settings.customColorHex">自选颜色 HEX 值</label>
               <input type="text" id="custom-color-hex" class="custom-color-hex" data-i18n-aria="settings.customColorHex" aria-label="自选颜色 HEX 值" placeholder="#F5F5DC" maxlength="7" spellcheck="false">
+            </div>
+            <div id="color-quality-warning" class="color-quality-warning" role="status" aria-live="polite" hidden>
+              <span data-i18n="warning.customColorQuality">这个颜色可能使部分图标、焦点状态和颜色层级不够协调。</span>
+              <button id="use-suggested-color" class="color-suggestion-btn" type="button" data-i18n="action.useSuggestedColor">使用建议颜色</button>
             </div>
           </div>
         </div>
@@ -307,7 +314,7 @@
       <div class="about-info">
         <div class="about-row">
           <span class="about-label" data-i18n="about.version">版本</span>
-          <span class="about-value">v1.7.1</span>
+          <span class="about-value">v1.7.2</span>
         </div>
         <div class="about-row">
           <span class="about-label" data-i18n="about.author">作者</span>
@@ -328,7 +335,6 @@
   </div>
 
   <script src="js/i18n.js"></script>
-  <script src="js/theme.js"></script>
   <script src="js/search.js"></script>
   <script src="js/clock.js"></script>
   <script src="js/assets.js"></script>

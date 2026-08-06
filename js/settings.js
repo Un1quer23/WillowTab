@@ -1,5 +1,6 @@
 (() => {
   const SETTINGS_KEY = 'newtab-settings';
+  const WALLPAPER_CONTROL_TARGET = 3.3;
 
   const DEFAULTS = {
     bgMode: 'color',
@@ -82,6 +83,8 @@
   const shadowValue = document.getElementById('shadow-value');
   const customColorPicker = document.getElementById('custom-color-picker');
   const customColorHex = document.getElementById('custom-color-hex');
+  const colorQualityWarning = document.getElementById('color-quality-warning');
+  const useSuggestedColor = document.getElementById('use-suggested-color');
   const themeSection = document.getElementById('theme-section');
   const themeOptions = document.getElementById('theme-options');
   const fontOptions = document.getElementById('font-options');
@@ -114,6 +117,7 @@
   let wallpaperSurfaceAnalysisToken = 0;
   let resizeSyncTimer = null;
   let aboutReturnFocus = null;
+  let activeColorPalette = null;
   const selectedWallpaperIds = new Set();
   const pendingHides = new Map();
   const pageRegions = [
@@ -247,8 +251,9 @@
 
   function effectiveThemeIsDark() {
     const html = document.documentElement;
-    if (html.getAttribute('data-theme') === 'dark') return true;
-    if (html.getAttribute('data-theme') === 'light') return false;
+    const colorScheme = html.getAttribute('data-color-scheme');
+    if (colorScheme === 'dark') return true;
+    if (colorScheme === 'light') return false;
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
@@ -510,17 +515,25 @@
     return `#${channel(color.r)}${channel(color.g)}${channel(color.b)}`;
   }
 
-  function pickMutedReadableColor(surfaces, desired, endpoint, minimumContrast = 4.5) {
+  function lowestContrast(color, surfaces) {
+    const luminance = relativeLuminance(color);
+    return Math.min(...surfaces.map((surface) => {
+      return contrastRatio(luminance, relativeLuminance(surface));
+    }));
+  }
+
+  function pickReadableColor(surfaces, desired, endpoint, targetContrast = 4.5) {
+    if (window.__willowColor) {
+      return window.__willowColor.readableColor(surfaces, desired, endpoint, targetContrast).hex;
+    }
     const isReadable = (candidate) => {
-      const candidateLuminance = relativeLuminance(candidate);
-      return surfaces.every((surface) => {
-        return contrastRatio(candidateLuminance, relativeLuminance(surface)) >= minimumContrast;
-      });
+      return lowestContrast(candidate, surfaces) >= targetContrast;
     };
 
     const roundedCandidate = (amount) => parseHexColor(rgbToHex(mixRgb(desired, endpoint, amount)));
 
-    if (isReadable(desired)) return rgbToHex(desired);
+    const roundedDesired = parseHexColor(rgbToHex(desired));
+    if (isReadable(roundedDesired)) return rgbToHex(roundedDesired);
 
     let low = 0;
     let high = 1;
@@ -529,7 +542,30 @@
       if (isReadable(roundedCandidate(middle))) high = middle;
       else low = middle;
     }
-    return rgbToHex(roundedCandidate(high));
+    const candidate = roundedCandidate(high);
+    if (isReadable(candidate)) return rgbToHex(candidate);
+    for (let step = 1; step <= 255; step += 1) {
+      const amount = high + ((1 - high) * step) / 255;
+      const fallback = roundedCandidate(amount);
+      if (isReadable(fallback)) return rgbToHex(fallback);
+    }
+    return rgbToHex(endpoint);
+  }
+
+  function resolveLightInputSurface(color, white) {
+    const roundedSurface = (amount) => parseHexColor(rgbToHex(mixRgb(color, white, amount)));
+    const desiredAmount = 0.12;
+    const desired = roundedSurface(desiredAmount);
+    if (lowestContrast(white, [color, desired]) >= 4.5) return desired;
+
+    let low = 0;
+    let high = desiredAmount;
+    for (let i = 0; i < 20; i += 1) {
+      const middle = (low + high) / 2;
+      if (lowestContrast(white, [color, roundedSurface(middle)]) >= 4.5) low = middle;
+      else high = middle;
+    }
+    return roundedSurface(low);
   }
 
   function clearColorReadabilityVars() {
@@ -543,97 +579,201 @@
     root.style.removeProperty('--motto-text');
     root.style.removeProperty('--placeholder-text');
     root.style.removeProperty('--border');
+    root.style.removeProperty('--border-focus');
     root.style.removeProperty('--input-bg');
-    root.style.removeProperty('--segment-selected-text');
-    root.style.removeProperty('--segment-selected-stroke');
+    root.style.removeProperty('--accent');
+    root.style.removeProperty('--accent-hover');
+    root.style.removeProperty('--accent-text');
+    root.style.removeProperty('--accent-subtle');
+    root.style.removeProperty('--focus-ring-color');
+    root.style.removeProperty('--canvas-text-primary');
+    root.style.removeProperty('--canvas-text-secondary');
+    root.style.removeProperty('--canvas-large-text');
+    root.style.removeProperty('--canvas-control-color');
+    root.style.removeProperty('--search-surface');
+    root.style.removeProperty('--search-text-color');
+    root.style.removeProperty('--search-placeholder-color');
+    root.style.removeProperty('--search-control-color');
+    root.style.removeProperty('--search-control-hover-color');
+    root.style.removeProperty('--search-control-focus-color');
+    root.style.removeProperty('--search-focus-stroke');
+    root.style.removeProperty('--search-selected-surface');
+    root.style.removeProperty('--search-selected-text');
+    activeColorPalette = null;
   }
 
   function applyColorReadabilityVars(bgColor) {
+    if (window.__willowColor) {
+      const palette = window.__willowColor.createSolidPalette(bgColor);
+      if (!palette) return;
+      const root = document.documentElement;
+      const accent = palette.colors.searchAccent;
+      const accentRgb = window.__willowColor.parseHex(accent);
+      activeColorPalette = palette;
+      document.body.dataset.colorReadable = palette.mode;
+      root.style.setProperty('--bg-secondary', palette.surfaces.secondary);
+      root.style.setProperty('--bg-tertiary', palette.surfaces.tertiary);
+      root.style.setProperty('--text-primary', palette.colors.canvasPrimary);
+      root.style.setProperty('--text-secondary', palette.colors.canvasSecondary);
+      root.style.setProperty('--text-tertiary', palette.colors.canvasControl);
+      root.style.setProperty('--placeholder-text', palette.colors.searchPlaceholder);
+      root.style.setProperty('--input-bg', palette.surfaces.input);
+      root.style.setProperty('--accent', accent);
+      root.style.setProperty('--accent-hover', accent);
+      root.style.setProperty('--accent-text', palette.colors.accentText);
+      root.style.setProperty('--accent-subtle', `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.08)`);
+      root.style.setProperty('--border-focus', accent);
+      root.style.setProperty('--focus-ring-color', accent);
+      root.style.setProperty('--canvas-text-primary', palette.colors.canvasPrimary);
+      root.style.setProperty('--canvas-text-secondary', palette.colors.canvasSecondary);
+      root.style.setProperty('--canvas-large-text', palette.colors.canvasLarge);
+      root.style.setProperty('--canvas-control-color', palette.colors.canvasControl);
+      root.style.setProperty('--search-surface', palette.surfaces.input);
+      root.style.setProperty('--search-text-color', palette.colors.searchText);
+      root.style.setProperty('--search-placeholder-color', palette.colors.searchPlaceholder);
+      root.style.setProperty('--search-control-color', palette.colors.searchControl);
+      root.style.setProperty('--search-control-hover-color', accent);
+      root.style.setProperty('--search-control-focus-color', accent);
+      root.style.setProperty('--search-focus-stroke', accent);
+      root.style.setProperty('--search-selected-surface', `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.08)`);
+      root.style.setProperty('--search-selected-text', palette.colors.accentText);
+      root.style.setProperty('--border', palette.mode === 'dark-text'
+        ? `color-mix(in srgb, ${bgColor} 75%, black)`
+        : 'rgba(255, 255, 255, 0.24)');
+      return;
+    }
     const color = parseHexColor(bgColor);
     if (!color) return;
     const root = document.documentElement;
-    const luminance = relativeLuminance(color);
-    const useDarkText = contrastRatio(luminance, 0) >= contrastRatio(luminance, 1);
     const white = { r: 255, g: 255, b: 255 };
     const black = { r: 0, g: 0, b: 0 };
-    const inputSurface = mixRgb(color, white, useDarkText ? 0.5 : 0.12);
-    const mutedText = pickMutedReadableColor(
+    const schemes = [
+      {
+        name: 'dark-text',
+        endpoint: black,
+        inputSurface: parseHexColor(rgbToHex(mixRgb(color, white, 0.5))),
+      },
+      {
+        name: 'light-text',
+        endpoint: white,
+        inputSurface: resolveLightInputSurface(color, white),
+      },
+    ];
+    schemes.forEach((scheme) => {
+      scheme.score = lowestContrast(scheme.endpoint, [color, scheme.inputSurface]);
+    });
+    const scheme = schemes.reduce((best, candidate) => candidate.score > best.score ? candidate : best);
+    const useDarkText = scheme.name === 'dark-text';
+    const endpoint = scheme.endpoint;
+    const inputSurface = scheme.inputSurface;
+    const surfaces = [color, inputSurface];
+    const lightPrimary = parseHexColor('#f3eddf');
+    const primaryDesired = useDarkText ? mixRgb(color, black, 0.8) : lightPrimary;
+    const secondaryDesired = useDarkText
+      ? mixRgb(color, black, 0.6)
+      : mixRgb(color, lightPrimary, 0.78);
+    const primaryText = pickReadableColor(surfaces, primaryDesired, endpoint);
+    const secondaryText = pickReadableColor(surfaces, secondaryDesired, endpoint);
+    const mutedText = pickReadableColor(
       [color, inputSurface],
       useDarkText ? parseHexColor('#6b6b60') : parseHexColor('#8f887e'),
-      useDarkText ? black : white,
+      endpoint,
     );
-    const placeholderText = pickMutedReadableColor(
+    const placeholderText = pickReadableColor(
       [inputSurface],
       useDarkText ? parseHexColor('#727269') : parseHexColor('#8f887e'),
-      useDarkText ? black : white,
+      endpoint,
     );
-    const mottoText = pickMutedReadableColor(
+    const mottoText = pickReadableColor(
       [inputSurface],
       useDarkText ? parseHexColor('#918d83') : parseHexColor('#706b64'),
-      useDarkText ? black : white,
+      endpoint,
       3.2,
     );
+    const accent = pickReadableColor(
+      surfaces,
+      parseHexColor(useDarkText ? '#c87a3c' : '#e8964a'),
+      endpoint,
+      3,
+    );
+    const accentColor = parseHexColor(accent);
+    const accentSubtleColor = mixRgb(accentColor, useDarkText ? white : black, 0.8);
+    const accentSubtleSurface = mixRgb(inputSurface, accentSubtleColor, 0.1);
+    const accentText = pickReadableColor(
+      [inputSurface, accentSubtleSurface],
+      accentColor,
+      endpoint,
+    );
+    const accentSubtle = `rgba(${Math.round(accentSubtleColor.r)}, ${Math.round(accentSubtleColor.g)}, ${Math.round(accentSubtleColor.b)}, 0.1)`;
     document.body.dataset.colorReadable = useDarkText ? 'dark-text' : 'light-text';
-    root.style.setProperty(
-      '--segment-selected-text',
-      useDarkText
-        ? 'color-mix(in srgb, var(--text-primary) 72%, var(--accent))'
-        : 'color-mix(in srgb, var(--text-primary) 82%, var(--accent))',
-    );
-    root.style.setProperty(
-      '--segment-selected-stroke',
-      useDarkText
-        ? 'color-mix(in srgb, var(--accent) 72%, black)'
-        : 'color-mix(in srgb, var(--accent) 58%, white)',
-    );
     if (useDarkText) {
       root.style.setProperty('--bg-secondary', `color-mix(in srgb, ${bgColor} 88%, white)`);
       root.style.setProperty('--bg-tertiary', `color-mix(in srgb, ${bgColor} 75%, white)`);
-      root.style.setProperty('--text-primary', `color-mix(in srgb, ${bgColor} 20%, black)`);
-      root.style.setProperty('--text-secondary', `color-mix(in srgb, ${bgColor} 40%, black)`);
-      root.style.setProperty('--text-tertiary', mutedText);
-      root.style.setProperty('--motto-text', mottoText);
-      root.style.setProperty('--placeholder-text', placeholderText);
       root.style.setProperty('--border', `color-mix(in srgb, ${bgColor} 75%, black)`);
-      root.style.setProperty('--input-bg', `color-mix(in srgb, ${bgColor} 50%, white)`);
-      return;
+    } else {
+      root.style.setProperty('--bg-secondary', `color-mix(in srgb, ${bgColor} 82%, white)`);
+      root.style.setProperty('--bg-tertiary', `color-mix(in srgb, ${bgColor} 72%, white)`);
+      root.style.setProperty('--border', 'rgba(255, 255, 255, 0.24)');
     }
 
-    root.style.setProperty('--bg-secondary', `color-mix(in srgb, ${bgColor} 82%, white)`);
-    root.style.setProperty('--bg-tertiary', `color-mix(in srgb, ${bgColor} 72%, white)`);
-    root.style.setProperty('--text-primary', '#f3eddf');
-    root.style.setProperty('--text-secondary', 'rgba(243, 237, 223, 0.78)');
+    root.style.setProperty('--text-primary', primaryText);
+    root.style.setProperty('--text-secondary', secondaryText);
     root.style.setProperty('--text-tertiary', mutedText);
     root.style.setProperty('--motto-text', mottoText);
     root.style.setProperty('--placeholder-text', placeholderText);
-    root.style.setProperty('--border', 'rgba(255, 255, 255, 0.24)');
-    root.style.setProperty('--input-bg', 'rgba(255, 255, 255, 0.12)');
+    root.style.setProperty('--input-bg', rgbToHex(inputSurface));
+    root.style.setProperty('--accent', accent);
+    root.style.setProperty('--accent-hover', accent);
+    root.style.setProperty('--accent-text', accentText);
+    root.style.setProperty('--accent-subtle', accentSubtle);
+    root.style.setProperty('--border-focus', accent);
+    root.style.setProperty('--focus-ring-color', accent);
+  }
+
+  function syncColorQualityWarning() {
+    if (!colorQualityWarning || !useSuggestedColor) return;
+    const showWarning = settings.bgMode === 'color'
+      && Boolean(settings.bgColor)
+      && !effectiveThemeIsDark()
+      && Boolean(activeColorPalette && activeColorPalette.warning);
+    colorQualityWarning.hidden = !showWarning;
+    useSuggestedColor.dataset.color = showWarning ? activeColorPalette.suggested : '';
   }
 
   function summarizeImageData(imageData, width, height) {
     let total = 0;
+    let totalR = 0;
+    let totalG = 0;
+    let totalB = 0;
     const pixels = imageData.data;
     const samples = [];
     for (let i = 0; i < pixels.length; i += 4) {
-      const value = (0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]) / 255;
-      samples.push(value);
+      const color = { r: pixels[i], g: pixels[i + 1], b: pixels[i + 2] };
+      const value = (0.299 * color.r + 0.587 * color.g + 0.114 * color.b) / 255;
+      samples.push({ value, color });
       total += value;
+      totalR += color.r;
+      totalG += color.g;
+      totalB += color.b;
     }
     const brightness = samples.length ? total / samples.length : -1;
+    const color = samples.length
+      ? { r: totalR / samples.length, g: totalG / samples.length, b: totalB / samples.length }
+      : null;
     let variance = 0;
     let neighborDiff = 0;
     let neighborCount = 0;
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const index = y * width + x;
-        const value = samples[index];
+        const value = samples[index].value;
         variance += (value - brightness) ** 2;
         if (x + 1 < width) {
-          neighborDiff += Math.abs(value - samples[index + 1]);
+          neighborDiff += Math.abs(value - samples[index + 1].value);
           neighborCount++;
         }
         if (y + 1 < height) {
-          neighborDiff += Math.abs(value - samples[index + width]);
+          neighborDiff += Math.abs(value - samples[index + width].value);
           neighborCount++;
         }
       }
@@ -641,7 +781,18 @@
     const deviation = Math.sqrt(variance / samples.length);
     const texture = neighborCount ? neighborDiff / neighborCount : 0;
     const complexity = Math.min(1, Math.max(0, deviation * 1.35 + texture * 2.4));
-    return { brightness, complexity };
+    const sorted = [...samples].sort((a, b) => a.value - b.value);
+    const lowSample = sorted.length ? sorted[0] : null;
+    const highSample = sorted.length ? sorted[sorted.length - 1] : null;
+    return {
+      brightness,
+      complexity,
+      color,
+      lowBrightness: lowSample ? lowSample.value : brightness,
+      highBrightness: highSample ? highSample.value : brightness,
+      lowColor: lowSample ? lowSample.color : color,
+      highColor: highSample ? highSample.color : color,
+    };
   }
 
   function analyzeWallpaperImage(dataUrl) {
@@ -688,19 +839,19 @@
         const top = rect.top - padding;
         const width = rect.width + padding * 2;
         const height = rect.height + padding * 2;
-        const sx = Math.max(0, Math.min(img.width, (left - offsetX) / scale));
-        const sy = Math.max(0, Math.min(img.height, (top - offsetY) / scale));
-        const sw = Math.max(1, Math.min(img.width - sx, width / scale));
-        const sh = Math.max(1, Math.min(img.height - sy, height / scale));
-        const sampleWidth = 48;
-        const sampleHeight = 18;
-        const canvas = document.createElement('canvas');
-        canvas.width = sampleWidth;
-        canvas.height = sampleHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sampleWidth, sampleHeight);
-        const imageData = ctx.getImageData(0, 0, sampleWidth, sampleHeight);
-        resolve(summarizeImageData(imageData, sampleWidth, sampleHeight));
+        const sampleRegion = (region, sampleWidth, sampleHeight) => {
+          const regionSx = Math.max(0, Math.min(img.width, (region.left - offsetX) / scale));
+          const regionSy = Math.max(0, Math.min(img.height, (region.top - offsetY) / scale));
+          const regionSw = Math.max(1, Math.min(img.width - regionSx, region.width / scale));
+          const regionSh = Math.max(1, Math.min(img.height - regionSy, region.height / scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = sampleWidth;
+          canvas.height = sampleHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, regionSx, regionSy, regionSw, regionSh, 0, 0, sampleWidth, sampleHeight);
+          return summarizeImageData(ctx.getImageData(0, 0, sampleWidth, sampleHeight), sampleWidth, sampleHeight);
+        };
+        resolve(sampleRegion({ left, top, width, height }, 48, 18));
       };
       img.onerror = () => resolve(null);
       img.src = dataUrl;
@@ -774,13 +925,10 @@
       }
     }
 
-    if (settings.bgMode === 'color' && !effectiveThemeIsDark()) {
-      const color = settings.bgColor || '#F5F5DC';
-      if (settings.bgColor) {
-        body.classList.add('has-custom-bg');
-        root.style.setProperty('--bg-primary', settings.bgColor);
-      }
-      applyColorReadabilityVars(color);
+    if (settings.bgMode === 'color' && settings.bgColor && !effectiveThemeIsDark()) {
+      body.classList.add('has-custom-bg');
+      root.style.setProperty('--bg-primary', settings.bgColor);
+      applyColorReadabilityVars(settings.bgColor);
     }
 
     applyShadowStrength();
@@ -799,9 +947,30 @@
     root.style.removeProperty('--wallpaper-menu-selected-text');
     root.style.removeProperty('--wallpaper-surface-border');
     root.style.removeProperty('--wallpaper-protection-bg');
+    root.style.removeProperty('--wallpaper-search-control-color');
+    root.style.removeProperty('--wallpaper-engine-color');
+    root.style.removeProperty('--wallpaper-submit-color');
+    root.style.removeProperty('--wallpaper-engine-hover-color');
+    root.style.removeProperty('--wallpaper-submit-hover-color');
+    root.style.removeProperty('--wallpaper-engine-scrim');
+    root.style.removeProperty('--wallpaper-submit-scrim');
+    root.style.removeProperty('--wallpaper-engine-hover-scrim');
+    root.style.removeProperty('--wallpaper-submit-hover-scrim');
+    root.style.removeProperty('--wallpaper-search-control-hover-color');
+    root.style.removeProperty('--wallpaper-search-control-focus-color');
+    root.style.removeProperty('--wallpaper-search-focus-stroke');
+    root.style.removeProperty('--wallpaper-action-border');
+    root.style.removeProperty('--wallpaper-analysis-min');
+    root.style.removeProperty('--wallpaper-analysis-max');
+    root.style.removeProperty('--wallpaper-analysis-target');
   }
 
-  function applyWallpaperMottoColor(textColor, inputSurfaceColor, inputAlpha, surfaceBrightness) {
+  function applyWallpaperMottoColor(
+    textColor,
+    inputSurfaceColor,
+    inputAlpha,
+    surfaceBrightness,
+  ) {
     const primaryText = parseHexColor(textColor);
     if (!primaryText) return inputAlpha;
     const tone = Math.min(1, Math.max(0, surfaceBrightness)) * 255;
@@ -812,7 +981,7 @@
       return contrastRatio(primaryLuminance, relativeLuminance(surface));
     };
     let resolvedInputAlpha = inputAlpha;
-    const targetPrimaryContrast = 5.5;
+    const targetPrimaryContrast = 4.5;
     if (contrastAt(inputAlpha) < targetPrimaryContrast && contrastAt(1) >= targetPrimaryContrast) {
       let low = inputAlpha;
       let high = 1;
@@ -826,8 +995,14 @@
     const inputSurface = mixRgb(wallpaperSurface, inputSurfaceColor, resolvedInputAlpha);
     const useDarkText = relativeLuminance(primaryText) < relativeLuminance(inputSurface);
     const desired = parseHexColor(useDarkText ? '#918d83' : '#706b64');
-    const motto = pickMutedReadableColor([inputSurface], desired, primaryText, 3.2);
-    document.documentElement.style.setProperty('--wallpaper-motto-text', motto);
+    const motto = pickReadableColor([inputSurface], desired, primaryText, 3.2);
+    const root = document.documentElement;
+    root.style.setProperty('--wallpaper-motto-text', motto);
+    root.style.setProperty('--wallpaper-search-control-color', textColor);
+    root.style.setProperty('--wallpaper-search-control-hover-color', textColor);
+    root.style.setProperty('--wallpaper-search-control-focus-color', textColor);
+    root.style.setProperty('--wallpaper-search-focus-stroke', textColor);
+    root.style.setProperty('--wallpaper-action-border', textColor);
     return resolvedInputAlpha;
   }
 
@@ -844,28 +1019,20 @@
     const wallpaperSurface = { r: tone, g: tone, b: tone };
     const menuSurface = mixRgb(wallpaperSurface, menuSurfaceColor, menuSurfaceAlpha);
     const selectedText = parseHexColor(selectedTextColor) || parseHexColor('#f3eddf');
-    const textLuminance = relativeLuminance(selectedText);
-    const contrastAt = (alpha) => contrastRatio(
-      textLuminance,
-      relativeLuminance(mixRgb(menuSurface, selectedSurfaceColor, alpha)),
+    const selectedSurface = mixRgb(menuSurface, selectedSurfaceColor, selectedSurfaceAlpha);
+    const useDarkText = relativeLuminance(selectedText) < relativeLuminance(selectedSurface);
+    const resolvedSelectedText = pickReadableColor(
+      [selectedSurface],
+      selectedText,
+      parseHexColor(useDarkText ? '#000000' : '#ffffff'),
+      4.5,
     );
-    let resolvedSelectedAlpha = selectedSurfaceAlpha;
-    if (contrastAt(resolvedSelectedAlpha) < 4.5) {
-      let low = resolvedSelectedAlpha;
-      let high = 1;
-      for (let i = 0; i < 20; i += 1) {
-        const middle = (low + high) / 2;
-        if (contrastAt(middle) >= 4.5) high = middle;
-        else low = middle;
-      }
-      resolvedSelectedAlpha = high;
-    }
 
     root.style.setProperty(
       '--wallpaper-menu-selected-bg',
-      `rgba(${Math.round(selectedSurfaceColor.r)},${Math.round(selectedSurfaceColor.g)},${Math.round(selectedSurfaceColor.b)},${resolvedSelectedAlpha.toFixed(3)})`,
+      `rgba(${Math.round(selectedSurfaceColor.r)},${Math.round(selectedSurfaceColor.g)},${Math.round(selectedSurfaceColor.b)},${selectedSurfaceAlpha.toFixed(3)})`,
     );
-    root.style.setProperty('--wallpaper-menu-selected-text', rgbToHex(selectedText));
+    root.style.setProperty('--wallpaper-menu-selected-text', resolvedSelectedText);
   }
 
   function updateWallpaperPresentation() {
@@ -889,15 +1056,94 @@
   }
 
   function syncWallpaperSurfaceAnalysis(brightness, complexity, applyToken = wallpaperApplyToken) {
-    if (!['auto', 'light'].includes(settings.wallpaperSurfaceMode) || !activeWallpaperData) return;
+    if (!activeWallpaperData) return;
     const token = ++wallpaperSurfaceAnalysisToken;
     requestAnimationFrame(() => {
-      analyzeWallpaperSurfaceRegion(activeWallpaperData).then((surfaceAnalysis) => {
+      const surfacePromise = ['auto', 'light'].includes(settings.wallpaperSurfaceMode)
+        ? analyzeWallpaperSurfaceRegion(activeWallpaperData)
+        : Promise.resolve(null);
+      surfacePromise.then((surfaceAnalysis) => {
         if (token !== wallpaperSurfaceAnalysisToken || applyToken !== wallpaperApplyToken) return;
-        if (!surfaceAnalysis || surfaceAnalysis.brightness < 0) return;
-        applyWallpaperTextColor(brightness, complexity, surfaceAnalysis);
+        if (surfaceAnalysis && surfaceAnalysis.brightness >= 0) {
+          applyWallpaperTextColor(brightness, complexity, surfaceAnalysis);
+        }
+        return syncWallpaperControlStyles(token, applyToken);
       });
     });
+  }
+
+  async function syncWallpaperControlStyles(token, applyToken) {
+    const analyzer = window.__willowWallpaperColor;
+    const engine = document.getElementById('engine-toggle');
+    const submit = document.getElementById('search-submit');
+    const engineVisual = engine?.querySelector('.search-control-visual');
+    const submitVisual = submit?.querySelector('.search-control-visual');
+    const engineSvg = engineVisual?.querySelector('svg');
+    const submitSvg = submitVisual?.querySelector('svg');
+    if (!analyzer || !engineVisual || !submitVisual || !engineSvg || !submitSvg) return;
+
+    const root = document.documentElement;
+    const styles = getComputedStyle(root);
+    const protection = analyzer.normalizeColor(styles.getPropertyValue('--wallpaper-protection-bg'));
+    try {
+      const analysis = await analyzer.analyzeControlSurface({
+        wallpaperUrl: activeWallpaperData,
+        wallpaperId: settings.activeWallpaperId,
+        viewport: {
+          width: window.innerWidth || document.documentElement.clientWidth,
+          height: window.innerHeight || document.documentElement.clientHeight,
+          dpr: window.devicePixelRatio || 1,
+        },
+        overlayAlpha: settings.overlayStrength / 100,
+        readability: settings.wallpaperReadability,
+        protectionColor: protection,
+        protectionAlpha: protection.a,
+        inputColor: styles.getPropertyValue('--wallpaper-input-bg'),
+        hoverColor: styles.getPropertyValue('--wallpaper-button-bg'),
+        blurRadius: parseFloat(styles.getPropertyValue('--wallpaper-surface-blur')) || 16,
+        targetContrast: WALLPAPER_CONTROL_TARGET,
+        solverVersion: analyzer.solverVersion,
+        controls: {
+          engine: { visual: engineVisual, svg: engineSvg },
+          submit: { visual: submitVisual, svg: submitSvg },
+        },
+      });
+      if (token !== wallpaperSurfaceAnalysisToken || applyToken !== wallpaperApplyToken || !analysis) return;
+      const desired = styles.getPropertyValue('--wallpaper-search-control-color').trim() || '#9f5300';
+      const pair = analyzer.solveControlPair(
+        analysis.controls.engine,
+        analysis.controls.submit,
+        desired,
+        WALLPAPER_CONTROL_TARGET,
+      );
+      if (!pair) return;
+      const { engine: engineStyle, submit: submitStyle } = pair;
+      root.style.setProperty('--wallpaper-engine-color', engineStyle.normal.color);
+      root.style.setProperty('--wallpaper-submit-color', submitStyle.normal.color);
+      root.style.setProperty('--wallpaper-engine-hover-color', engineStyle.hover.color);
+      root.style.setProperty('--wallpaper-submit-hover-color', submitStyle.hover.color);
+      root.style.setProperty('--wallpaper-engine-scrim', engineStyle.normal.scrim);
+      root.style.setProperty('--wallpaper-submit-scrim', submitStyle.normal.scrim);
+      root.style.setProperty('--wallpaper-engine-hover-scrim', engineStyle.hover.scrim);
+      root.style.setProperty('--wallpaper-submit-hover-scrim', submitStyle.hover.scrim);
+      root.style.setProperty('--wallpaper-analysis-min', Math.min(
+        engineStyle.normal.minimumContrast,
+        submitStyle.normal.minimumContrast,
+      ).toFixed(3));
+      root.style.setProperty('--wallpaper-analysis-max', Math.max(
+        engineStyle.hover.minimumContrast,
+        submitStyle.hover.minimumContrast,
+      ).toFixed(3));
+      root.style.setProperty('--wallpaper-analysis-target', WALLPAPER_CONTROL_TARGET.toFixed(1));
+      analyzer.lastResult = {
+        analysis,
+        engine: engineStyle,
+        submit: submitStyle,
+        pair: pair.diagnostics,
+      };
+    } catch (_) {
+      // Keep the theme-provided control colors if the wallpaper cannot be analyzed.
+    }
   }
 
   function applyWallpaperTextColor(brightness, complexity = 0, surfaceAnalysis = null) {
@@ -1100,7 +1346,7 @@
       root.style.setProperty('--shadow-md', `0 4px 20px rgba(0,0,0,${(0.3 * scale).toFixed(3)})`);
       root.style.setProperty('--shadow-lg', `0 12px 40px rgba(0,0,0,${(0.4 * scale).toFixed(3)})`);
       root.style.setProperty('--input-shadow-focus',
-        `0 2px 8px rgba(0,0,0,${(0.15 * scale).toFixed(3)}), 0 6px 24px rgba(200,122,60,${(0.15 * scale).toFixed(3)})`);
+        `0 2px 8px rgba(0,0,0,${(0.15 * scale).toFixed(3)}), 0 6px 24px color-mix(in srgb, var(--wallpaper-search-focus-stroke) ${(15 * scale).toFixed(1)}%, transparent)`);
       root.style.setProperty('--text-shadow-time',
         `0 0 16px rgba(255,255,255,${(0.25 * scale).toFixed(3)}), 0 2px 8px rgba(0,0,0,${(0.5 * scale).toFixed(3)})`);
       root.style.setProperty('--text-shadow-greeting', `0 1px 6px rgba(0,0,0,${(0.4 * scale).toFixed(3)})`);
@@ -1111,7 +1357,7 @@
       root.style.setProperty('--shadow-md', `0 4px 20px rgba(0,0,0,${(0.26 * scale).toFixed(3)})`);
       root.style.setProperty('--shadow-lg', `0 12px 40px rgba(0,0,0,${(0.34 * scale).toFixed(3)})`);
       root.style.setProperty('--input-shadow-focus',
-        `0 2px 8px rgba(0,0,0,${(0.18 * scale).toFixed(3)}), 0 6px 24px rgba(200,122,60,${(0.14 * scale).toFixed(3)})`);
+        `0 2px 8px rgba(0,0,0,${(0.18 * scale).toFixed(3)}), 0 6px 24px color-mix(in srgb, var(--search-focus-stroke) ${(14 * scale).toFixed(1)}%, transparent)`);
       root.style.setProperty('--text-shadow-time', `0 2px 10px rgba(0,0,0,${(0.35 * scale).toFixed(3)})`);
       root.style.setProperty('--text-shadow-greeting', `0 1px 6px rgba(0,0,0,${(0.28 * scale).toFixed(3)})`);
     } else {
@@ -1121,7 +1367,7 @@
       root.style.setProperty('--shadow-md', `0 4px 20px rgba(44,36,22,${(0.08 * scale).toFixed(3)})`);
       root.style.setProperty('--shadow-lg', `0 12px 40px rgba(44,36,22,${(0.12 * scale).toFixed(3)})`);
       root.style.setProperty('--input-shadow-focus',
-        `0 1px 3px rgba(44,36,22,${(0.08 * scale).toFixed(3)}), 0 6px 24px rgba(200,122,60,${(0.1 * scale).toFixed(3)})`);
+        `0 1px 3px rgba(44,36,22,${(0.08 * scale).toFixed(3)}), 0 6px 24px color-mix(in srgb, var(--search-focus-stroke) ${(10 * scale).toFixed(1)}%, transparent)`);
       root.style.setProperty('--text-shadow-time', `0 2px 8px rgba(0,0,0,${(0.15 * scale).toFixed(3)})`);
       root.style.setProperty('--text-shadow-greeting', `0 1px 4px rgba(0,0,0,${(0.1 * scale).toFixed(3)})`);
     }
@@ -1393,6 +1639,7 @@
     const color = settings.bgColor || '#F5F5DC';
     customColorPicker.value = color;
     customColorHex.value = settings.bgColor || '';
+    syncColorQualityWarning();
 
     renderWallpaperGallery();
     syncWallpaperControls();
@@ -1769,6 +2016,20 @@
     syncUI();
   });
 
+  customColorHex.addEventListener('input', () => {
+    const val = customColorHex.value.trim();
+    if (!/^#[0-9a-fA-F]{6}$/.test(val)) return;
+    const normalized = val.toLowerCase();
+    if (normalized === settings.bgColor) return;
+    settings.bgMode = 'color';
+    settings.bgColor = normalized;
+    customColorPicker.value = normalized;
+    saveSettings();
+    applyBackground();
+    scheduleWallpaperRotation();
+    syncUI();
+  });
+
   customColorHex.addEventListener('change', () => {
     const val = customColorHex.value.trim();
     if (!/^#[0-9a-fA-F]{6}$/.test(val)) {
@@ -1783,6 +2044,21 @@
     scheduleWallpaperRotation();
     syncUI();
   });
+
+  if (useSuggestedColor) {
+    useSuggestedColor.addEventListener('click', () => {
+      const suggested = useSuggestedColor.dataset.color;
+      if (!/^#[0-9a-fA-F]{6}$/.test(suggested)) return;
+      settings.bgMode = 'color';
+      settings.bgColor = suggested.toLowerCase();
+      customColorPicker.value = settings.bgColor;
+      customColorHex.value = settings.bgColor;
+      saveSettings();
+      applyBackground();
+      scheduleWallpaperRotation();
+      syncUI();
+    });
+  }
 
   function isWallpaperFile(file) {
     return /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(file.name) || /^image\//i.test(file.type || '');
@@ -2278,17 +2554,21 @@
     applyBackground();
     if (!panel.hasAttribute('hidden')) syncUI();
   });
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-color-scheme'] });
 
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    applyBackground();
-    if (!panel.hasAttribute('hidden')) syncUI();
+  const engineIconObserver = new MutationObserver(() => {
+    const active = settings.wallpapers.find((wallpaper) => wallpaper.id === settings.activeWallpaperId);
+    if (settings.bgMode === 'wallpaper' && active && activeWallpaperData) {
+      syncWallpaperSurfaceAnalysis(active.brightness ?? 0, active.complexity ?? 0);
+    }
   });
+  const engineToggle = document.getElementById('engine-toggle');
+  if (engineToggle) engineIconObserver.observe(engineToggle, { childList: true, subtree: true });
 
   window.addEventListener('resize', () => {
     clearTimeout(resizeSyncTimer);
     resizeSyncTimer = setTimeout(() => {
-      if (settings.bgMode === 'wallpaper' && ['auto', 'light'].includes(settings.wallpaperSurfaceMode)) {
+      if (settings.bgMode === 'wallpaper') {
         updateWallpaperPresentation();
       }
     }, 150);
@@ -2300,6 +2580,7 @@
     if (saveTimer) saveSettingsNow();
     clearTimeout(wallpaperRotationTimer);
     clearTimeout(resizeSyncTimer);
+    engineIconObserver.disconnect();
   });
 
   settingsReady.finally(() => {

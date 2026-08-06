@@ -13,6 +13,8 @@ const sharedFiles = [
   'icons/ntp48.png',
   'icons/ntp128.png',
   'js/clock.js',
+  'js/color.js',
+  'js/wallpaper-color.js',
   'js/assets.js',
   'js/theme.js',
   '_locales/en/messages.json',
