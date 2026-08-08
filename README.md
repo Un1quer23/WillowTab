@@ -14,12 +14,8 @@ Use the centered search box to start searching quickly. WillowTab supports Googl
 
 ### Personal Backgrounds
 
-Use a solid color background, import local images, or import a local folder. You can enter wallpaper mode before adding the first image,
-manage multiple wallpapers, choose one manually, or rotate them automatically. Wallpaper imports validate file and batch limits,
-distinguish same-named files from different folders, and roll back incomplete saves to protect the existing library.
-
-In wallpaper mode, WillowTab analyzes the final rendered background and glass surfaces to strengthen clock and search-control contrast
-while retaining warm colors. On complex mixed images, the clock uses the best attainable warm color without adding a background block.
+Use a solid color background or local images, manage multiple wallpapers, and switch them manually or automatically. In wallpaper mode,
+WillowTab adapts text, controls, and the search surface to the selected image.
 
 ### Light and Dark Themes
 
@@ -34,6 +30,19 @@ Adjust fonts, corner radius, shadow strength, settings button placement, and the
 WillowTab does not collect, track, or sell personal data.
 
 WillowTab is for people who want a new tab page that stays simple, beautiful, and efficient without adding distracting information.
+
+## Color and Contrast Engineering
+
+WillowTab treats contrast as a semantic-role and rendered-surface problem rather than relying on one fixed light or dark text color:
+
+- [`js/color.js`](js/color.js) generates solid-background palettes in OKLCH and solves separate roles for the clock, search text,
+  and search controls. The clock uses a `6.0:1` target and search controls use `4.5:1`; if a warm clock color cannot reach its target,
+  the solver records that result and uses the best warm endpoint instead of adding a background block.
+- [`js/wallpaper-color.js`](js/wallpaper-color.js) samples the actual `cover` crop at the current viewport and DPR, then includes the
+  global overlay, readability protection, and final glass surfaces for normal and hover states. The clock never receives a local scrim;
+  search controls use one only when color alone cannot reach `4.5:1`.
+- [`scripts/validate-colors.js`](scripts/validate-colors.js) checks a 4,096-color RGB grid, 12 representative colors, fixed theme roles,
+  wallpaper edge cases, and one-step contrast boundaries.
 
 ## Install
 
@@ -82,10 +91,6 @@ WillowTab/
 │   ├── i18n.js
 │   ├── search.js
 │   ├── clock.js
-│   ├── assets.js
-│   ├── color.js
-│   ├── wallpaper-color.js
-│   ├── wallpaper-policy.js
 │   ├── settings.js
 │   └── theme.js
 ├── icons/
