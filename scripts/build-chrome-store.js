@@ -15,6 +15,7 @@ const sharedFiles = [
   'js/clock.js',
   'js/color.js',
   'js/wallpaper-color.js',
+  'js/wallpaper-policy.js',
   'js/assets.js',
   'js/theme.js',
   '_locales/en/messages.json',

@@ -171,6 +171,28 @@
     };
   }
 
+  function readableOverlayColor(surface, desired, endpoint, target, overlayAlpha = 0.08) {
+    const desiredColor = typeof desired === 'string' ? parseHex(desired) : desired;
+    let candidate = desiredColor;
+    let result = null;
+    const solveTarget = target + 0.02;
+    for (let iteration = 0; iteration < 16; iteration += 1) {
+      const hoverSurface = composite(candidate, surface, overlayAlpha);
+      result = readableColor([surface, hoverSurface], desiredColor, endpoint, solveTarget);
+      const next = parseHex(result.hex);
+      if (toHex(next) === toHex(candidate)) break;
+      candidate = next;
+    }
+    const foreground = parseHex(result.hex);
+    const hoverSurface = composite(foreground, surface, overlayAlpha);
+    return {
+      ...result,
+      ratio: minimumContrast(foreground, [surface, hoverSurface]),
+      target,
+      hoverSurface: toHex(hoverSurface),
+    };
+  }
+
   function colorDistance(first, second) {
     const a = rgbToOklch(typeof first === 'string' ? parseHex(first) : first);
     const b = rgbToOklch(typeof second === 'string' ? parseHex(second) : second);
@@ -197,6 +219,10 @@
     const darkText = scheme.name === 'dark-text';
     const endpoint = scheme.endpoint;
     const input = scheme.input;
+    const bgSecondary = toHex(mix(background, darkText ? white : black, darkText ? 0.12 : 0.1));
+    const bgTertiary = toHex(mix(background, darkText ? white : black, darkText ? 0.25 : 0.18));
+    const secondary = parseHex(bgSecondary);
+    const tertiary = parseHex(bgTertiary);
     const hue = backgroundOklch.h;
     const neutralChroma = Math.min(0.018, backgroundOklch.c * 0.12 + 0.006);
     const desiredLightness = darkText ? 0.46 : 0.72;
@@ -219,17 +245,32 @@
     const brandAccent = darkText ? '#c87a3c' : '#e8964a';
     const canvasPrimary = readableColor([background], desiredPrimary, endpoint, 4.5);
     const canvasSecondary = readableColor([background], desiredSecondary, endpoint, 4.5);
-    const canvasLarge = readableColor([background], desiredLarge, endpoint, 3);
+    const canvasLargeSurfaces = [background, secondary, tertiary];
+    const canvasLargeEndpoint = [black, white]
+      .sort((first, second) => (
+        minimumContrast(second, canvasLargeSurfaces) - minimumContrast(first, canvasLargeSurfaces)
+      ))[0];
+    let canvasLarge = readableColor(canvasLargeSurfaces, desiredLarge, canvasLargeEndpoint, 6.0);
+    if (canvasLarge.ratio < 6.0) {
+      const warmEndpoint = ['#241f18', '#f6efe2']
+        .map((hex) => ({ hex, ratio: minimumContrast(parseHex(hex), canvasLargeSurfaces) }))
+        .sort((first, second) => second.ratio - first.ratio)[0];
+      canvasLarge = {
+        ...canvasLarge,
+        hex: warmEndpoint.hex,
+        ratio: warmEndpoint.ratio,
+        amount: 1,
+      };
+    }
+    canvasLarge.meetsTarget = canvasLarge.ratio >= 6.0;
     const canvasControl = readableColor([background], desiredControl, endpoint, 3);
-    const searchText = readableColor([input], desiredPrimary, endpoint, 4.5);
+    const searchText = readableColor([input, tertiary], desiredPrimary, endpoint, 4.5);
     const searchPlaceholder = readableColor([input], desiredSecondary, endpoint, 4.5);
-    const searchControl = readableColor([input], desiredControl, endpoint, 3);
-    const searchAccent = readableColor([input], brandAccent, endpoint, 3);
+    const searchControl = readableColor([input], desiredControl, endpoint, 4.5);
+    const searchAccent = readableOverlayColor(input, brandAccent, endpoint, 4.5);
     const accentColor = parseHex(searchAccent.hex);
     const selectedSurface = composite(accentColor, input, 0.08);
     const accentText = readableColor([selectedSurface], accentColor, endpoint, 4.5);
-    const bgSecondary = toHex(mix(background, darkText ? white : black, darkText ? 0.12 : 0.1));
-    const bgTertiary = toHex(mix(background, darkText ? white : black, darkText ? 0.25 : 0.18));
     const hierarchyDistance = colorDistance(canvasPrimary.hex, canvasSecondary.hex);
     const maximumPull = Math.max(
       canvasPrimary.amount,

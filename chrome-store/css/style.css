@@ -32,14 +32,14 @@ body.has-wallpaper .wallpaper-confirm-dialog {
   --focus-ring-color: var(--selection-stroke-color);
   --canvas-text-primary: #70706a;
   --canvas-text-secondary: #71715b;
-  --canvas-large-text: #8d8d87;
+  --canvas-large-text: #5c5d56;
   --canvas-control-color: #8d8d7f;
   --search-surface: var(--input-bg);
-  --search-text-color: #73736d;
+  --search-text-color: #72726c;
   --search-placeholder-color: #75745f;
-  --search-control-color: #919183;
-  --search-control-hover-color: #cd7e41;
-  --search-control-focus-color: #cd7e41;
+  --search-control-color: #747467;
+  --search-control-hover-color: #a65a16;
+  --search-control-focus-color: #a65a16;
   --search-focus-stroke: #cd7e41;
   --search-selected-surface: var(--accent-subtle);
   --search-selected-text: #a65a17;
@@ -48,6 +48,8 @@ body.has-wallpaper .wallpaper-confirm-dialog {
   --panel-control-text: #73736d;
   --panel-control-secondary: #75745f;
   --panel-control-icon: #919183;
+  --panel-control-hover-text: #6a6a65;
+  --panel-accent-text: #a25610;
   --panel-focus-stroke: #cd7e41;
   --panel-warning-text: #6a6a64;
   --wallpaper-search-control-color: var(--wallpaper-text-color);
@@ -136,13 +138,13 @@ html[data-color-scheme="dark"] {
   --danger-subtle: rgba(217, 108, 99, 0.08);
   --canvas-text-primary: #7f7d77;
   --canvas-text-secondary: #7e7e7a;
-  --canvas-large-text: #64615b;
+  --canvas-large-text: #a8a59d;
   --canvas-control-color: #656158;
-  --search-text-color: #86837d;
+  --search-text-color: #918e87;
   --search-placeholder-color: #848480;
-  --search-control-color: #6a675e;
-  --search-control-hover-color: #9f5300;
-  --search-control-focus-color: #9f5300;
+  --search-control-color: #878479;
+  --search-control-hover-color: #be7834;
+  --search-control-focus-color: #be7834;
   --search-focus-stroke: #9f5300;
   --search-selected-text: #c47533;
   --panel-text-primary: #7f7d77;
@@ -150,6 +152,8 @@ html[data-color-scheme="dark"] {
   --panel-control-text: #86837d;
   --panel-control-secondary: #848480;
   --panel-control-icon: #6a675e;
+  --panel-control-hover-text: #918e87;
+  --panel-accent-text: #ca7a39;
   --panel-focus-stroke: #9f5300;
   --panel-warning-text: #83817b;
 }
@@ -410,7 +414,7 @@ body.has-wallpaper .engine-dropdown-item.active {
 
 body.has-wallpaper .time-display {
   text-shadow: var(--text-shadow-time);
-  color: var(--wallpaper-time-color, #f0ece0);
+  color: var(--wallpaper-time-color, #f6efe2);
 }
 
 body.has-wallpaper .greeting {
@@ -591,7 +595,7 @@ body.has-custom-bg {
   border-radius: calc(var(--radius-ui) * 0.7);
   background: transparent;
   cursor: pointer;
-  color: var(--text-primary);
+  color: var(--search-text-color);
   font-family: var(--font-body);
   font-size: 0.9rem;
   text-align: left;
@@ -807,6 +811,7 @@ body.has-custom-bg {
 
 .action-btn.icon-only {
   border-radius: var(--radius-full);
+  justify-content: center;
   padding: 6px;
   border: none;
   background: transparent;
@@ -907,6 +912,22 @@ body.has-custom-bg {
 .settings-panel .settings-nav-summary,
 .settings-panel .settings-nav-btn::after {
   color: var(--panel-control-secondary);
+}
+
+.settings-panel .action-btn:not(.icon-only):hover,
+.about-panel .action-btn:not(.icon-only):hover,
+.wallpaper-confirm-dialog .action-btn:not(.icon-only):hover,
+.settings-panel .settings-nav-btn:hover,
+.settings-panel .font-option:hover,
+.settings-panel .about-trigger:hover,
+.settings-panel .wallpaper-add-menu button:hover,
+.settings-panel .wallpaper-add-menu button:focus-visible {
+  color: var(--panel-control-hover-text);
+}
+
+.settings-panel .wallpaper-add-menu button,
+.settings-panel .about-trigger {
+  color: var(--panel-control-text);
 }
 
 .settings-panel.is-open {
@@ -1129,7 +1150,7 @@ html[lang="zh-CN"] .settings-panel-header h2 {
   border: 1px solid var(--segment-border);
   border-radius: var(--radius-full);
   background: var(--input-bg);
-  color: var(--accent-text);
+  color: var(--panel-accent-text);
   font: inherit;
   cursor: pointer;
 }
@@ -1311,10 +1332,6 @@ html[lang="zh-CN"] .settings-panel-header h2 {
   transition: opacity var(--transition);
 }
 
-#color-section + #wallpaper-section {
-  margin-top: 16px;
-}
-
 .setting-subgroup.disabled {
   pointer-events: none;
 }
@@ -1474,7 +1491,7 @@ html[lang="zh-CN"] .settings-panel-header h2 {
 }
 
 .wallpaper-tab.active {
-  color: var(--accent);
+  color: var(--panel-accent-text);
 }
 
 .wallpaper-tab.active::after {
@@ -1515,8 +1532,8 @@ html[lang="zh-CN"] .settings-panel-header h2 {
   white-space: nowrap;
 }
 
-.wallpaper-toolbar-action:hover {
-  color: var(--accent);
+.settings-panel .action-btn.wallpaper-toolbar-action:hover {
+  color: var(--panel-accent-text);
   box-shadow: none;
 }
 
@@ -1629,7 +1646,7 @@ html[lang="zh-CN"] .settings-panel-header h2 {
 .wallpaper-selected-count {
   min-height: 24px;
   margin-bottom: 8px;
-  color: var(--text-secondary);
+  color: var(--panel-control-hover-text);
   font-size: 0.82rem;
 }
 
@@ -1931,7 +1948,7 @@ html[lang="zh-CN"] .settings-panel-header h2 {
   border-radius: var(--radius-ui);
   background: var(--bg-secondary);
   font-size: 1rem;
-  color: var(--text-primary);
+  color: var(--panel-control-hover-text);
   flex-shrink: 0;
 }
 
@@ -2100,13 +2117,13 @@ html[lang="zh-CN"] .settings-panel-header h2 {
 }
 
 .about-link {
-  color: var(--accent);
+  color: var(--panel-accent-text);
   text-decoration: none;
   transition: color var(--transition);
 }
 
 .about-link:hover {
-  color: var(--accent-hover);
+  color: var(--panel-accent-text);
   text-decoration: underline;
 }
 
@@ -2178,7 +2195,7 @@ html[lang="zh-CN"] .settings-panel-header h2 {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius-ui);
-  color: var(--text-primary);
+  color: var(--search-text-color);
   font-family: var(--font-body);
   font-size: 0.88rem;
   box-shadow: var(--shadow-lg);

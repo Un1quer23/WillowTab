@@ -62,6 +62,7 @@
     return {
       id: record.id,
       name: record.name || 'Wallpaper',
+      sourcePath: record.sourcePath || '',
       brightness: record.brightness,
       complexity: record.complexity,
       createdAt: record.createdAt || Date.now(),
@@ -75,6 +76,7 @@
     const stored = {
       id: record.id,
       name: record.name || 'Wallpaper',
+      sourcePath: record.sourcePath || '',
       data: record.data,
       brightness: record.brightness,
       complexity: record.complexity,
@@ -103,6 +105,39 @@
       const request = store.delete(id);
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error || new Error('Failed to remove wallpaper'));
+    });
+  }
+
+  async function listWallpapers() {
+    return withStore('readonly', (store, resolve, reject) => {
+      const metadata = [];
+      const request = store.openCursor();
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          resolve(metadata);
+          return;
+        }
+        metadata.push(metaFromRecord(cursor.value));
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error || new Error('Failed to list wallpapers'));
+    });
+  }
+
+  async function removeWallpapers(ids) {
+    const uniqueIds = Array.from(new Set(Array.from(ids || []).filter(Boolean)));
+    if (!uniqueIds.length) return;
+    await withStore('readwrite', (store, resolve, reject) => {
+      let pending = uniqueIds.length;
+      for (const id of uniqueIds) {
+        const request = store.delete(id);
+        request.onsuccess = () => {
+          pending -= 1;
+          if (pending === 0) resolve();
+        };
+        request.onerror = () => reject(request.error || new Error('Failed to remove wallpapers'));
+      }
     });
   }
 
@@ -140,6 +175,7 @@
           const meta = await putWallpaper({
             id: wallpaper.id || generateId(),
             name: wallpaper.name,
+            sourcePath: wallpaper.sourcePath,
             data: wallpaper.data,
             brightness: wallpaper.brightness,
             complexity: wallpaper.complexity,
@@ -163,6 +199,8 @@
     put: putWallpaper,
     get: getWallpaper,
     remove: removeWallpaper,
+    list: listWallpapers,
+    removeMany: removeWallpapers,
     migrateSettings,
   };
 })();

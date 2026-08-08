@@ -1,6 +1,8 @@
 (() => {
   const ANALYSIS_CACHE_LIMIT = 32;
-  const SOLVER_VERSION = 'paired-3.3-v1';
+  const SOLVER_VERSION = 'paired-4.5-warm-controls-time-6-warm-no-scrim-v6';
+  const CONTROL_DARK_ENDPOINT = '#272016';
+  const CONTROL_LIGHT_ENDPOINT = '#f3eddf';
   const analysisCache = new Map();
 
   function colorApi() {
@@ -240,6 +242,7 @@
       return [name, visualRect.left, visualRect.top, visualRect.width, visualRect.height, control.svg?.outerHTML || ''];
     });
     return JSON.stringify([
+      'controls',
       context.wallpaperId || context.wallpaperUrl,
       context.viewport,
       context.overlayAlpha,
@@ -357,6 +360,70 @@
     return analysis;
   }
 
+  function textCacheKey(context, rect) {
+    return JSON.stringify([
+      'text',
+      context.wallpaperId || context.wallpaperUrl,
+      context.viewport,
+      context.overlayAlpha,
+      context.readability,
+      context.protectionColor,
+      context.protectionAlpha,
+      context.solverVersion || SOLVER_VERSION,
+      [rect.left, rect.top, rect.width, rect.height],
+    ]);
+  }
+
+  async function analyzeTextSurface(context) {
+    if (typeof document === 'undefined' || !context?.wallpaperUrl || !context?.element) return null;
+    const rect = context.element.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const dpr = clamp(context.viewport?.dpr || window.devicePixelRatio || 1, 1, 4);
+    const viewport = {
+      width: context.viewport?.width || window.innerWidth,
+      height: context.viewport?.height || window.innerHeight,
+      dpr,
+    };
+    const normalizedContext = { ...context, viewport };
+    const key = textCacheKey(normalizedContext, rect);
+    if (analysisCache.has(key)) return analysisCache.get(key);
+
+    const image = await loadImage(context.wallpaperUrl);
+    const scale = Math.max(viewport.width / image.naturalWidth, viewport.height / image.naturalHeight);
+    const drawnWidth = image.naturalWidth * scale;
+    const drawnHeight = image.naturalHeight * scale;
+    const offsetX = (viewport.width - drawnWidth) / 2;
+    const offsetY = (viewport.height - drawnHeight) / 2;
+    const width = Math.max(1, Math.ceil(rect.width * dpr));
+    const height = Math.max(1, Math.ceil(rect.height * dpr));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const canvasContext = canvas.getContext('2d', { willReadFrequently: true });
+    canvasContext.drawImage(
+      image,
+      (offsetX - rect.left) * dpr,
+      (offsetY - rect.top) * dpr,
+      drawnWidth * dpr,
+      drawnHeight * dpr,
+    );
+    const pixels = canvasContext.getImageData(0, 0, width, height);
+    applyBackdropLayers(pixels, rect, normalizedContext);
+    const limits = surfaceLimits(pixels, null, []);
+    const analysis = {
+      ...limits,
+      diagnostics: {
+        cacheKey: key,
+        dpr,
+        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      },
+    };
+    api.lastTextAnalysis = analysis;
+    analysisCache.set(key, analysis);
+    if (analysisCache.size > ANALYSIS_CACHE_LIMIT) analysisCache.delete(analysisCache.keys().next().value);
+    return analysis;
+  }
+
   function minimumContrast(candidate, surfaces) {
     return colorApi().minimumContrast(candidate, surfaces);
   }
@@ -396,8 +463,10 @@
     const desired = api.parseHex(desiredColor) || api.parseHex('#9f5300');
     const black = api.parseHex('#000000');
     const white = api.parseHex('#ffffff');
+    const darkEndpoint = api.parseHex(CONTROL_DARK_ENDPOINT);
+    const lightEndpoint = api.parseHex(CONTROL_LIGHT_ENDPOINT);
     const surfaces = state.surfaces;
-    const endpoints = [black, white].map((endpoint) => ({
+    const endpoints = [darkEndpoint, lightEndpoint].map((endpoint) => ({
       endpoint,
       ratio: minimumContrast(endpoint, surfaces),
     })).sort((a, b) => b.ratio - a.ratio);
@@ -409,8 +478,8 @@
     if (endpoints[0].ratio < target) {
       fallback = true;
       const candidates = [
-        { scrimColor: black, endpoint: white },
-        { scrimColor: white, endpoint: black },
+        { scrimColor: black, endpoint: lightEndpoint },
+        { scrimColor: white, endpoint: darkEndpoint },
       ].map((candidate) => {
         let low = 0;
         let high = 1;
@@ -507,7 +576,7 @@
     };
   }
 
-  function solveControlPair(engineAnalysis, submitAnalysis, desiredColor, target = 3.3) {
+  function solveControlPair(engineAnalysis, submitAnalysis, desiredColor, target = 4.5) {
     if (!engineAnalysis?.normal || !engineAnalysis?.hover
       || !submitAnalysis?.normal || !submitAnalysis?.hover) return null;
     const normal = solvePairedState(
@@ -534,7 +603,7 @@
     };
   }
 
-  function solveControlStyle(analysis, desiredColor, target = 3.3) {
+  function solveControlStyle(analysis, desiredColor, target = 4.5) {
     if (!analysis?.normal || !analysis?.hover) return null;
     return {
       normal: solveState(analysis.normal, desiredColor, target),
@@ -542,15 +611,47 @@
     };
   }
 
+  function solveTextStyle(analysis, desiredColor, target = 6.0) {
+    if (!analysis?.surfaces?.length) return null;
+    const color = colorApi();
+    const black = color.parseHex('#000000');
+    const white = color.parseHex('#ffffff');
+    const endpoint = [black, white].sort((first, second) => (
+      minimumContrast(second, analysis.surfaces) - minimumContrast(first, analysis.surfaces)
+    ))[0];
+    const readable = color.readableColor(analysis.surfaces, desiredColor, endpoint, target);
+    const tightened = readable.ratio >= target
+      ? tightenToTarget(readable.hex, analysis.surfaces, target)
+      : ['#241f18', '#f6efe2']
+        .map((candidate) => ({
+          color: candidate,
+          ratio: minimumContrast(color.parseHex(candidate), analysis.surfaces),
+        }))
+        .sort((first, second) => second.ratio - first.ratio)[0];
+    return {
+      color: tightened.color,
+      scrim: 'rgba(0, 0, 0, 0.0000)',
+      scrimAlpha: 0,
+      minimumContrast: tightened.ratio,
+      fallback: false,
+      meetsTarget: tightened.ratio >= target,
+      surfaces: analysis.surfaces,
+    };
+  }
+
   const api = {
     analyzeControlSurface,
+    analyzeTextSurface,
     solveControlPair,
     solveControlStyle,
+    solveTextStyle,
     solverVersion: SOLVER_VERSION,
     normalizeColor,
     composite,
     clearCache: () => analysisCache.clear(),
     lastAnalysis: null,
+    lastTextAnalysis: null,
+    lastTextResult: null,
   };
 
   if (typeof window !== 'undefined') window.__willowWallpaperColor = api;

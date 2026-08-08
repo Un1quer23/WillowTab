@@ -26,6 +26,33 @@
     greetingEl.textContent = getGreeting(h);
   }
 
-  update();
-  setInterval(update, 1000);
+  let updateTimer = null;
+
+  function millisecondsUntilNextMinute(now = Date.now()) {
+    return 60000 - (now % 60000) + 25;
+  }
+
+  function scheduleUpdate() {
+    clearTimeout(updateTimer);
+    updateTimer = null;
+    if (document.hidden) return;
+    updateTimer = setTimeout(() => {
+      update();
+      scheduleUpdate();
+    }, millisecondsUntilNextMinute());
+  }
+
+  function refreshAndSchedule() {
+    if (document.hidden) {
+      clearTimeout(updateTimer);
+      updateTimer = null;
+      return;
+    }
+    update();
+    scheduleUpdate();
+  }
+
+  document.addEventListener('visibilitychange', refreshAndSchedule);
+  window.addEventListener('pagehide', () => clearTimeout(updateTimer));
+  refreshAndSchedule();
 })();

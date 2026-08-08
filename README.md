@@ -14,7 +14,12 @@ Use the centered search box to start searching quickly. WillowTab supports Googl
 
 ### Personal Backgrounds
 
-Use a solid color background, import local images, or import a local folder. You can manage multiple wallpapers, choose one manually, or rotate them automatically. In wallpaper mode, WillowTab also adjusts text, controls, and the search surface to keep the interface readable.
+Use a solid color background, import local images, or import a local folder. You can enter wallpaper mode before adding the first image,
+manage multiple wallpapers, choose one manually, or rotate them automatically. Wallpaper imports validate file and batch limits,
+distinguish same-named files from different folders, and roll back incomplete saves to protect the existing library.
+
+In wallpaper mode, WillowTab analyzes the final rendered background and glass surfaces to strengthen clock and search-control contrast
+while retaining warm colors. On complex mixed images, the clock uses the best attainable warm color without adding a background block.
 
 ### Light and Dark Themes
 
@@ -50,11 +55,11 @@ For other Chromium-based browsers, install manually from GitHub Releases:
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-Download `WillowTab-v1.7.2.zip`, the generic build for Chromium-based browsers.
+Download `WillowTab-v1.7.3.zip`, the generic build for Chromium-based browsers.
 
 Manual installation steps:
 
-1. Download `WillowTab-v1.7.2.zip`.
+1. Download `WillowTab-v1.7.3.zip`.
 2. Extract it to a local folder.
 3. Open your browser's extension management page, such as `chrome://extensions`.
 4. Enable Developer mode.
@@ -62,7 +67,7 @@ Manual installation steps:
 
 ### Chrome Web Store Package
 
-`WillowTab-for-Chrome-v1.7.2.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
+`WillowTab-for-Chrome-v1.7.3.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
 
 ## Project Structure
 
@@ -77,6 +82,10 @@ WillowTab/
 │   ├── i18n.js
 │   ├── search.js
 │   ├── clock.js
+│   ├── assets.js
+│   ├── color.js
+│   ├── wallpaper-color.js
+│   ├── wallpaper-policy.js
 │   ├── settings.js
 │   └── theme.js
 ├── icons/

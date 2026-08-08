@@ -14,7 +14,12 @@ WillowTab 是一款简洁优雅的新标签页扩展，提供干净的搜索入�
 
 ### 个性化背景
 
-支持纯色背景、本地图片和文件夹导入。你可以管理多张壁纸，并按自己的偏好手动选择或自动切换；壁纸模式下也会优化文字、控件和搜索框的显示效果，尽量保持清晰易读。
+支持纯色背景、本地图片和文件夹导入。即使还没有壁纸，也可以先进入壁纸模式再添加图片；你可以管理多张壁纸，
+并按自己的偏好手动选择或自动切换。壁纸导入会检查单文件与批次限制、区分不同文件夹中的同名图片，
+并在保存不完整时回滚，避免影响已有壁纸库。
+
+壁纸模式会分析最终渲染的背景与毛玻璃表面，在保留暖色观感的同时增强时钟和搜索控件的对比度。
+对于明暗高度混合的复杂图片，时钟会使用可达到的最佳暖色，不额外添加背景块。
 
 ### 浅色 / 深色主题
 
@@ -50,11 +55,11 @@ Google Chrome 用户建议直接从 Chrome Web Store 安装：
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-下载 `WillowTab-v1.7.2.zip`，也就是适用于 Chromium 系浏览器的通用版。
+下载 `WillowTab-v1.7.3.zip`，也就是适用于 Chromium 系浏览器的通用版。
 
 手动安装步骤：
 
-1. 下载 `WillowTab-v1.7.2.zip`。
+1. 下载 `WillowTab-v1.7.3.zip`。
 2. 解压到本地文件夹。
 3. 打开浏览器扩展管理页面，例如 `chrome://extensions`。
 4. 启用“开发者模式”。
@@ -62,7 +67,7 @@ Google Chrome 用户建议直接从 Chrome Web Store 安装：
 
 ### Chrome Web Store Package / Chrome 商店特供包
 
-`WillowTab-for-Chrome-v1.7.2.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
+`WillowTab-for-Chrome-v1.7.3.zip` 是为满足 Google 合规要求提供的 Chrome Web Store 特供版，主要用于 Chrome Web Store 提交和审核。
 
 ## 项目结构
 
@@ -77,6 +82,10 @@ WillowTab/
 │   ├── i18n.js
 │   ├── search.js
 │   ├── clock.js
+│   ├── assets.js
+│   ├── color.js
+│   ├── wallpaper-color.js
+│   ├── wallpaper-policy.js
 │   ├── settings.js
 │   └── theme.js
 ├── icons/

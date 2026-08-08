@@ -1,6 +1,8 @@
 (() => {
   const SETTINGS_KEY = 'newtab-settings';
-  const WALLPAPER_CONTROL_TARGET = 3.3;
+  const WALLPAPER_CONTROL_TARGET = 4.5;
+  const WALLPAPER_TIME_TARGET = 6.0;
+  const wallpaperPolicy = window.__willowWallpaperPolicy;
 
   const DEFAULTS = {
     bgMode: 'color',
@@ -91,6 +93,7 @@
   const radiusOptions = document.getElementById('radius-options');
   const tabTitleInput = document.getElementById('tab-title-input');
   const suggestionsToggle = document.getElementById('suggestions-toggle');
+  const toastRegion = document.getElementById('toast-region');
 
   const aboutBtn = document.getElementById('about-btn');
   const aboutPanel = document.getElementById('about-panel');
@@ -100,6 +103,7 @@
   const wallpaperAssets = window.__wallpaperAssets;
   let settingsOverlay = null;
   let saveTimer = null;
+  let toastHideTimer = null;
   let wallpaperApplyToken = 0;
   let lastFocusedBeforePanel = null;
   let wallpaperRotationTimer = null;
@@ -289,6 +293,26 @@
     }
   }
 
+  async function reconcileWallpaperStorage() {
+    if (!wallpaperAssets || typeof wallpaperAssets.list !== 'function') return;
+    const storedWallpapers = await wallpaperAssets.list();
+    const storedIds = new Set(storedWallpapers.map((item) => item.id));
+    const referencedIds = new Set(settings.wallpapers.map((item) => item.id));
+    const orphanedIds = storedWallpapers
+      .filter((item) => !referencedIds.has(item.id))
+      .map((item) => item.id);
+    const validWallpapers = settings.wallpapers.filter((item) => item.data || storedIds.has(item.id));
+
+    if (orphanedIds.length) {
+      await wallpaperAssets.removeMany(orphanedIds);
+    }
+    settings.wallpapers = validWallpapers;
+    normalizeSettings();
+    if (!saveSettingsNow()) {
+      console.error('Failed to persist reconciled wallpaper settings');
+    }
+  }
+
   function normalizeSettings() {
     if (!Array.isArray(settings.wallpapers)) settings.wallpapers = [];
     if (!Object.prototype.hasOwnProperty.call(ROTATION_INTERVALS, settings.wallpaperRotation)) {
@@ -306,14 +330,16 @@
   }
 
   function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => toast.classList.add('visible'));
-    setTimeout(() => {
-      toast.classList.remove('visible');
-      toast.addEventListener('transitionend', () => toast.remove());
+    if (!toastRegion) return;
+    clearTimeout(toastHideTimer);
+    toastRegion.classList.remove('visible');
+    toastRegion.textContent = '';
+    requestAnimationFrame(() => {
+      toastRegion.textContent = message;
+      toastRegion.classList.add('visible');
+    });
+    toastHideTimer = setTimeout(() => {
+      toastRegion.classList.remove('visible');
     }, 2500);
   }
 
@@ -331,10 +357,12 @@
     saveTimer = null;
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(serializeSettings(settings)));
+      return true;
     } catch (e) {
       if (e.name === 'QuotaExceededError') {
         alert((window.__i18n && window.__i18n.t('error.quotaExceeded')) || '存储空间不足，新的设置未能保存，已有壁纸已保留。');
       }
+      return false;
     }
   }
 
@@ -345,6 +373,7 @@
         const meta = {
           id: w.id,
           name: w.name,
+          sourcePath: w.sourcePath || '',
           brightness: w.brightness,
           complexity: w.complexity,
           createdAt: w.createdAt,
@@ -368,7 +397,6 @@
     }
     if (!settings.wallpapers.length) {
       settings.activeWallpaperId = '';
-      if (settings.bgMode === 'wallpaper') settings.bgMode = 'color';
     }
     if (!hasEnoughWallpapersForRotation()) {
       settings.wallpaperRotation = 'off';
@@ -444,13 +472,15 @@
   }
 
   function compressImage(dataUrl, maxWidth) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
         let w = img.width;
         let h = img.height;
+        const sourceWidth = w;
+        const sourceHeight = h;
         if (w <= maxWidth) {
-          resolve(dataUrl);
+          resolve({ data: dataUrl, sourceWidth, sourceHeight });
           return;
         }
         const ratio = maxWidth / w;
@@ -461,9 +491,13 @@
         canvas.height = h;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.85));
+        resolve({
+          data: canvas.toDataURL('image/jpeg', 0.85),
+          sourceWidth,
+          sourceHeight,
+        });
       };
-      img.onerror = () => resolve(dataUrl);
+      img.onerror = () => reject(new Error('Failed to decode wallpaper'));
       img.src = dataUrl;
     });
   }
@@ -963,6 +997,8 @@
     root.style.removeProperty('--wallpaper-analysis-min');
     root.style.removeProperty('--wallpaper-analysis-max');
     root.style.removeProperty('--wallpaper-analysis-target');
+    root.style.removeProperty('--wallpaper-time-analysis-min');
+    root.style.removeProperty('--wallpaper-time-analysis-target');
   }
 
   function applyWallpaperMottoColor(
@@ -1067,9 +1103,50 @@
         if (surfaceAnalysis && surfaceAnalysis.brightness >= 0) {
           applyWallpaperTextColor(brightness, complexity, surfaceAnalysis);
         }
-        return syncWallpaperControlStyles(token, applyToken);
+        return Promise.all([
+          syncWallpaperControlStyles(token, applyToken),
+          syncWallpaperTimeStyle(token, applyToken),
+        ]);
       });
     });
+  }
+
+  async function syncWallpaperTimeStyle(token, applyToken) {
+    const analyzer = window.__willowWallpaperColor;
+    const time = document.querySelector('.time-display');
+    if (!analyzer || !time) return;
+
+    const root = document.documentElement;
+    const styles = getComputedStyle(root);
+    const protection = analyzer.normalizeColor(styles.getPropertyValue('--wallpaper-protection-bg'));
+    try {
+      const analysis = await analyzer.analyzeTextSurface({
+        wallpaperUrl: activeWallpaperData,
+        wallpaperId: settings.activeWallpaperId,
+        element: time,
+        viewport: {
+          width: window.innerWidth || document.documentElement.clientWidth,
+          height: window.innerHeight || document.documentElement.clientHeight,
+          dpr: window.devicePixelRatio || 1,
+        },
+        overlayAlpha: settings.overlayStrength / 100,
+        readability: settings.wallpaperReadability,
+        protectionColor: protection,
+        protectionAlpha: protection.a,
+        targetContrast: WALLPAPER_TIME_TARGET,
+        solverVersion: analyzer.solverVersion,
+      });
+      if (token !== wallpaperSurfaceAnalysisToken || applyToken !== wallpaperApplyToken || !analysis) return;
+      const desired = styles.getPropertyValue('--wallpaper-time-color').trim() || '#f6efe2';
+      const result = analyzer.solveTextStyle(analysis, desired, WALLPAPER_TIME_TARGET);
+      if (!result) return;
+      root.style.setProperty('--wallpaper-time-color', result.color);
+      root.style.setProperty('--wallpaper-time-analysis-min', result.minimumContrast.toFixed(3));
+      root.style.setProperty('--wallpaper-time-analysis-target', WALLPAPER_TIME_TARGET.toFixed(1));
+      analyzer.lastTextResult = { analysis, result };
+    } catch (_) {
+      // Keep the best-effort light or dark time color when wallpaper analysis fails.
+    }
   }
 
   async function syncWallpaperControlStyles(token, applyToken) {
@@ -1151,6 +1228,7 @@
     clearWallpaperAdaptiveVars();
     const effective = brightness * (1 - settings.overlayStrength / 100);
     const lightSurface = brightness >= 0.62 || effective >= 0.52;
+    root.style.setProperty('--wallpaper-time-color', lightSurface ? '#241f18' : '#f6efe2');
     const surfaceMode = settings.wallpaperSurfaceMode || 'light';
     const surfaceBrightness = surfaceAnalysis ? surfaceAnalysis.brightness : brightness;
     const surfaceEffective = surfaceBrightness * (1 - settings.overlayStrength / 100);
@@ -1609,8 +1687,8 @@
     const hasWallpapers = settings.wallpapers.length > 0;
     const wallpaperModeOption = modeToggle.querySelector('[data-mode="wallpaper"]');
     if (wallpaperModeOption) {
-      wallpaperModeOption.disabled = !hasWallpapers;
-      wallpaperModeOption.setAttribute('aria-disabled', String(!hasWallpapers));
+      wallpaperModeOption.disabled = false;
+      wallpaperModeOption.removeAttribute('aria-disabled');
     }
     if (wallpaperModeHint) wallpaperModeHint.hidden = hasWallpapers;
 
@@ -1627,7 +1705,7 @@
     } else {
       colorSection.removeAttribute('data-hint');
     }
-    wallpaperSection.hidden = false;
+    wallpaperSection.hidden = (settings.bgMode !== 'wallpaper');
     themeSection.hidden = (settings.bgMode === 'wallpaper');
 
     colorPresets.querySelectorAll('.color-swatch').forEach((swatch) => {
@@ -1853,7 +1931,6 @@
       wallpaperSelectionMode = false;
       selectedWallpaperIds.clear();
       settings.activeWallpaperId = '';
-      settings.bgMode = 'color';
       settings.wallpaperRotation = 'off';
       settings.lastWallpaperRotationAt = Date.now();
     }
@@ -2064,14 +2141,14 @@
     return /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(file.name) || /^image\//i.test(file.type || '');
   }
 
-  function normalizedWallpaperName(name) {
-    return String(name || '').trim().toLocaleLowerCase();
-  }
-
   async function importWallpaperFiles(fileList, source) {
     if (wallpaperImportInProgress) return;
     const selectedFiles = Array.from(fileList || []);
     if (!selectedFiles.length) return;
+    if (!wallpaperPolicy) {
+      showToast(t('error.wallpaperImportUnavailable'));
+      return;
+    }
 
     const naturalSort = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
     let files = selectedFiles.filter(isWallpaperFile);
@@ -2079,82 +2156,141 @@
       files = files.sort((a, b) => naturalSort.compare(a.webkitRelativePath || a.name, b.webkitRelativePath || b.name));
     }
 
+    const batchValidation = wallpaperPolicy.validateBatch(files);
+    if (!batchValidation.ok) {
+      showToast(t(batchValidation.reason === 'too_many_files'
+        ? 'error.wallpaperBatchCount'
+        : 'error.wallpaperBatchSize', {
+        limit: batchValidation.reason === 'too_many_files'
+          ? wallpaperPolicy.LIMITS.maxBatchFiles
+          : '1 GiB',
+      }));
+      return;
+    }
+
+    const settingsSnapshot = JSON.parse(JSON.stringify(settings));
     const wasEmpty = settings.wallpapers.length === 0;
     const previousActiveId = settings.activeWallpaperId;
     const previousBgMode = settings.bgMode;
     const singlePhotoImport = source === 'photo' && files.length === 1;
-    const existingNames = new Set(settings.wallpapers.map((item) => normalizedWallpaperName(item.name)));
+    const existingIdentities = new Set(settings.wallpapers.map((item) => wallpaperPolicy.getFileIdentity(item)));
     const addedIds = [];
     let skipped = selectedFiles.length - files.length;
+    let limited = 0;
     let failed = 0;
+    let committed = false;
+    let rolledBack = false;
 
     wallpaperImportInProgress = true;
     wallpaperImportProgress = { current: 0, total: files.length };
     closeWallpaperAddMenu(false);
     syncWallpaperControls();
 
-    for (let index = 0; index < files.length; index += 1) {
-      const file = files[index];
-      wallpaperImportProgress = { current: index + 1, total: files.length };
-      syncWallpaperControls();
-      const normalizedName = normalizedWallpaperName(file.name);
-      if (existingNames.has(normalizedName)) {
-        skipped += 1;
-        continue;
+    const rollbackImport = async () => {
+      settings = { ...DEFAULTS, ...settingsSnapshot };
+      normalizeSettings();
+      if (addedIds.length && wallpaperAssets && typeof wallpaperAssets.removeMany === 'function') {
+        try {
+          await wallpaperAssets.removeMany(addedIds);
+        } catch (error) {
+          console.error('Failed to roll back imported wallpapers', error);
+        }
       }
-      try {
-        const dataUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = () => resolve(null);
-          reader.readAsDataURL(file);
-        });
-        if (!dataUrl) throw new Error('Failed to read wallpaper');
-        const compressed = await compressImage(dataUrl, 1920);
-        const analysis = await analyzeWallpaperImage(compressed);
-        const id = generateId();
-        if (!wallpaperAssets) throw new Error('Wallpaper storage is unavailable');
-        const meta = await wallpaperAssets.put({
-          id,
-          data: compressed,
-          name: file.name,
-          brightness: analysis.brightness,
-          complexity: analysis.complexity,
-          createdAt: Date.now() + index,
-        });
-        settings.wallpapers.push(meta);
-        existingNames.add(normalizedName);
-        addedIds.push(meta.id);
-      } catch (_) {
-        failed += 1;
-      }
-    }
-
-    if (addedIds.length) {
-      const shouldActivateImported = wasEmpty || (singlePhotoImport && addedIds.length === 1);
-      if (shouldActivateImported) {
-        settings.activeWallpaperId = addedIds[0];
-        settings.bgMode = 'wallpaper';
-        resetWallpaperRotationClock();
-      } else {
-        settings.activeWallpaperId = settings.wallpapers.some((item) => item.id === previousActiveId)
-          ? previousActiveId
-          : settings.wallpapers[0].id;
-        settings.bgMode = previousBgMode;
-      }
-      saveSettingsNow();
+      addedIds.length = 0;
+      rolledBack = true;
       applyBackground();
       scheduleWallpaperRotation();
+    };
+
+    try {
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        wallpaperImportProgress = { current: index + 1, total: files.length };
+        syncWallpaperControls();
+        const sourcePath = wallpaperPolicy.getImportPath(file, source);
+        const identity = wallpaperPolicy.getFileIdentity({ name: file.name, sourcePath }, source);
+        if (existingIdentities.has(identity)) {
+          skipped += 1;
+          continue;
+        }
+
+        const encodedValidation = wallpaperPolicy.validateFile(file);
+        if (!encodedValidation.ok) {
+          limited += 1;
+          continue;
+        }
+
+        try {
+          const dataUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(file);
+          });
+          if (!dataUrl) throw new Error('Failed to read wallpaper');
+          const processed = await compressImage(dataUrl, 1920);
+          const pixelValidation = wallpaperPolicy.validateFile(file, processed.sourceWidth, processed.sourceHeight);
+          if (!pixelValidation.ok) {
+            limited += 1;
+            continue;
+          }
+          const analysis = await analyzeWallpaperImage(processed.data);
+          const id = generateId();
+          if (!wallpaperAssets) throw new Error('Wallpaper storage is unavailable');
+          const meta = await wallpaperAssets.put({
+            id,
+            data: processed.data,
+            name: file.name,
+            sourcePath,
+            brightness: analysis.brightness,
+            complexity: analysis.complexity,
+            createdAt: Date.now() + index,
+          });
+          settings.wallpapers.push(meta);
+          existingIdentities.add(identity);
+          addedIds.push(meta.id);
+        } catch (_) {
+          failed += 1;
+        }
+      }
+
+      if (addedIds.length) {
+        const shouldActivateImported = wasEmpty || (singlePhotoImport && addedIds.length === 1);
+        if (shouldActivateImported) {
+          settings.activeWallpaperId = addedIds[0];
+          settings.bgMode = 'wallpaper';
+          resetWallpaperRotationClock();
+        } else {
+          settings.activeWallpaperId = settings.wallpapers.some((item) => item.id === previousActiveId)
+            ? previousActiveId
+            : settings.wallpapers[0].id;
+          settings.bgMode = previousBgMode;
+        }
+        if (!saveSettingsNow()) {
+          await rollbackImport();
+        } else {
+          committed = true;
+          applyBackground();
+          scheduleWallpaperRotation();
+        }
+      }
+    } catch (error) {
+      console.error('Wallpaper import failed', error);
+      if (!committed) await rollbackImport();
+    } finally {
+      wallpaperImportInProgress = false;
+      wallpaperImportProgress = { current: 0, total: 0 };
+      syncUI();
     }
 
-    wallpaperImportInProgress = false;
-    wallpaperImportProgress = { current: 0, total: 0 };
-    syncUI();
-    showToast(t('toast.wallpaperImportResult', {
-      added: addedIds.length,
-      skipped,
-      failed,
-    }));
+    showToast(rolledBack
+      ? t('error.wallpaperImportRolledBack')
+      : t('toast.wallpaperImportResult', {
+        added: addedIds.length,
+        skipped,
+        limited,
+        failed,
+      }));
   }
 
   wallpaperAddBtn.addEventListener('click', () => {
@@ -2470,7 +2606,11 @@
   });
 
   loadSettings();
-  const settingsReady = migrateWallpaperStorage().catch(() => {});
+  const settingsReady = migrateWallpaperStorage()
+    .then(reconcileWallpaperStorage)
+    .catch((error) => {
+      console.error('Failed to reconcile wallpaper storage', error);
+    });
 
   PRESET_COLORS.forEach((c) => {
     const btn = document.createElement('button');
@@ -2578,6 +2718,7 @@
 
   window.addEventListener('pagehide', () => {
     if (saveTimer) saveSettingsNow();
+    clearTimeout(toastHideTimer);
     clearTimeout(wallpaperRotationTimer);
     clearTimeout(resizeSyncTimer);
     engineIconObserver.disconnect();

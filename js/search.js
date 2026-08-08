@@ -63,6 +63,7 @@
   let selectedMenuIndex = 0;
   let selectedSuggestIndex = -1;
   let abortController = null;
+  let suggestionRequestId = 0;
 
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
@@ -134,6 +135,12 @@
   }
 
   function selectEngine(index) {
+    if (abortController) {
+      abortController.abort();
+      abortController = null;
+    }
+    suggestionRequestId += 1;
+    closeSuggestions();
     activeIndex = index;
     localStorage.setItem(STORAGE_KEY, ENGINES[index].id);
     updateToggleIcon();
@@ -196,6 +203,7 @@
     }
     abortController = new AbortController();
     const requestController = abortController;
+    const requestId = ++suggestionRequestId;
 
     const engine = ENGINES[activeIndex];
     if (!engine.suggestUrl) {
@@ -203,24 +211,29 @@
       return;
     }
 
+    const isCurrentRequest = () => (
+      requestController === abortController &&
+      requestId === suggestionRequestId &&
+      ENGINES[activeIndex].id === engine.id &&
+      input.value.trim() === query &&
+      document.body.dataset.suggestionsEnabled === 'true'
+    );
+
     try {
       const resp = await fetch(engine.suggestUrl + encodeURIComponent(query), {
-        signal: abortController.signal,
+        signal: requestController.signal,
       });
+      if (!isCurrentRequest()) return;
       if (!resp.ok) {
         closeSuggestions();
         return;
       }
       const data = await resp.json();
-      if (requestController !== abortController ||
-          input.value.trim() !== query ||
-          document.body.dataset.suggestionsEnabled !== 'true') {
-        return;
-      }
+      if (!isCurrentRequest()) return;
       const suggestions = engine.parseSuggestions(data).slice(0, 8);
       renderSuggestions(suggestions);
     } catch (err) {
-      if (err.name !== 'AbortError') {
+      if (err.name !== 'AbortError' && isCurrentRequest()) {
         closeSuggestions();
       }
     }
@@ -241,6 +254,7 @@
         abortController.abort();
         abortController = null;
       }
+      suggestionRequestId += 1;
       closeSuggestions();
       return;
     }

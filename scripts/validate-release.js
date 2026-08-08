@@ -3,13 +3,19 @@ const path = require('path');
 const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
+const SUGGESTION_ORIGINS = [
+  'https://suggestqueries.google.com/*',
+  'https://www.baidu.com/*',
+  'https://api.bing.com/*',
+  'https://duckduckgo.com/*',
+];
 const targets = [
   {
     name: 'generic',
     cwd: root,
     manifest: path.join(root, 'manifest.json'),
     zipName(version) { return `WillowTab-v${version}.zip`; },
-    versionFiles: ['newtab.html', 'README.md', 'js/i18n.js'],
+    versionFiles: ['newtab.html', 'README.md', 'README.zh-CN.md', 'js/i18n.js'],
   },
   {
     name: 'chrome',
@@ -135,7 +141,7 @@ function assertVersionReferences(target, version) {
       }
     }
 
-    if (target.name === 'generic' && relativeFile === 'README.md') {
+    if (target.name === 'generic' && relativeFile.startsWith('README')) {
       if (!text.includes(expectedGenericZip)) fail(`README.md does not contain ${expectedGenericZip}`);
       if (!text.includes(expectedChromeZip)) fail(`README.md does not contain ${expectedChromeZip}`);
     }
@@ -153,6 +159,59 @@ function assertLocalesNotFlattened(entries, label) {
   }
 }
 
+function assertExactStringSet(actual, expected, label) {
+  const actualValues = Array.isArray(actual) ? actual : [];
+  const missing = expected.filter((value) => !actualValues.includes(value));
+  const extra = actualValues.filter((value) => !expected.includes(value));
+  if (missing.length || extra.length || actualValues.length !== expected.length) {
+    fail(`${label} mismatch. Missing: ${missing.join(', ') || 'none'}; Extra: ${extra.join(', ') || 'none'}`);
+  }
+}
+
+function readSuggestionDefault(file, label) {
+  const source = fs.readFileSync(file, 'utf8');
+  const match = /\benableSuggestions:\s*(true|false)\b/.exec(source);
+  if (!match) fail(`Unable to read ${label} enableSuggestions default`);
+  return match[1] === 'true';
+}
+
+function assertVariantSemantics(manifests) {
+  const generic = manifests.find(({ target }) => target.name === 'generic');
+  const chrome = manifests.find(({ target }) => target.name === 'chrome');
+  if (!generic || !chrome) fail('Missing generic or Chrome release target');
+
+  assertExactStringSet(generic.manifest.host_permissions, SUGGESTION_ORIGINS, 'generic host_permissions');
+  assertExactStringSet(generic.manifest.permissions, [], 'generic permissions');
+  assertExactStringSet(generic.manifest.optional_host_permissions, [], 'generic optional_host_permissions');
+
+  assertExactStringSet(chrome.manifest.permissions, ['search'], 'chrome permissions');
+  assertExactStringSet(chrome.manifest.optional_host_permissions, SUGGESTION_ORIGINS, 'chrome optional_host_permissions');
+  assertExactStringSet(chrome.manifest.host_permissions, [], 'chrome host_permissions');
+
+  const genericSettings = path.join(root, 'js', 'settings.js');
+  const chromeSettings = path.join(root, 'chrome-store', 'js', 'settings.js');
+  if (readSuggestionDefault(genericSettings, 'generic') !== true) {
+    fail('generic suggestions must default to enabled');
+  }
+  if (readSuggestionDefault(chromeSettings, 'chrome') !== false) {
+    fail('Chrome Store suggestions must default to disabled');
+  }
+
+  const chromeSettingsSource = fs.readFileSync(chromeSettings, 'utf8');
+  if (!/chrome\.permissions\.request\(\{\s*origins:\s*SUGGESTION_ORIGINS\s*\}\)/.test(chromeSettingsSource)) {
+    fail('Chrome Store settings is missing the optional suggestion-permission request path');
+  }
+  if (!/chrome\.permissions\.remove\(\{\s*origins:\s*SUGGESTION_ORIGINS\s*\}\)/.test(chromeSettingsSource)) {
+    fail('Chrome Store settings is missing the optional suggestion-permission removal path');
+  }
+
+  const genericPolicy = fs.readFileSync(path.join(root, 'js', 'wallpaper-policy.js'));
+  const chromePolicy = fs.readFileSync(path.join(root, 'chrome-store', 'js', 'wallpaper-policy.js'));
+  if (!genericPolicy.equals(chromePolicy)) {
+    fail('generic and Chrome Store wallpaper-policy.js differ');
+  }
+}
+
 function main() {
   const files = getPackageFiles();
   const manifests = targets.map((target) => ({ target, manifest: readJson(target.manifest) }));
@@ -162,6 +221,7 @@ function main() {
   }
   const version = manifests[0].manifest.version;
   if (!version) fail('Manifest version is empty');
+  assertVariantSemantics(manifests);
 
   for (const { target } of manifests) {
     for (const file of files) {
