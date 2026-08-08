@@ -31,18 +31,44 @@ WillowTab does not collect, track, or sell personal data.
 
 WillowTab is for people who want a new tab page that stays simple, beautiful, and efficient without adding distracting information.
 
-## Color and Contrast Engineering
+## Technical Implementation
 
-WillowTab treats contrast as a semantic-role and rendered-surface problem rather than relying on one fixed light or dark text color:
+### Adaptive Color and Rendered-Surface Analysis
 
-- [`js/color.js`](js/color.js) generates solid-background palettes in OKLCH and solves separate roles for the clock, search text,
-  and search controls. The clock uses a `6.0:1` target and search controls use `4.5:1`; if a warm clock color cannot reach its target,
-  the solver records that result and uses the best warm endpoint instead of adding a background block.
-- [`js/wallpaper-color.js`](js/wallpaper-color.js) samples the actual `cover` crop at the current viewport and DPR, then includes the
-  global overlay, readability protection, and final glass surfaces for normal and hover states. The clock never receives a local scrim;
-  search controls use one only when color alone cannot reach `4.5:1`.
+WillowTab treats contrast as a semantic-role and final-rendered-surface problem rather than switching between one fixed light color and
+one fixed dark color.
+
+```mermaid
+flowchart TD
+    A["Background and presentation state"] --> B{"Background mode"}
+    B -->|Solid color| C["color.js<br/>OKLCH palette generation"]
+    C --> D["Surface range<br/>Canvas, gradients, input and hover"]
+    B -->|Wallpaper| E["wallpaper-color.js<br/>Actual cover crop at viewport and DPR"]
+    E --> F["Final surface composition<br/>Overlay, readability, glass blur and SVG masks"]
+    D --> G["Role-specific contrast solver"]
+    F --> G
+    H["Targets<br/>Clock 6.0:1; body, search text and controls 4.5:1"] --> G
+    G --> I["Semantic CSS variables"]
+    I --> J["Clock, text and search controls"]
+    K["Versioned cache keys and generation tokens"] -. Guard asynchronous analysis .-> E
+```
+
+- [`css/style.css`](css/style.css) exposes semantic tokens for canvas text, search surfaces and controls, panels, accents, danger states,
+  and wallpaper glass. Components consume these roles instead of sharing raw light/dark color values.
+- [`js/color.js`](js/color.js) generates solid-background palettes in OKLCH and evaluates each role against every surface it may occupy,
+  including the base canvas, gradient endpoints, input surfaces, and selected or hover states. Body and search text plus search controls
+  target `4.5:1`; the clock targets `6.0:1`, while the greeting and motto remain separate visual roles. The solver tightens successful
+  colors toward the limiting surface so they remain warm rather than jumping directly to pure black or white.
+- [`js/wallpaper-color.js`](js/wallpaper-color.js) samples the actual `cover` crop at the current viewport and DPR, composites the global
+  overlay and readability layer, reproduces the glass blur, and masks the exact SVG control shapes. The control solver first tries one
+  shared engine/submit color, keeps it only when both results satisfy contrast and visual-equivalence guardrails, and otherwise solves
+  them independently for normal and hover states. The clock never receives a local scrim; controls receive the minimum four-decimal
+  scrim only when color alone cannot reach `4.5:1`.
+- Wallpaper analysis cache keys include the image, viewport, overlay, readability settings, blur, solver version, and element geometry.
+  [`js/settings.js`](js/settings.js) also uses generation tokens so an older asynchronous analysis cannot overwrite a newer wallpaper or
+  resized viewport result.
 - [`scripts/validate-colors.js`](scripts/validate-colors.js) checks a 4,096-color RGB grid, 12 representative colors, fixed theme roles,
-  wallpaper edge cases, and one-step contrast boundaries.
+  light/dark/split wallpaper surfaces, paired controls, no-scrim clock behavior, minimum-scrim boundaries, and one-step color boundaries.
 
 ## Install
 
