@@ -65,14 +65,13 @@ flowchart TD
   overlay and readability layer, reproduces the glass blur, and masks the exact SVG control shapes. The control solver first tries one
   warm candidate for each icon region, then uses the candidate that maximizes the lower of the two final-surface contrast values. The
   engine and submit icons therefore stay exactly the same color in each normal/hover state. Their wallpaper target is `6.0:1`; when a
-  mixed surface makes that impossible, diagnostics record the best attainable shared result. Neither the clock nor the search icons
-  receive a local contrast scrim or background block.
+  mixed surface makes that impossible, diagnostics record the best attainable shared result.
 - Wallpaper analysis cache keys include the image, viewport, overlay, readability settings, blur, solver version, and element geometry.
   [`js/settings.js`](js/settings.js) also uses generation tokens so an older asynchronous analysis cannot overwrite a newer wallpaper or
   resized viewport result.
 - [`scripts/validate-colors.js`](scripts/validate-colors.js) checks a 4,096-color RGB grid, 12 representative colors, fixed theme roles,
-  light/dark/split/high-complexity wallpaper surfaces, strict shared-color controls, maximin candidate selection, no-scrim behavior,
-  best-effort diagnostics, and one-step color boundaries.
+  light/dark/split/high-complexity wallpaper surfaces, strict shared-color controls, maximin candidate selection, best-effort diagnostics,
+  and one-step color boundaries.
 
 ## Install
 
