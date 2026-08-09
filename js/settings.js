@@ -1,6 +1,6 @@
 (() => {
   const SETTINGS_KEY = 'newtab-settings';
-  const WALLPAPER_CONTROL_TARGET = 4.5;
+  const WALLPAPER_CONTROL_TARGET = 6.0;
   const WALLPAPER_TIME_TARGET = 6.0;
   const wallpaperPolicy = window.__willowWallpaperPolicy;
 
@@ -986,10 +986,6 @@
     root.style.removeProperty('--wallpaper-submit-color');
     root.style.removeProperty('--wallpaper-engine-hover-color');
     root.style.removeProperty('--wallpaper-submit-hover-color');
-    root.style.removeProperty('--wallpaper-engine-scrim');
-    root.style.removeProperty('--wallpaper-submit-scrim');
-    root.style.removeProperty('--wallpaper-engine-hover-scrim');
-    root.style.removeProperty('--wallpaper-submit-hover-scrim');
     root.style.removeProperty('--wallpaper-search-control-hover-color');
     root.style.removeProperty('--wallpaper-search-control-focus-color');
     root.style.removeProperty('--wallpaper-search-focus-stroke');
@@ -1199,10 +1195,6 @@
       root.style.setProperty('--wallpaper-submit-color', submitStyle.normal.color);
       root.style.setProperty('--wallpaper-engine-hover-color', engineStyle.hover.color);
       root.style.setProperty('--wallpaper-submit-hover-color', submitStyle.hover.color);
-      root.style.setProperty('--wallpaper-engine-scrim', engineStyle.normal.scrim);
-      root.style.setProperty('--wallpaper-submit-scrim', submitStyle.normal.scrim);
-      root.style.setProperty('--wallpaper-engine-hover-scrim', engineStyle.hover.scrim);
-      root.style.setProperty('--wallpaper-submit-hover-scrim', submitStyle.hover.scrim);
       root.style.setProperty('--wallpaper-analysis-min', Math.min(
         engineStyle.normal.minimumContrast,
         submitStyle.normal.minimumContrast,

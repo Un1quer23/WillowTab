@@ -32,17 +32,21 @@ body.has-wallpaper .wallpaper-confirm-dialog {
   --focus-ring-color: var(--selection-stroke-color);
   --canvas-text-primary: #70706a;
   --canvas-text-secondary: #71715b;
+  --canvas-greeting-text: var(--canvas-text-secondary);
   --canvas-large-text: #5c5d56;
   --canvas-control-color: #8d8d7f;
   --search-surface: var(--input-bg);
   --search-text-color: #72726c;
   --search-placeholder-color: #75745f;
-  --search-control-color: #747467;
-  --search-control-hover-color: #a65a16;
-  --search-control-focus-color: #a65a16;
+  --search-control-color: #606054;
+  --search-control-hover-color: #8c490b;
+  --search-control-focus-color: #8c490b;
   --search-focus-stroke: #cd7e41;
   --search-selected-surface: var(--accent-subtle);
   --search-selected-text: #a65a17;
+  --engine-menu-text: var(--search-text-color);
+  --engine-menu-hover-text: var(--engine-menu-text);
+  --engine-menu-selected-text: var(--search-selected-text);
   --panel-text-primary: #70706a;
   --panel-text-secondary: #71715b;
   --panel-control-text: #73736d;
@@ -50,17 +54,19 @@ body.has-wallpaper .wallpaper-confirm-dialog {
   --panel-control-icon: #919183;
   --panel-control-hover-text: #6a6a65;
   --panel-accent-text: #a25610;
+  --panel-heading-text: var(--panel-text-primary);
+  --panel-section-heading-text: var(--panel-text-secondary);
   --panel-focus-stroke: #cd7e41;
   --panel-warning-text: #6a6a64;
+  --segment-selected-bg: #a66631;
+  --segment-selected-bg-hover: #a66531;
+  --segment-selected-text: #fffdf5;
+  --segment-selected-stroke: #8f5529;
   --wallpaper-search-control-color: var(--wallpaper-text-color);
   --wallpaper-engine-color: var(--wallpaper-search-control-color);
   --wallpaper-submit-color: var(--wallpaper-search-control-color);
   --wallpaper-engine-hover-color: var(--wallpaper-engine-color);
   --wallpaper-submit-hover-color: var(--wallpaper-submit-color);
-  --wallpaper-engine-scrim: rgba(0, 0, 0, 0);
-  --wallpaper-submit-scrim: rgba(0, 0, 0, 0);
-  --wallpaper-engine-hover-scrim: rgba(0, 0, 0, 0);
-  --wallpaper-submit-hover-scrim: rgba(0, 0, 0, 0);
   --wallpaper-search-control-hover-color: var(--wallpaper-text-color);
   --wallpaper-search-control-focus-color: var(--wallpaper-text-color);
   --wallpaper-search-focus-stroke: var(--wallpaper-text-color);
@@ -71,10 +77,6 @@ body.has-wallpaper .wallpaper-confirm-dialog {
   --font-body: Georgia, 'Times New Roman', 'Songti SC', 'SimSun', serif;
   --segment-border: color-mix(in srgb, var(--border) 88%, var(--accent));
   --segment-hover-bg: color-mix(in srgb, var(--input-bg) 92%, var(--accent));
-  --segment-selected-bg: #a66631;
-  --segment-selected-bg-hover: #a66531;
-  --segment-selected-text: #fffdf5;
-  --segment-selected-stroke: #8f5529;
   --text-shadow-time: 0 2px 8px rgba(0, 0, 0, 0.15);
   --text-shadow-greeting: 0 1px 4px rgba(0, 0, 0, 0.1);
   --wallpaper-text-color: var(--text-primary);
@@ -119,7 +121,7 @@ html[data-color-scheme="dark"] {
   --text-primary: #7f7d77;
   --text-secondary: #7e7e7a;
   --text-tertiary: #7e7e7a;
-  --motto-text: #706b64;
+  --motto-text: #7c776f;
   --accent: #9f5300;
   --accent-hover: #9f5300;
   --accent-text: #c47533;
@@ -133,29 +135,37 @@ html[data-color-scheme="dark"] {
   --shadow-sm: none;
   --shadow-md: 0 2px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --danger-text: #cf635a;
+  --danger-text: #ef8176;
   --danger-border: #a73f39;
   --danger-subtle: rgba(217, 108, 99, 0.08);
   --canvas-text-primary: #7f7d77;
   --canvas-text-secondary: #7e7e7a;
-  --canvas-large-text: #a8a59d;
+  --canvas-greeting-text: #969691;
+  --canvas-large-text: #c1beb5;
   --canvas-control-color: #656158;
   --search-text-color: #918e87;
   --search-placeholder-color: #848480;
-  --search-control-color: #878479;
-  --search-control-hover-color: #be7834;
-  --search-control-focus-color: #be7834;
+  --search-control-color: #aaa79a;
+  --search-control-hover-color: #e49c5a;
+  --search-control-focus-color: #e49c5a;
   --search-focus-stroke: #9f5300;
   --search-selected-text: #c47533;
-  --panel-text-primary: #7f7d77;
-  --panel-text-secondary: #827d72;
-  --panel-control-text: #86837d;
-  --panel-control-secondary: #848480;
-  --panel-control-icon: #6a675e;
-  --panel-control-hover-text: #918e87;
-  --panel-accent-text: #ca7a39;
+  --engine-menu-text: #a9a69f;
+  --engine-menu-hover-text: #b5b2aa;
+  --engine-menu-selected-text: #ea9959;
+  --panel-text-primary: #9b9991;
+  --panel-text-secondary: #9e998c;
+  --panel-control-text: #a3a098;
+  --panel-control-secondary: #a1a09d;
+  --panel-control-icon: #8f8b82;
+  --panel-control-hover-text: #afaba3;
+  --panel-accent-text: #ec9859;
+  --panel-heading-text: #a19f97;
+  --panel-section-heading-text: #a19f97;
   --panel-focus-stroke: #9f5300;
-  --panel-warning-text: #83817b;
+  --panel-warning-text: #a3a099;
+  --segment-selected-bg: #82512a;
+  --segment-selected-bg-hover: #825129;
 }
 
 *,
@@ -260,14 +270,6 @@ body.has-wallpaper .search-submit {
   color: var(--wallpaper-submit-color);
 }
 
-body.has-wallpaper .engine-toggle .search-control-visual {
-  background: var(--wallpaper-engine-scrim);
-}
-
-body.has-wallpaper .search-submit .search-control-visual {
-  background: var(--wallpaper-submit-scrim);
-}
-
 body.has-wallpaper .search-input-wrapper:focus-within .engine-toggle {
   color: var(--wallpaper-engine-color);
 }
@@ -289,16 +291,9 @@ body.has-wallpaper .search-submit:hover {
   background: transparent;
 }
 
-body.has-wallpaper .engine-toggle:hover .search-control-visual {
-  background:
-    linear-gradient(var(--wallpaper-engine-hover-scrim), var(--wallpaper-engine-hover-scrim)),
-    var(--wallpaper-button-bg);
-}
-
+body.has-wallpaper .engine-toggle:hover .search-control-visual,
 body.has-wallpaper .search-submit:hover .search-control-visual {
-  background:
-    linear-gradient(var(--wallpaper-submit-hover-scrim), var(--wallpaper-submit-hover-scrim)),
-    var(--wallpaper-button-bg);
+  background: var(--wallpaper-button-bg);
 }
 
 body.has-wallpaper .action-btn {
@@ -455,10 +450,14 @@ body.has-custom-bg {
 .greeting {
   margin-top: 8px;
   font-size: 1.1rem;
-  color: var(--canvas-text-secondary);
+  color: var(--canvas-greeting-text);
   font-style: italic;
   text-shadow: var(--text-shadow-greeting);
   letter-spacing: 0.01em;
+}
+
+body.has-custom-bg .greeting {
+  color: var(--canvas-text-secondary);
 }
 
 .search-section {
@@ -595,7 +594,7 @@ body.has-custom-bg {
   border-radius: calc(var(--radius-ui) * 0.7);
   background: transparent;
   cursor: pointer;
-  color: var(--search-text-color);
+  color: var(--engine-menu-text);
   font-family: var(--font-body);
   font-size: 0.9rem;
   text-align: left;
@@ -605,11 +604,12 @@ body.has-custom-bg {
 .engine-dropdown-item:hover,
 .engine-dropdown-item:focus-visible {
   background: var(--bg-tertiary);
+  color: var(--engine-menu-hover-text);
 }
 
 .engine-dropdown-item.active {
   background: var(--search-selected-surface);
-  color: var(--search-selected-text);
+  color: var(--engine-menu-selected-text);
 }
 
 .engine-dropdown-name {
@@ -961,7 +961,7 @@ body.has-custom-bg {
   font-size: 1.3rem;
   font-weight: 400;
   line-height: 1.35;
-  color: var(--text-primary);
+  color: var(--panel-heading-text);
   letter-spacing: -0.01em;
 }
 
@@ -1022,7 +1022,7 @@ html[lang="zh-CN"] .settings-panel-header h2 {
 .setting-group-title {
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--text-secondary);
+  color: var(--panel-section-heading-text);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin-bottom: 12px;
@@ -1891,6 +1891,7 @@ html[lang="zh-CN"] .settings-panel-header h2 {
   margin-bottom: 10px;
   font-size: 1.08rem;
   font-weight: 500;
+  color: var(--panel-heading-text);
 }
 
 .wallpaper-confirm-dialog p {
@@ -2073,7 +2074,7 @@ html[lang="zh-CN"] .settings-panel-header h2 {
 .about-panel-header h2 {
   font-size: 1.1rem;
   font-weight: 500;
-  color: var(--text-primary);
+  color: var(--panel-heading-text);
 }
 
 .about-content {

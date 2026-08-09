@@ -1,5 +1,8 @@
 (() => {
   const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
+  const SEARCH_CONTROL_TARGET = 6.0;
+  const CONTROL_DARK_ENDPOINT = '#272016';
+  const CONTROL_LIGHT_ENDPOINT = '#f3eddf';
 
   function parseHex(value) {
     if (typeof value !== 'string') return null;
@@ -183,11 +186,25 @@
       if (toHex(next) === toHex(candidate)) break;
       candidate = next;
     }
-    const foreground = parseHex(result.hex);
-    const hoverSurface = composite(foreground, surface, overlayAlpha);
+    const resolved = [result.hex, result.previousHex]
+      .filter(Boolean)
+      .map((hex) => {
+        const foreground = parseHex(hex);
+        const hoverSurface = composite(foreground, surface, overlayAlpha);
+        return {
+          hex,
+          ratio: minimumContrast(foreground, [surface, hoverSurface]),
+          hoverSurface,
+        };
+      })
+      .filter((candidate) => candidate.ratio >= target)
+      .sort((first, second) => first.ratio - second.ratio)[0];
+    const foreground = parseHex(resolved?.hex || result.hex);
+    const hoverSurface = resolved?.hoverSurface || composite(foreground, surface, overlayAlpha);
     return {
       ...result,
-      ratio: minimumContrast(foreground, [surface, hoverSurface]),
+      hex: resolved?.hex || result.hex,
+      ratio: resolved?.ratio || minimumContrast(foreground, [surface, hoverSurface]),
       target,
       hoverSurface: toHex(hoverSurface),
     };
@@ -266,8 +283,32 @@
     const canvasControl = readableColor([background], desiredControl, endpoint, 3);
     const searchText = readableColor([input, tertiary], desiredPrimary, endpoint, 4.5);
     const searchPlaceholder = readableColor([input], desiredSecondary, endpoint, 4.5);
-    const searchControl = readableColor([input], desiredControl, endpoint, 4.5);
-    const searchAccent = readableOverlayColor(input, brandAccent, endpoint, 4.5);
+    const warmEndpoints = [CONTROL_DARK_ENDPOINT, CONTROL_LIGHT_ENDPOINT].map(parseHex);
+    const controlEndpoint = warmEndpoints.reduce((best, candidate) => (
+      contrast(candidate, input) > contrast(best, input) ? candidate : best
+    ));
+    const accentEndpoint = warmEndpoints.reduce((best, candidate) => {
+      const bestHover = composite(best, input, 0.08);
+      const candidateHover = composite(candidate, input, 0.08);
+      return minimumContrast(candidate, [input, candidateHover])
+        > minimumContrast(best, [input, bestHover]) ? candidate : best;
+    });
+    const searchControl = readableColor(
+      [input],
+      desiredControl,
+      controlEndpoint,
+      SEARCH_CONTROL_TARGET,
+    );
+    const searchAccent = readableOverlayColor(
+      input,
+      brandAccent,
+      accentEndpoint,
+      SEARCH_CONTROL_TARGET,
+    );
+    searchControl.meetsTarget = searchControl.ratio >= SEARCH_CONTROL_TARGET;
+    searchControl.bestEffort = !searchControl.meetsTarget;
+    searchAccent.meetsTarget = searchAccent.ratio >= SEARCH_CONTROL_TARGET;
+    searchAccent.bestEffort = !searchAccent.meetsTarget;
     const accentColor = parseHex(searchAccent.hex);
     const selectedSurface = composite(accentColor, input, 0.08);
     const accentText = readableColor([selectedSurface], accentColor, endpoint, 4.5);

@@ -1,6 +1,6 @@
 (() => {
   const ANALYSIS_CACHE_LIMIT = 32;
-  const SOLVER_VERSION = 'paired-4.5-warm-controls-time-6-warm-no-scrim-v6';
+  const SOLVER_VERSION = 'paired-6-shared-warm-controls-no-scrim-time-6-warm-no-scrim-v8';
   const CONTROL_DARK_ENDPOINT = '#272016';
   const CONTROL_LIGHT_ENDPOINT = '#f3eddf';
   const analysisCache = new Map();
@@ -461,8 +461,6 @@
   function solveState(state, desiredColor, target) {
     const api = colorApi();
     const desired = api.parseHex(desiredColor) || api.parseHex('#9f5300');
-    const black = api.parseHex('#000000');
-    const white = api.parseHex('#ffffff');
     const darkEndpoint = api.parseHex(CONTROL_DARK_ENDPOINT);
     const lightEndpoint = api.parseHex(CONTROL_LIGHT_ENDPOINT);
     const surfaces = state.surfaces;
@@ -470,108 +468,128 @@
       endpoint,
       ratio: minimumContrast(endpoint, surfaces),
     })).sort((a, b) => b.ratio - a.ratio);
-    let scrim = { r: 0, g: 0, b: 0, a: 0 };
-    let solvedSurfaces = surfaces;
-    let endpoint = endpoints[0].endpoint;
-    let fallback = false;
-
-    if (endpoints[0].ratio < target) {
-      fallback = true;
-      const candidates = [
-        { scrimColor: black, endpoint: lightEndpoint },
-        { scrimColor: white, endpoint: darkEndpoint },
-      ].map((candidate) => {
-        let low = 0;
-        let high = 1;
-        for (let iteration = 0; iteration < 24; iteration += 1) {
-          const middle = (low + high) / 2;
-          const composited = surfaces.map((surface) => composite(surface, { ...candidate.scrimColor, a: middle }));
-          if (minimumContrast(candidate.endpoint, composited) >= target) high = middle;
-          else low = middle;
-        }
-        const alpha = Math.ceil(high * 10000) / 10000;
-        return { ...candidate, alpha };
-      }).sort((a, b) => a.alpha - b.alpha);
-      const selected = candidates[0];
-      scrim = { ...selected.scrimColor, a: selected.alpha };
-      endpoint = selected.endpoint;
-      solvedSurfaces = surfaces.map((surface) => composite(surface, scrim));
-    }
-
-    const readable = api.readableColor(solvedSurfaces, desired, endpoint, target);
-    const tightened = tightenToTarget(readable.hex, solvedSurfaces, target);
+    const endpoint = endpoints[0].endpoint;
+    const readable = api.readableColor(surfaces, desired, endpoint, target);
+    const resolved = readable.ratio >= target
+      ? tightenToTarget(readable.hex, surfaces, target)
+      : { color: api.toHex(endpoint), ratio: endpoints[0].ratio };
+    const meetsTarget = resolved.ratio >= target;
     return {
-      color: tightened.color,
-      scrim: `rgba(${Math.round(scrim.r)}, ${Math.round(scrim.g)}, ${Math.round(scrim.b)}, ${scrim.a.toFixed(4)})`,
-      scrimAlpha: scrim.a,
-      minimumContrast: tightened.ratio,
-      fallback,
-      surfaces: solvedSurfaces,
-    };
-  }
-
-  function controlResult(color, surfaces) {
-    const api = colorApi();
-    return {
-      color,
+      color: resolved.color,
       scrim: 'rgba(0, 0, 0, 0.0000)',
       scrimAlpha: 0,
-      minimumContrast: minimumContrast(api.parseHex(color), surfaces),
-      fallback: false,
+      minimumContrast: resolved.ratio,
+      target,
+      meetsTarget,
+      bestEffort: !meetsTarget,
       surfaces,
     };
   }
 
-  function solvePairedState(engineState, submitState, desiredColor, target) {
-    const shared = solveState({
-      surfaces: [...engineState.surfaces, ...submitState.surfaces],
-    }, desiredColor, target);
-    const engineShared = controlResult(shared.color, engineState.surfaces);
-    const submitShared = controlResult(shared.color, submitState.surfaces);
-    const ratioDifference = Math.abs(
-      engineShared.minimumContrast - submitShared.minimumContrast,
-    );
-    const maximumTightRatio = target + 0.1;
-    const canShare = !shared.fallback
-      && shared.scrimAlpha === 0
-      && engineShared.minimumContrast >= target
-      && submitShared.minimumContrast >= target
-      && engineShared.minimumContrast < maximumTightRatio
-      && submitShared.minimumContrast < maximumTightRatio
-      && ratioDifference <= 0.1;
-
-    if (canShare) {
-      return {
-        engine: engineShared,
-        submit: submitShared,
-        diagnostics: {
-          shared: true,
-          color: shared.color,
-          ratioDifference,
-        },
-      };
-    }
-
-    const engine = solveState(engineState, desiredColor, target);
-    const submit = solveState(submitState, desiredColor, target);
+  function controlResult(color, surfaces, target) {
     const api = colorApi();
-    const engineOklch = api.rgbToOklch(api.parseHex(engine.color));
-    const submitOklch = api.rgbToOklch(api.parseHex(submit.color));
-    const hueDifference = Math.min(
-      Math.abs(engineOklch.h - submitOklch.h),
-      360 - Math.abs(engineOklch.h - submitOklch.h),
-    );
+    const minimum = minimumContrast(api.parseHex(color), surfaces);
+    const meetsTarget = minimum >= target;
     return {
+      color,
+      scrim: 'rgba(0, 0, 0, 0.0000)',
+      scrimAlpha: 0,
+      minimumContrast: minimum,
+      target,
+      meetsTarget,
+      bestEffort: !meetsTarget,
+      surfaces,
+    };
+  }
+
+  function oklchDistance(first, second) {
+    const api = colorApi();
+    const fallback = api.parseHex('#9f5300');
+    const resolve = (value) => (typeof value === 'string' ? api.parseHex(value) : value) || fallback;
+    const a = api.rgbToOklch(resolve(first));
+    const b = api.rgbToOklch(resolve(second));
+    const hueDelta = Math.min(Math.abs(a.h - b.h), 360 - Math.abs(a.h - b.h)) / 180;
+    return Math.sqrt(
+      (a.l - b.l) ** 2
+      + (a.c - b.c) ** 2
+      + (hueDelta * Math.min(a.c, b.c)) ** 2,
+    );
+  }
+
+  function controlPolarity(color) {
+    return oklchDistance(color, CONTROL_LIGHT_ENDPOINT)
+      <= oklchDistance(color, CONTROL_DARK_ENDPOINT) ? 'light' : 'dark';
+  }
+
+  function evaluatePairedCandidate(candidate, engineState, submitState, desiredColor, target) {
+    const engine = controlResult(candidate.color, engineState.surfaces, target);
+    const submit = controlResult(candidate.color, submitState.surfaces, target);
+    return {
+      ...candidate,
       engine,
       submit,
+      sharedMinimumContrast: Math.min(engine.minimumContrast, submit.minimumContrast),
+      ratioDifference: Math.abs(engine.minimumContrast - submit.minimumContrast),
+      meetsTarget: engine.meetsTarget && submit.meetsTarget,
+      desiredDistance: oklchDistance(candidate.color, desiredColor),
+      polarity: controlPolarity(candidate.color),
+    };
+  }
+
+  function solvePairedState(engineState, submitState, desiredColor, target) {
+    const engineCandidate = solveState(engineState, desiredColor, target);
+    const submitCandidate = solveState(submitState, desiredColor, target);
+    const candidates = engineCandidate.color === submitCandidate.color
+      ? [{ source: 'identical', color: engineCandidate.color }]
+      : [
+        { source: 'engine', color: engineCandidate.color },
+        { source: 'submit', color: submitCandidate.color },
+      ];
+    const evaluated = candidates.map((candidate) => evaluatePairedCandidate(
+      candidate,
+      engineState,
+      submitState,
+      desiredColor,
+      target,
+    )).sort((first, second) => {
+      if (first.meetsTarget !== second.meetsTarget) return second.meetsTarget - first.meetsTarget;
+      if (Math.abs(first.sharedMinimumContrast - second.sharedMinimumContrast) > 1e-9) {
+        return second.sharedMinimumContrast - first.sharedMinimumContrast;
+      }
+      if (Math.abs(first.desiredDistance - second.desiredDistance) > 1e-9) {
+        return first.desiredDistance - second.desiredDistance;
+      }
+      if (Math.abs(first.ratioDifference - second.ratioDifference) > 1e-9) {
+        return first.ratioDifference - second.ratioDifference;
+      }
+      return first.source.localeCompare(second.source);
+    });
+    const selected = evaluated[0];
+    return {
+      engine: selected.engine,
+      submit: selected.submit,
       diagnostics: {
-        shared: false,
-        sharedCandidate: shared.color,
-        sharedEngineRatio: engineShared.minimumContrast,
-        sharedSubmitRatio: submitShared.minimumContrast,
-        ratioDifference,
-        hueDifference,
-        chromaDifference: Math.abs(engineOklch.c - submitOklch.c),
+        shared: true,
+        color: selected.color,
+        selectionSource: selected.source,
+        selectedPolarity: selected.polarity,
+        sharedMinimumContrast: selected.sharedMinimumContrast,
+        engineRatio: selected.engine.minimumContrast,
+        submitRatio: selected.submit.minimumContrast,
+        ratioDifference: selected.ratioDifference,
+        meetsTarget: selected.meetsTarget,
+        bestEffort: !selected.meetsTarget,
+        candidates: evaluated.map((candidate) => ({
+          source: candidate.source,
+          color: candidate.color,
+          polarity: candidate.polarity,
+          sharedMinimumContrast: candidate.sharedMinimumContrast,
+          engineRatio: candidate.engine.minimumContrast,
+          submitRatio: candidate.submit.minimumContrast,
+          ratioDifference: candidate.ratioDifference,
+          meetsTarget: candidate.meetsTarget,
+          desiredDistance: candidate.desiredDistance,
+        })),
       },
     };
   }

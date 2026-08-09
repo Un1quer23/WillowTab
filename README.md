@@ -47,28 +47,32 @@ flowchart TD
     E --> F["Final surface composition<br/>Overlay, readability, glass blur and SVG masks"]
     D --> G["Role-specific contrast solver"]
     F --> G
-    H["Targets<br/>Clock 6.0:1; body, search text and controls 4.5:1"] --> G
+    H["Targets by role and mode<br/>Dark clock 8.0:1; dark search controls 7.0:1<br/>Light, solid and wallpaper clock/controls 6.0:1"] --> G
     G --> I["Semantic CSS variables"]
     I --> J["Clock, text and search controls"]
     K["Versioned cache keys and generation tokens"] -. Guard asynchronous analysis .-> E
 ```
 
 - [`css/style.css`](css/style.css) exposes semantic tokens for canvas text, search surfaces and controls, panels, accents, danger states,
-  and wallpaper glass. Components consume these roles instead of sharing raw light/dark color values.
+  and wallpaper glass. Components consume these roles instead of sharing raw light/dark color values. The fixed dark theme uses stronger
+  role-specific targets than the light theme: `8.0:1` for the clock, `7.0:1` for the two search icons and engine-menu text, `5.0:1` for
+  the greeting, and `3.8:1` for the decorative motto.
 - [`js/color.js`](js/color.js) generates solid-background palettes in OKLCH and evaluates each role against every surface it may occupy,
   including the base canvas, gradient endpoints, input surfaces, and selected or hover states. Body and search text plus search controls
-  target `4.5:1`; the clock targets `6.0:1`, while the greeting and motto remain separate visual roles. The solver tightens successful
-  colors toward the limiting surface so they remain warm rather than jumping directly to pure black or white.
+  use separate targets; custom solid colors target `4.5:1` for ordinary text and `6.0:1` for the clock and two search icons. The solver
+  tightens successful colors toward the limiting surface so they remain warm rather than jumping directly to pure black or white.
 - [`js/wallpaper-color.js`](js/wallpaper-color.js) samples the actual `cover` crop at the current viewport and DPR, composites the global
   overlay and readability layer, reproduces the glass blur, and masks the exact SVG control shapes. The control solver first tries one
-  shared engine/submit color, keeps it only when both results satisfy contrast and visual-equivalence guardrails, and otherwise solves
-  them independently for normal and hover states. The clock never receives a local scrim; controls receive the minimum four-decimal
-  scrim only when color alone cannot reach `4.5:1`.
+  warm candidate for each icon region, then uses the candidate that maximizes the lower of the two final-surface contrast values. The
+  engine and submit icons therefore stay exactly the same color in each normal/hover state. Their wallpaper target is `6.0:1`; when a
+  mixed surface makes that impossible, diagnostics record the best attainable shared result. Neither the clock nor the search icons
+  receive a local contrast scrim or background block.
 - Wallpaper analysis cache keys include the image, viewport, overlay, readability settings, blur, solver version, and element geometry.
   [`js/settings.js`](js/settings.js) also uses generation tokens so an older asynchronous analysis cannot overwrite a newer wallpaper or
   resized viewport result.
 - [`scripts/validate-colors.js`](scripts/validate-colors.js) checks a 4,096-color RGB grid, 12 representative colors, fixed theme roles,
-  light/dark/split wallpaper surfaces, paired controls, no-scrim clock behavior, minimum-scrim boundaries, and one-step color boundaries.
+  light/dark/split/high-complexity wallpaper surfaces, strict shared-color controls, maximin candidate selection, no-scrim behavior,
+  best-effort diagnostics, and one-step color boundaries.
 
 ## Install
 
@@ -90,11 +94,11 @@ For other Chromium-based browsers, install manually from GitHub Releases:
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-Download `WillowTab-v1.7.3.zip`, the generic build for Chromium-based browsers.
+Download `WillowTab-v1.7.4.zip`, the generic build for Chromium-based browsers.
 
 Manual installation steps:
 
-1. Download `WillowTab-v1.7.3.zip`.
+1. Download `WillowTab-v1.7.4.zip`.
 2. Extract it to a local folder.
 3. Open your browser's extension management page, such as `chrome://extensions`.
 4. Enable Developer mode.
@@ -102,7 +106,7 @@ Manual installation steps:
 
 ### Chrome Web Store Package
 
-`WillowTab-for-Chrome-v1.7.3.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
+`WillowTab-for-Chrome-v1.7.4.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
 
 ## Project Structure
 
