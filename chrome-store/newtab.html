@@ -97,16 +97,37 @@
           </div>
 
           <div class="setting-row">
-            <label class="setting-label" for="custom-color-picker" data-i18n="settings.customColor">自选颜色</label>
+            <label class="setting-label" for="custom-color-hex" data-i18n="settings.customColor">自选颜色</label>
             <div class="custom-color-row">
-              <input type="color" id="custom-color-picker" class="custom-color-picker" data-i18n-aria="settings.customColorPicker" aria-label="自选颜色">
+              <span id="custom-color-preview" class="custom-color-preview" role="img" data-i18n-aria="settings.customColorPreview" aria-label="当前自选颜色"></span>
               <label class="sr-only" for="custom-color-hex" data-i18n="settings.customColorHex">自选颜色 HEX 值</label>
-              <input type="text" id="custom-color-hex" class="custom-color-hex" data-i18n-aria="settings.customColorHex" aria-label="自选颜色 HEX 值" placeholder="#F5F5DC" maxlength="7" spellcheck="false">
+              <input type="text" id="custom-color-hex" class="custom-color-hex" data-i18n-aria="settings.customColorHex" aria-label="自选颜色 HEX 值" aria-describedby="custom-color-range-hint custom-color-error" aria-invalid="false" placeholder="#BFBB98" maxlength="7" spellcheck="false" autocomplete="off">
             </div>
-            <div id="color-quality-warning" class="color-quality-warning" role="status" aria-live="polite" hidden>
-              <span data-i18n="warning.customColorQuality">这个颜色可能使部分图标、焦点状态和颜色层级不够协调。</span>
-              <button id="use-suggested-color" class="color-suggestion-btn" type="button" data-i18n="action.useSuggestedColor">使用建议颜色</button>
+            <div class="custom-color-sliders">
+              <div class="custom-color-slider-group">
+                <label class="custom-color-slider-label" for="custom-color-hue">
+                  <span data-i18n="settings.colorHue">色相</span>
+                  <output id="custom-color-hue-value" for="custom-color-hue">0°</output>
+                </label>
+                <input type="range" id="custom-color-hue" class="range-slider color-range-slider" min="0" max="359" value="0" step="1" data-i18n-aria="settings.colorHue" aria-label="色相">
+              </div>
+              <div class="custom-color-slider-group">
+                <label class="custom-color-slider-label" for="custom-color-chroma">
+                  <span data-i18n="settings.colorChroma">色彩强度</span>
+                  <output id="custom-color-chroma-value" for="custom-color-chroma">0%</output>
+                </label>
+                <input type="range" id="custom-color-chroma" class="range-slider color-range-slider" min="0" max="140" value="0" step="1" data-i18n-aria="settings.colorChroma" aria-label="色彩强度">
+              </div>
+              <div class="custom-color-slider-group">
+                <label class="custom-color-slider-label" for="custom-color-lightness">
+                  <span data-i18n="settings.colorLightness">亮度</span>
+                  <output id="custom-color-lightness-value" for="custom-color-lightness">96%</output>
+                </label>
+                <input type="range" id="custom-color-lightness" class="range-slider color-range-slider" min="320" max="1000" value="964" step="1" data-i18n-aria="settings.colorLightness" aria-label="亮度">
+              </div>
             </div>
+            <p id="custom-color-range-hint" class="settings-inline-hint" data-i18n="hint.customColorSafeRange">仅提供亮度不低于 32%、彩度不高于安全上限的颜色。</p>
+            <p id="custom-color-error" class="custom-color-error" role="status" aria-live="polite" hidden></p>
           </div>
         </div>
 
@@ -315,7 +336,7 @@
       <div class="about-info">
         <div class="about-row">
           <span class="about-label" data-i18n="about.version">版本</span>
-          <span class="about-value">v1.7.4</span>
+          <span class="about-value">v1.7.5</span>
         </div>
         <div class="about-row">
           <span class="about-label" data-i18n="about.author">作者</span>

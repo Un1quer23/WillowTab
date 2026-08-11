@@ -18,11 +18,118 @@ const TARGETS = {
   searchText: 4.5,
   searchPlaceholder: 4.5,
   searchControl: 6.0,
+  brandAccent: 6.0,
   searchAccent: 6.0,
   accentText: 4.5,
+  searchSelectedText: 4.5,
 };
 
+function paletteColorDistance(first, second) {
+  const a = color.rgbToOklch(color.parseHex(first));
+  const b = color.rgbToOklch(color.parseHex(second));
+  const hueDelta = Math.min(Math.abs(a.h - b.h), 360 - Math.abs(a.h - b.h)) / 180;
+  return Math.sqrt(
+    (a.l - b.l) ** 2
+    + (a.c - b.c) ** 2
+    + (hueDelta * Math.min(a.c, b.c)) ** 2,
+  );
+}
+
+function circularHueDistance(first, second) {
+  return Math.min(Math.abs(first - second), 360 - Math.abs(first - second));
+}
+
+function validateSolidConstraint(background) {
+  const initial = color.inspectSolidBackground(background);
+  assert(initial.valid, `${background} must be a valid source color`);
+  const constrained = color.constrainSolidBackground(background);
+  assert(constrained, `${background} did not produce a constrained color`);
+  const resolved = color.inspectSolidBackground(constrained);
+  assert.strictEqual(resolved.safe, true, `${background} constrained outside the safe solid-color range`);
+  assert(
+    resolved.oklch.l >= color.SOLID_COLOR_LIMITS.lightnessMin,
+    `${background} constrained lightness is ${resolved.oklch.l}`,
+  );
+  assert(
+    resolved.oklch.c <= color.SOLID_COLOR_LIMITS.chromaMax,
+    `${background} constrained chroma is ${resolved.oklch.c}`,
+  );
+  assert.strictEqual(
+    color.constrainSolidBackground(constrained),
+    constrained,
+    `${background} constraint must be idempotent`,
+  );
+  if (initial.safe) {
+    assert.strictEqual(constrained, initial.normalized, `${background} safe color was changed`);
+  }
+  return { initial, constrained, resolved };
+}
+
 const styleSource = fs.readFileSync(path.join(__dirname, '..', 'css', 'style.css'), 'utf8');
+const settingsSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'settings.js'), 'utf8');
+const htmlSource = fs.readFileSync(path.join(__dirname, '..', 'newtab.html'), 'utf8');
+const presetBlockStart = settingsSource.indexOf('  const PRESET_COLORS = [');
+const presetBlockEnd = settingsSource.indexOf('  let settings = { ...DEFAULTS };', presetBlockStart);
+assert(presetBlockStart >= 0 && presetBlockEnd > presetBlockStart, 'Preset color block was not found');
+const presetBlock = settingsSource.slice(presetBlockStart, presetBlockEnd);
+const presetColors = [...presetBlock.matchAll(/value:\s*'(#[0-9A-F]{6})'/g)].map((match) => match[1]);
+assert.deepStrictEqual(
+  presetColors,
+  ['#BFBB98', '#E7E1D3', '#C9D5CF', '#C8D4E3', '#D7CEDC', '#DDBFB2'],
+  'The curated soft preset palette changed unexpectedly',
+);
+assert.match(settingsSource, /const DEFAULTS = \{[\s\S]*?bgColor: '#BFBB98'/);
+assert.strictEqual(presetColors[0], '#BFBB98', 'Sage must be the first preset and the default background');
+assert.doesNotMatch(presetBlock, /#F5F5DC/i, 'Beige must not remain in the preset list');
+
+assert.deepStrictEqual(color.SOLID_COLOR_LIMITS, {
+  hueMin: 0,
+  hueMax: 359,
+  lightnessMin: 0.32,
+  lightnessMax: 1,
+  chromaMin: 0,
+  chromaMax: 0.14,
+});
+assert.doesNotMatch(htmlSource, /type="color"/, 'The unrestricted system color picker must be removed');
+assert.match(htmlSource, /id="custom-color-hue"[^>]*min="0"[^>]*max="359"/);
+assert.match(htmlSource, /id="custom-color-chroma"[^>]*min="0"[^>]*max="140"/);
+assert.match(htmlSource, /id="custom-color-lightness"[^>]*min="320"[^>]*max="1000"/);
+assert.doesNotMatch(htmlSource, /use-suggested-color|color-quality-warning/);
+assert.match(styleSource, /background:\s*var\(--range-track,\s*var\(--border\)\);/);
+assert.match(settingsSource, /inspectSolidBackground\(customColorHex\.value\.trim\(\)\)/);
+assert.match(settingsSource, /setAttribute\('aria-invalid', String\(customColorHexInvalid\)\)/);
+
+assert.match(
+  styleSource,
+  /body\.has-custom-bg\s+\.panel-overlay\s*\{[^}]*background:\s*transparent;/,
+  'Custom solid-color previews must not be darkened by the settings overlay',
+);
+
+assert.doesNotMatch(
+  styleSource,
+  /(?:^|\n)\.search-input-wrapper:focus-within\s+\.engine-toggle,\s*\n\.search-input-wrapper:focus-within\s+\.search-submit\s*\{[^}]*color:/,
+  'Focusing the search input must not pre-highlight both search controls',
+);
+assert.match(
+  styleSource,
+  /\.engine-toggle:focus-visible,\s*\n\.search-submit:focus-visible\s*\{[^}]*color:\s*var\(--search-control-focus-color\);/,
+  'Search controls must keep their own keyboard-focus highlight',
+);
+assert.match(
+  styleSource,
+  /\.engine-toggle:hover\s+\.search-control-visual\s*\{[^}]*background:\s*var\(--search-control-hover-surface\);/,
+  'Search controls must use the search-specific hover surface',
+);
+assert.match(
+  styleSource,
+  /\.engine-dropdown-item:focus-visible\s*\{[^}]*outline-color:\s*var\(--search-control-focus-ring\);/,
+  'The engine menu must use the search-specific focus ring',
+);
+assert.match(
+  settingsSource,
+  /const brandAccent = palette\.colors\.brandAccent;[\s\S]*--accent', brandAccent\);[\s\S]*--search-control-hover-color', searchAccent\);/,
+  'Custom colors must keep brand and search accents wired to separate roles',
+);
 
 function extractThemeBlock(pattern, name) {
   const match = styleSource.match(pattern);
@@ -59,9 +166,12 @@ assertThemeTokens('Light', baseThemeBlock, {
   'search-placeholder-color': '#75745f',
   'search-control-color': '#606054',
   'search-control-hover-color': '#8c490b',
+  'search-control-hover-surface': 'var(--accent-subtle)',
   'search-control-focus-color': '#8c490b',
+  'search-control-focus-ring': 'var(--focus-ring-color)',
   'search-focus-stroke': '#cd7e41',
   'engine-menu-text': 'var(--search-text-color)',
+  'engine-menu-hover-surface': 'var(--bg-tertiary)',
   'engine-menu-hover-text': 'var(--engine-menu-text)',
   'engine-menu-selected-text': 'var(--search-selected-text)',
   'panel-text-primary': '#70706a',
@@ -75,10 +185,13 @@ assertThemeTokens('Light', baseThemeBlock, {
   'panel-section-heading-text': 'var(--panel-text-secondary)',
   'panel-focus-stroke': '#cd7e41',
   'panel-warning-text': '#6a6a64',
+  'segment-border': 'color-mix(in srgb, var(--border) 88%, var(--accent))',
+  'segment-hover-bg': 'color-mix(in srgb, var(--input-bg) 92%, var(--accent))',
   'segment-selected-bg': '#a66631',
   'segment-selected-bg-hover': '#a66531',
   'segment-selected-text': '#fffdf5',
   'segment-selected-stroke': '#8f5529',
+  'selection-stroke-color': 'var(--segment-selected-stroke)',
 });
 
 assertThemeTokens('Dark', darkThemeBlock, {
@@ -134,7 +247,7 @@ function validatePalette(background) {
       result.ratio >= target,
       `${background} ${role} is ${result.ratio.toFixed(4)}, expected at least ${target}`,
     );
-    if (role === 'searchAccent') {
+    if (role === 'brandAccent' || role === 'searchAccent') {
       assert(result.hoverSurface, `${background} ${role} hover surface was not recorded`);
       assert(
         result.ratio < target + 0.1,
@@ -150,6 +263,58 @@ function validatePalette(background) {
       assert.strictEqual(result.meetsTarget, true, `${background} ${role} target state is incorrect`);
     }
   }
+
+  const backgroundOklch = color.rgbToOklch(color.parseHex(background));
+  const diagnostics = palette.diagnostics.searchAccent;
+  assert(diagnostics, `${background} search accent diagnostics are missing`);
+  assert(
+    diagnostics.overlayAlpha === 0.08 || diagnostics.overlayAlpha === 0.12,
+    `${background} search accent overlay alpha is invalid`,
+  );
+  assert.strictEqual(
+    palette.surfaces.searchSelected,
+    palette.results.searchAccent.hoverSurface,
+    `${background} search selected surface is stale`,
+  );
+  assert(
+    Math.abs(
+      diagnostics.distance
+      - paletteColorDistance(palette.colors.searchControl, palette.colors.searchAccent)
+    ) < 0.000001,
+    `${background} search accent distance diagnostic is stale`,
+  );
+
+  if (backgroundOklch.c < 0.035) {
+    assert.strictEqual(diagnostics.strategy, 'brand', `${background} should use the brand accent`);
+    assert.strictEqual(diagnostics.hueOffset, null, `${background} brand accent must not report a hue offset`);
+    assert.strictEqual(diagnostics.overlayAlpha, 0.08, `${background} brand accent alpha changed unexpectedly`);
+    assert.strictEqual(diagnostics.candidates.length, 1, `${background} brand diagnostics must have one candidate`);
+    assert.strictEqual(palette.colors.searchAccent, palette.colors.brandAccent, `${background} neutral accents diverged`);
+  } else {
+    assert.strictEqual(diagnostics.strategy, 'analogous', `${background} should use an analogous accent`);
+    assert([0, -25, 25].includes(diagnostics.hueOffset), `${background} selected hue offset is invalid`);
+    assert.strictEqual(diagnostics.candidates.length, 3, `${background} analogous diagnostics must have three candidates`);
+    assert.deepStrictEqual(
+      diagnostics.candidates.map((candidate) => candidate.hueOffset),
+      [0, -25, 25],
+      `${background} analogous candidate order changed`,
+    );
+    const selectedDiagnostic = diagnostics.candidates.find((candidate) => (
+      candidate.hueOffset === diagnostics.hueOffset
+      && candidate.color === palette.colors.searchAccent
+    ));
+    assert(selectedDiagnostic, `${background} selected analogous candidate is missing`);
+    assert.strictEqual(selectedDiagnostic.meetsTarget, true, `${background} selected analogous candidate misses contrast`);
+    for (const candidate of diagnostics.candidates) {
+      const candidateOklch = color.rgbToOklch(color.parseHex(candidate.color));
+      if (candidateOklch.c < 0.01) continue;
+      const expectedHue = (backgroundOklch.h + candidate.hueOffset + 360) % 360;
+      assert(
+        circularHueDistance(candidate.actualHue, expectedHue) <= 10,
+        `${background} candidate ${candidate.hueOffset} drifted outside its analogous hue`,
+      );
+    }
+  }
   return palette;
 }
 
@@ -158,12 +323,107 @@ const representativeColors = [
   '#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff',
 ];
 
+const safeCustomColors = [
+  '#5577AA', '#3F8F72', '#8F5AA8', '#B85F52', '#F5F5DC', '#BFBB98', '#FFFFFF',
+];
+for (const background of safeCustomColors) {
+  const result = validateSolidConstraint(background);
+  assert.strictEqual(result.constrained, background.toLowerCase(), `${background} must remain unchanged`);
+}
+
+const blackConstraint = validateSolidConstraint('#000000');
+assert.strictEqual(blackConstraint.constrained, '#333333', 'Black must map to the safe neutral floor');
+validateSolidConstraint('#141311');
+for (const background of ['#FF0000', '#00FF00', '#0000FF', '#BB00FF']) {
+  const result = validateSolidConstraint(background);
+  assert(result.initial.violations.includes('too-saturated'), `${background} must be classified as too saturated`);
+  if (result.resolved.oklch.c >= 0.01) {
+    assert(
+      circularHueDistance(result.initial.oklch.h, result.resolved.oklch.h) <= 2,
+      `${background} constrained hue drifted unexpectedly`,
+    );
+  }
+}
+const combinedConstraint = validateSolidConstraint('#180080');
+assert.deepStrictEqual(combinedConstraint.initial.violations, ['too-dark', 'too-saturated']);
+assert.strictEqual(color.inspectSolidBackground('not-a-color').valid, false);
+assert.strictEqual(color.constrainSolidBackground('not-a-color'), null);
+
+for (let hue = 0; hue <= 359; hue += 30) {
+  for (const chroma of [0, 0.07, 0.14]) {
+    for (const lightness of [0.32, 0.66, 1]) {
+      const generated = color.toHex(color.gamutMappedOklch({ l: lightness, c: chroma, h: hue }));
+      validateSolidConstraint(generated);
+    }
+  }
+}
+
 for (const background of representativeColors) validatePalette(background);
+
+for (const background of presetColors) {
+  const inspection = color.inspectSolidBackground(background);
+  assert.strictEqual(inspection.safe, true, `${background} preset is outside the safe solid-color range`);
+  assert(inspection.oklch.l >= 0.78, `${background} preset is too dark for the soft preset palette`);
+  assert(inspection.oklch.c <= 0.05, `${background} preset is too saturated for the soft preset palette`);
+  validatePalette(background);
+}
+
+for (const background of representativeColors) {
+  assert.deepStrictEqual(
+    color.createSolidPalette(background),
+    color.createSolidPalette(background),
+    `${background} palette generation must be deterministic`,
+  );
+}
+
+const whitePalette = color.createSolidPalette('#ffffff');
+assert(
+  paletteColorDistance(whitePalette.colors.searchControl, whitePalette.colors.searchAccent) >= 0.12,
+  'White search controls must have a visibly distinct hover color',
+);
+
+const blackPalette = color.createSolidPalette('#000000');
+assert.strictEqual(whitePalette.colors.brandAccent, '#9a3f0c', 'White brand accent changed unexpectedly');
+assert.strictEqual(whitePalette.colors.searchAccent, '#9a3f0c', 'White search accent changed unexpectedly');
+assert.strictEqual(blackPalette.colors.brandAccent, '#cb7b2c', 'Black brand accent changed unexpectedly');
+assert.strictEqual(blackPalette.colors.searchAccent, '#cb7b2c', 'Black search accent changed unexpectedly');
+
+const bluePalette = color.createSolidPalette('#5577aa');
+assert.deepStrictEqual(
+  {
+    input: bluePalette.surfaces.input,
+    brandAccent: bluePalette.colors.brandAccent,
+    searchAccent: bluePalette.colors.searchAccent,
+    strategy: bluePalette.diagnostics.searchAccent.strategy,
+    hueOffset: bluePalette.diagnostics.searchAccent.hueOffset,
+    overlayAlpha: bluePalette.diagnostics.searchAccent.overlayAlpha,
+  },
+  {
+    input: '#aabbd5',
+    brandAccent: '#541f03',
+    searchAccent: '#082e62',
+    strategy: 'analogous',
+    hueOffset: 0,
+    overlayAlpha: 0.08,
+  },
+  'Blue search accent must remain coordinated and distinct from the brand accent',
+);
+
+for (const background of ['#5577aa', '#3f8f72', '#8f5aa8', '#b85f52']) {
+  const palette = color.createSolidPalette(background);
+  const backgroundHue = color.rgbToOklch(color.parseHex(background)).h;
+  const accentHue = color.rgbToOklch(color.parseHex(palette.colors.searchAccent)).h;
+  const expectedHue = (backgroundHue + palette.diagnostics.searchAccent.hueOffset + 360) % 360;
+  assert(
+    circularHueDistance(accentHue, expectedHue) <= 5,
+    `${background} search accent is not analogous to the background`,
+  );
+}
 
 const adaptivePaletteSnapshots = {
   '#141311': {
     mode: 'light-text',
-    surfaces: { input: '#0e0e0c', secondary: '#12110f', tertiary: '#10100e' },
+    surfaces: { input: '#0e0e0c', secondary: '#12110f', tertiary: '#10100e', searchSelected: '#1e170f' },
     colors: {
       canvasPrimary: '#7f7d79',
       canvasSecondary: '#7c7f74',
@@ -172,13 +432,15 @@ const adaptivePaletteSnapshots = {
       searchText: '#7d7b77',
       searchPlaceholder: '#797c71',
       searchControl: '#948f87',
+      brandAccent: '#d48436',
       searchAccent: '#d48436',
       accentText: '#bc6e18',
+      searchSelectedText: '#bc6e18',
     },
   },
   '#F5F5DC': {
     mode: 'dark-text',
-    surfaces: { input: '#fafaee', secondary: '#f6f6e0', tertiary: '#f8f8e5' },
+    surfaces: { input: '#fafaee', secondary: '#f6f6e0', tertiary: '#f8f8e5', searchSelected: '#f2ebdc' },
     colors: {
       canvasPrimary: '#736f69',
       canvasSecondary: '#647462',
@@ -187,8 +449,10 @@ const adaptivePaletteSnapshots = {
       searchText: '#75716c',
       searchPlaceholder: '#687766',
       searchControl: '#606053',
-      searchAccent: '#884704',
-      accentText: '#9d5a22',
+      brandAccent: '#963b07',
+      searchAccent: '#963b07',
+      accentText: '#ad4f24',
+      searchSelectedText: '#ad4f24',
     },
   },
 };
@@ -269,6 +533,16 @@ for (const [name, foreground, surface, target] of fixedPairs) {
   const ratio = color.contrast(color.parseHex(foreground), resolvedSurface);
   assert(ratio >= target, `${name} is ${ratio.toFixed(4)}, expected at least ${target}`);
   assert(ratio < target + 0.06, `${name} retains avoidable contrast: ${ratio.toFixed(4)}`);
+}
+
+const minimumOnlyPairs = [
+  ['light segment hover text', '#6a6a65', lightControlHoverSurface, 4.5],
+  ['dark segment hover text', '#afaba3', darkControlHoverSurface, 6.5],
+];
+
+for (const [name, foreground, surface, target] of minimumOnlyPairs) {
+  const ratio = color.contrast(color.parseHex(foreground), surface);
+  assert(ratio >= target, `${name} is ${ratio.toFixed(4)}, expected at least ${target}`);
 }
 
 const wallpaperCases = {
@@ -559,7 +833,9 @@ let sampled = 0;
 for (let r = 0; r <= 255; r += 17) {
   for (let g = 0; g <= 255; g += 17) {
     for (let b = 0; b <= 255; b += 17) {
-      validatePalette(color.toHex({ r, g, b }));
+      const background = color.toHex({ r, g, b });
+      validateSolidConstraint(background);
+      validatePalette(background);
       sampled += 1;
     }
   }

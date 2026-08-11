@@ -6,7 +6,7 @@
 
   const DEFAULTS = {
     bgMode: 'color',
-    bgColor: '',
+    bgColor: '#BFBB98',
     wallpapers: [],
     activeWallpaperId: '',
     font: 'serif',
@@ -30,8 +30,12 @@
   };
 
   const PRESET_COLORS = [
-    { value: '#F5F5DC', get label() { return (window.__i18n && window.__i18n.t('color.beige')) || '米灰'; } },
-    { value: '#bfbb98', get label() { return (window.__i18n && window.__i18n.t('color.sage')) || '鼠尾草'; } },
+    { value: '#BFBB98', get label() { return (window.__i18n && window.__i18n.t('color.sage')) || '鼠尾草'; } },
+    { value: '#E7E1D3', get label() { return (window.__i18n && window.__i18n.t('color.warmOat')) || '暖燕麦'; } },
+    { value: '#C9D5CF', get label() { return (window.__i18n && window.__i18n.t('color.mistPine')) || '雾松绿'; } },
+    { value: '#C8D4E3', get label() { return (window.__i18n && window.__i18n.t('color.mistBlue')) || '雾蓝'; } },
+    { value: '#D7CEDC', get label() { return (window.__i18n && window.__i18n.t('color.softLavender')) || '柔雾紫'; } },
+    { value: '#DDBFB2', get label() { return (window.__i18n && window.__i18n.t('color.softClay')) || '柔陶'; } },
   ];
 
   let settings = { ...DEFAULTS };
@@ -83,10 +87,15 @@
   const overlayValue = document.getElementById('overlay-value');
   const shadowSlider = document.getElementById('shadow-slider');
   const shadowValue = document.getElementById('shadow-value');
-  const customColorPicker = document.getElementById('custom-color-picker');
+  const customColorPreview = document.getElementById('custom-color-preview');
   const customColorHex = document.getElementById('custom-color-hex');
-  const colorQualityWarning = document.getElementById('color-quality-warning');
-  const useSuggestedColor = document.getElementById('use-suggested-color');
+  const customColorHue = document.getElementById('custom-color-hue');
+  const customColorHueValue = document.getElementById('custom-color-hue-value');
+  const customColorChroma = document.getElementById('custom-color-chroma');
+  const customColorChromaValue = document.getElementById('custom-color-chroma-value');
+  const customColorLightness = document.getElementById('custom-color-lightness');
+  const customColorLightnessValue = document.getElementById('custom-color-lightness-value');
+  const customColorError = document.getElementById('custom-color-error');
   const themeSection = document.getElementById('theme-section');
   const themeOptions = document.getElementById('theme-options');
   const fontOptions = document.getElementById('font-options');
@@ -122,6 +131,9 @@
   let resizeSyncTimer = null;
   let aboutReturnFocus = null;
   let activeColorPalette = null;
+  let customColorMigrationNotice = '';
+  let customColorHexInvalid = false;
+  let customColorSliderState = null;
   const selectedWallpaperIds = new Set();
   const pendingHides = new Map();
   const pageRegions = [
@@ -261,6 +273,35 @@
     return window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
+  function normalizeLoadedCustomColor() {
+    if (settings.bgColor === '') {
+      settings.bgColor = DEFAULTS.bgColor;
+      return true;
+    }
+    if (typeof settings.bgColor !== 'string') {
+      settings.bgColor = DEFAULTS.bgColor;
+      customColorMigrationNotice = 'notice.customColorReset';
+      return true;
+    }
+    const colorApi = window.__willowColor;
+    const inspection = colorApi && colorApi.inspectSolidBackground(settings.bgColor);
+    if (!inspection || !inspection.valid) {
+      settings.bgColor = DEFAULTS.bgColor;
+      customColorMigrationNotice = 'notice.customColorReset';
+      return true;
+    }
+    if (inspection.safe) return false;
+    const constrained = colorApi.constrainSolidBackground(settings.bgColor);
+    if (!constrained) {
+      settings.bgColor = DEFAULTS.bgColor;
+      customColorMigrationNotice = 'notice.customColorReset';
+      return true;
+    }
+    settings.bgColor = constrained;
+    customColorMigrationNotice = 'notice.customColorAdjusted';
+    return true;
+  }
+
   function loadSettings() {
     try {
       const raw = localStorage.getItem(SETTINGS_KEY);
@@ -275,7 +316,9 @@
           delete parsed.wallpaper;
         }
         settings = { ...DEFAULTS, ...parsed };
+        const customColorChanged = normalizeLoadedCustomColor();
         normalizeSettings();
+        if (customColorChanged) saveSettingsNow();
       }
     } catch (_) {
       settings = { ...DEFAULTS };
@@ -629,10 +672,14 @@
     root.style.removeProperty('--search-placeholder-color');
     root.style.removeProperty('--search-control-color');
     root.style.removeProperty('--search-control-hover-color');
+    root.style.removeProperty('--search-control-hover-surface');
     root.style.removeProperty('--search-control-focus-color');
+    root.style.removeProperty('--search-control-focus-ring');
     root.style.removeProperty('--search-focus-stroke');
     root.style.removeProperty('--search-selected-surface');
     root.style.removeProperty('--search-selected-text');
+    root.style.removeProperty('--engine-menu-hover-surface');
+    root.style.removeProperty('--engine-menu-hover-text');
     activeColorPalette = null;
   }
 
@@ -641,8 +688,12 @@
       const palette = window.__willowColor.createSolidPalette(bgColor);
       if (!palette) return;
       const root = document.documentElement;
-      const accent = palette.colors.searchAccent;
-      const accentRgb = window.__willowColor.parseHex(accent);
+      const brandAccent = palette.colors.brandAccent;
+      const brandAccentRgb = window.__willowColor.parseHex(brandAccent);
+      const searchAccent = palette.colors.searchAccent;
+      const searchAccentRgb = window.__willowColor.parseHex(searchAccent);
+      const searchAccentAlpha = palette.diagnostics.searchAccent.overlayAlpha;
+      const searchAccentSurface = `rgba(${searchAccentRgb.r}, ${searchAccentRgb.g}, ${searchAccentRgb.b}, ${searchAccentAlpha})`;
       activeColorPalette = palette;
       document.body.dataset.colorReadable = palette.mode;
       root.style.setProperty('--bg-secondary', palette.surfaces.secondary);
@@ -652,12 +703,12 @@
       root.style.setProperty('--text-tertiary', palette.colors.canvasControl);
       root.style.setProperty('--placeholder-text', palette.colors.searchPlaceholder);
       root.style.setProperty('--input-bg', palette.surfaces.input);
-      root.style.setProperty('--accent', accent);
-      root.style.setProperty('--accent-hover', accent);
+      root.style.setProperty('--accent', brandAccent);
+      root.style.setProperty('--accent-hover', brandAccent);
       root.style.setProperty('--accent-text', palette.colors.accentText);
-      root.style.setProperty('--accent-subtle', `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.08)`);
-      root.style.setProperty('--border-focus', accent);
-      root.style.setProperty('--focus-ring-color', accent);
+      root.style.setProperty('--accent-subtle', `rgba(${brandAccentRgb.r}, ${brandAccentRgb.g}, ${brandAccentRgb.b}, 0.08)`);
+      root.style.setProperty('--border-focus', brandAccent);
+      root.style.setProperty('--focus-ring-color', brandAccent);
       root.style.setProperty('--canvas-text-primary', palette.colors.canvasPrimary);
       root.style.setProperty('--canvas-text-secondary', palette.colors.canvasSecondary);
       root.style.setProperty('--canvas-large-text', palette.colors.canvasLarge);
@@ -666,11 +717,15 @@
       root.style.setProperty('--search-text-color', palette.colors.searchText);
       root.style.setProperty('--search-placeholder-color', palette.colors.searchPlaceholder);
       root.style.setProperty('--search-control-color', palette.colors.searchControl);
-      root.style.setProperty('--search-control-hover-color', accent);
-      root.style.setProperty('--search-control-focus-color', accent);
-      root.style.setProperty('--search-focus-stroke', accent);
-      root.style.setProperty('--search-selected-surface', `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.08)`);
-      root.style.setProperty('--search-selected-text', palette.colors.accentText);
+      root.style.setProperty('--search-control-hover-color', searchAccent);
+      root.style.setProperty('--search-control-hover-surface', searchAccentSurface);
+      root.style.setProperty('--search-control-focus-color', searchAccent);
+      root.style.setProperty('--search-control-focus-ring', searchAccent);
+      root.style.setProperty('--search-focus-stroke', searchAccent);
+      root.style.setProperty('--search-selected-surface', searchAccentSurface);
+      root.style.setProperty('--search-selected-text', palette.colors.searchSelectedText);
+      root.style.setProperty('--engine-menu-hover-surface', searchAccentSurface);
+      root.style.setProperty('--engine-menu-hover-text', searchAccent);
       root.style.setProperty('--border', palette.mode === 'dark-text'
         ? `color-mix(in srgb, ${bgColor} 75%, black)`
         : 'rgba(255, 255, 255, 0.24)');
@@ -726,7 +781,7 @@
     );
     const accent = pickReadableColor(
       surfaces,
-      parseHexColor(useDarkText ? '#c87a3c' : '#e8964a'),
+      parseHexColor(useDarkText ? '#e65f10' : '#e8964a'),
       endpoint,
       3,
     );
@@ -762,16 +817,165 @@
     root.style.setProperty('--accent-subtle', accentSubtle);
     root.style.setProperty('--border-focus', accent);
     root.style.setProperty('--focus-ring-color', accent);
+    root.style.setProperty('--search-control-hover-color', accent);
+    root.style.setProperty('--search-control-hover-surface', accentSubtle);
+    root.style.setProperty('--search-control-focus-color', accent);
+    root.style.setProperty('--search-control-focus-ring', accent);
+    root.style.setProperty('--search-focus-stroke', accent);
+    root.style.setProperty('--search-selected-surface', accentSubtle);
+    root.style.setProperty('--search-selected-text', accentText);
+    root.style.setProperty('--engine-menu-hover-surface', accentSubtle);
+    root.style.setProperty('--engine-menu-hover-text', accent);
   }
 
-  function syncColorQualityWarning() {
-    if (!colorQualityWarning || !useSuggestedColor) return;
-    const showWarning = settings.bgMode === 'color'
-      && Boolean(settings.bgColor)
-      && !effectiveThemeIsDark()
-      && Boolean(activeColorPalette && activeColorPalette.warning);
-    colorQualityWarning.hidden = !showWarning;
-    useSuggestedColor.dataset.color = showWarning ? activeColorPalette.suggested : '';
+  function safeSolidHexFromOklch(oklch) {
+    const colorApi = window.__willowColor;
+    if (!colorApi) return null;
+    const generated = colorApi.toHex(colorApi.gamutMappedOklch(oklch));
+    return colorApi.constrainSolidBackground(generated);
+  }
+
+  function setCustomColorValidation(violations = []) {
+    if (!customColorHex || !customColorError) return;
+    const reasons = new Set(violations);
+    let message = '';
+    if (reasons.has('invalid-format')) {
+      message = t('error.customColorFormat');
+    } else if (reasons.has('too-dark') && reasons.has('too-saturated')) {
+      message = t('error.customColorTooDarkAndSaturated');
+    } else if (reasons.has('too-dark')) {
+      message = t('error.customColorTooDark');
+    } else if (reasons.has('too-saturated')) {
+      message = t('error.customColorTooSaturated');
+    }
+    customColorHexInvalid = Boolean(message);
+    customColorHex.setAttribute('aria-invalid', String(customColorHexInvalid));
+    customColorError.textContent = message;
+    customColorError.hidden = !message;
+  }
+
+  function customColorGradient(stops) {
+    return `linear-gradient(90deg, ${stops.map(({ color, position }) => `${color} ${position}%`).join(', ')})`;
+  }
+
+  function updateCustomColorTracks(oklch) {
+    const colorApi = window.__willowColor;
+    if (!colorApi) return;
+    const limits = colorApi.SOLID_COLOR_LIMITS;
+    const hueChroma = Math.max(oklch.c, 0.08);
+    const hueStops = Array.from({ length: 13 }, (_, index) => {
+      const position = index * 100 / 12;
+      return {
+        color: safeSolidHexFromOklch({ l: oklch.l, c: hueChroma, h: index * 30 }),
+        position,
+      };
+    });
+    const chromaStops = Array.from({ length: 5 }, (_, index) => {
+      const position = index * 25;
+      return {
+        color: safeSolidHexFromOklch({
+          l: oklch.l,
+          c: limits.chromaMax * index / 4,
+          h: oklch.h,
+        }),
+        position,
+      };
+    });
+    const lightnessStops = Array.from({ length: 6 }, (_, index) => {
+      const position = index * 20;
+      return {
+        color: safeSolidHexFromOklch({
+          l: limits.lightnessMin + (limits.lightnessMax - limits.lightnessMin) * index / 5,
+          c: oklch.c,
+          h: oklch.h,
+        }),
+        position,
+      };
+    });
+    customColorHue.style.setProperty('--range-track', customColorGradient(hueStops));
+    customColorChroma.style.setProperty('--range-track', customColorGradient(chromaStops));
+    customColorLightness.style.setProperty('--range-track', customColorGradient(lightnessStops));
+  }
+
+  function syncCustomColorControls(color, syncHex = true) {
+    const colorApi = window.__willowColor;
+    if (!colorApi) return;
+    const fallback = '#bfbb98';
+    const inspection = colorApi.inspectSolidBackground(color);
+    const safeInspection = inspection && inspection.valid && inspection.safe
+      ? inspection
+      : colorApi.inspectSolidBackground(fallback);
+    if (!safeInspection) return;
+
+    if (!customColorSliderState) {
+      customColorSliderState = {
+        h: Math.round(safeInspection.oklch.h) % 360,
+        c: safeInspection.oklch.c,
+        l: safeInspection.oklch.l,
+      };
+    }
+    const state = customColorSliderState;
+    const normalized = safeInspection.normalized;
+    customColorPreview.style.backgroundColor = normalized;
+    customColorPreview.dataset.color = normalized;
+    customColorPreview.setAttribute('aria-label', `${t('settings.customColorPreview')} ${normalized.toUpperCase()}`);
+
+    customColorHue.value = String(Math.round(state.h) % 360);
+    customColorChroma.value = String(Math.round(state.c * 1000));
+    customColorLightness.value = String(Math.round(state.l * 1000));
+    const chromaPercent = Math.round(state.c / colorApi.SOLID_COLOR_LIMITS.chromaMax * 100);
+    const lightnessPercent = Math.round(state.l * 100);
+    customColorHueValue.textContent = `${customColorHue.value}°`;
+    customColorChromaValue.textContent = `${chromaPercent}%`;
+    customColorLightnessValue.textContent = `${lightnessPercent}%`;
+    customColorHue.setAttribute('aria-valuetext', customColorHueValue.textContent);
+    customColorChroma.setAttribute('aria-valuetext', customColorChromaValue.textContent);
+    customColorLightness.setAttribute('aria-valuetext', customColorLightnessValue.textContent);
+    updateCustomColorTracks(state);
+
+    if (syncHex) {
+      customColorHex.value = settings.bgColor || '';
+      setCustomColorValidation();
+    }
+  }
+
+  function commitCustomColor(color, preserveSliderState = false) {
+    const colorApi = window.__willowColor;
+    const inspection = colorApi && colorApi.inspectSolidBackground(color);
+    if (!inspection || !inspection.valid || !inspection.safe) return false;
+    if (!preserveSliderState) customColorSliderState = null;
+    settings.bgMode = 'color';
+    settings.bgColor = inspection.normalized;
+    setCustomColorValidation();
+    saveSettings();
+    applyBackground();
+    scheduleWallpaperRotation();
+    syncUI();
+    return true;
+  }
+
+  function applyCustomColorSliders() {
+    customColorSliderState = {
+      h: Number(customColorHue.value),
+      c: Number(customColorChroma.value) / 1000,
+      l: Number(customColorLightness.value) / 1000,
+    };
+    const color = safeSolidHexFromOklch(customColorSliderState);
+    if (color) commitCustomColor(color, true);
+  }
+
+  function applyCustomColorHex() {
+    const colorApi = window.__willowColor;
+    const inspection = colorApi && colorApi.inspectSolidBackground(customColorHex.value.trim());
+    if (!inspection || !inspection.valid) {
+      setCustomColorValidation(['invalid-format']);
+      return false;
+    }
+    if (!inspection.safe) {
+      setCustomColorValidation(inspection.violations);
+      return false;
+    }
+    return commitCustomColor(inspection.normalized);
   }
 
   function summarizeImageData(imageData, width, height) {
@@ -1508,6 +1712,10 @@
     applyTabTitle();
     applySuggestions();
     rotateWallpaperIfDue();
+    if (customColorMigrationNotice) {
+      showToast(t(customColorMigrationNotice));
+      customColorMigrationNotice = '';
+    }
   }
 
   function createOverlay() {
@@ -1722,15 +1930,13 @@
     themeSection.hidden = (settings.bgMode === 'wallpaper');
 
     colorPresets.querySelectorAll('.color-swatch').forEach((swatch) => {
-      const selected = swatch.dataset.color === settings.bgColor;
+      const selected = swatch.dataset.color.toLowerCase() === String(settings.bgColor || '').toLowerCase();
       swatch.classList.toggle('active', selected);
       swatch.setAttribute('aria-pressed', String(selected));
     });
 
-    const color = settings.bgColor || '#F5F5DC';
-    customColorPicker.value = color;
-    customColorHex.value = settings.bgColor || '';
-    syncColorQualityWarning();
+    const color = settings.bgColor || DEFAULTS.bgColor;
+    syncCustomColorControls(color, !customColorHexInvalid);
 
     renderWallpaperGallery();
     syncWallpaperControls();
@@ -2089,67 +2295,15 @@
   colorPresets.addEventListener('click', (e) => {
     const swatch = e.target.closest('.color-swatch');
     if (!swatch) return;
-    settings.bgMode = 'color';
-    settings.bgColor = swatch.dataset.color;
-    saveSettings();
-    applyBackground();
-    scheduleWallpaperRotation();
-    syncUI();
+    commitCustomColor(swatch.dataset.color);
   });
 
-  customColorPicker.addEventListener('input', () => {
-    settings.bgMode = 'color';
-    settings.bgColor = customColorPicker.value;
-    customColorHex.value = settings.bgColor;
-    saveSettings();
-    applyBackground();
-    scheduleWallpaperRotation();
-    syncUI();
+  [customColorHue, customColorChroma, customColorLightness].forEach((slider) => {
+    slider.addEventListener('input', applyCustomColorSliders);
   });
 
-  customColorHex.addEventListener('input', () => {
-    const val = customColorHex.value.trim();
-    if (!/^#[0-9a-fA-F]{6}$/.test(val)) return;
-    const normalized = val.toLowerCase();
-    if (normalized === settings.bgColor) return;
-    settings.bgMode = 'color';
-    settings.bgColor = normalized;
-    customColorPicker.value = normalized;
-    saveSettings();
-    applyBackground();
-    scheduleWallpaperRotation();
-    syncUI();
-  });
-
-  customColorHex.addEventListener('change', () => {
-    const val = customColorHex.value.trim();
-    if (!/^#[0-9a-fA-F]{6}$/.test(val)) {
-      customColorHex.value = settings.bgColor || '';
-      return;
-    }
-    settings.bgMode = 'color';
-    settings.bgColor = val.toLowerCase();
-    customColorPicker.value = settings.bgColor;
-    saveSettings();
-    applyBackground();
-    scheduleWallpaperRotation();
-    syncUI();
-  });
-
-  if (useSuggestedColor) {
-    useSuggestedColor.addEventListener('click', () => {
-      const suggested = useSuggestedColor.dataset.color;
-      if (!/^#[0-9a-fA-F]{6}$/.test(suggested)) return;
-      settings.bgMode = 'color';
-      settings.bgColor = suggested.toLowerCase();
-      customColorPicker.value = settings.bgColor;
-      customColorHex.value = settings.bgColor;
-      saveSettings();
-      applyBackground();
-      scheduleWallpaperRotation();
-      syncUI();
-    });
-  }
+  customColorHex.addEventListener('input', applyCustomColorHex);
+  customColorHex.addEventListener('change', applyCustomColorHex);
 
   function isWallpaperFile(file) {
     return /\.(jpg|jpeg|png|webp|gif|bmp|svg)$/i.test(file.name) || /^image\//i.test(file.type || '');

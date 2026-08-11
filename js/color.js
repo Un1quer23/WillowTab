@@ -3,6 +3,19 @@
   const SEARCH_CONTROL_TARGET = 6.0;
   const CONTROL_DARK_ENDPOINT = '#272016';
   const CONTROL_LIGHT_ENDPOINT = '#f3eddf';
+  const ADAPTIVE_ACCENT_CHROMA_THRESHOLD = 0.035;
+  const ADAPTIVE_ACCENT_HUE_OFFSETS = [0, -25, 25];
+  const ADAPTIVE_ACCENT_MIN_DISTANCE = 0.07;
+  const ADAPTIVE_ACCENT_BASE_ALPHA = 0.08;
+  const ADAPTIVE_ACCENT_STRONG_ALPHA = 0.12;
+  const SOLID_COLOR_LIMITS = Object.freeze({
+    hueMin: 0,
+    hueMax: 359,
+    lightnessMin: 0.32,
+    lightnessMax: 1,
+    chromaMin: 0,
+    chromaMax: 0.14,
+  });
 
   function parseHex(value) {
     if (typeof value !== 'string') return null;
@@ -105,6 +118,66 @@
       chroma *= 0.9;
     }
     return oklchToRgb({ l: clamp(color.l), c: 0, h: color.h });
+  }
+
+  function inspectSolidBackground(value) {
+    const color = parseHex(value);
+    if (!color) {
+      return {
+        valid: false,
+        safe: false,
+        normalized: null,
+        oklch: null,
+        violations: ['invalid-format'],
+      };
+    }
+    const oklch = rgbToOklch(color);
+    const violations = [];
+    if (oklch.l < SOLID_COLOR_LIMITS.lightnessMin) violations.push('too-dark');
+    if (oklch.c > SOLID_COLOR_LIMITS.chromaMax) violations.push('too-saturated');
+    return {
+      valid: true,
+      safe: violations.length === 0,
+      normalized: toHex(color),
+      oklch,
+      violations,
+    };
+  }
+
+  function constrainSolidBackground(value) {
+    const inspection = inspectSolidBackground(value);
+    if (!inspection.valid) return null;
+    if (inspection.safe) return inspection.normalized;
+
+    let lightness = clamp(
+      inspection.oklch.l,
+      SOLID_COLOR_LIMITS.lightnessMin,
+      SOLID_COLOR_LIMITS.lightnessMax,
+    );
+    let chroma = clamp(
+      inspection.oklch.c,
+      SOLID_COLOR_LIMITS.chromaMin,
+      SOLID_COLOR_LIMITS.chromaMax,
+    );
+    const hue = (inspection.oklch.h + 360) % 360;
+
+    for (let attempt = 0; attempt < 32; attempt += 1) {
+      const constrained = toHex(gamutMappedOklch({ l: lightness, c: chroma, h: hue }));
+      const resolved = inspectSolidBackground(constrained);
+      if (resolved.safe) return resolved.normalized;
+      if (resolved.violations.includes('too-dark')) {
+        lightness = Math.min(SOLID_COLOR_LIMITS.lightnessMax, lightness + 0.001);
+      }
+      if (resolved.violations.includes('too-saturated')) {
+        chroma = Math.max(SOLID_COLOR_LIMITS.chromaMin, chroma - 0.001);
+      }
+    }
+
+    return toHex(gamutMappedOklch({
+      l: Math.min(SOLID_COLOR_LIMITS.lightnessMax, lightness + 0.01),
+      c: Math.max(SOLID_COLOR_LIMITS.chromaMin, chroma - 0.01),
+      h: hue,
+    }));
   }
 
   function readableColor(surfaces, desired, endpoint, target) {
@@ -217,6 +290,112 @@
     return Math.sqrt((a.l - b.l) ** 2 + (a.c - b.c) ** 2 + (hueDelta * Math.min(a.c, b.c)) ** 2);
   }
 
+  function searchAccentCandidateDiagnostics(candidate) {
+    return {
+      hueOffset: candidate.hueOffset,
+      desired: candidate.desired,
+      color: candidate.result.hex,
+      actualHue: candidate.actualHue,
+      ratio: candidate.result.ratio,
+      distance: candidate.distance,
+      hoverSurface: candidate.result.hoverSurface,
+      meetsTarget: candidate.result.ratio >= SEARCH_CONTROL_TARGET,
+    };
+  }
+
+  function solveAdaptiveSearchAccent(backgroundOklch, darkText, input, endpoint, searchControl, brandAccent) {
+    const brandDistance = colorDistance(searchControl.hex, brandAccent.hex);
+    if (backgroundOklch.c < ADAPTIVE_ACCENT_CHROMA_THRESHOLD) {
+      return {
+        result: { ...brandAccent },
+        diagnostics: {
+          strategy: 'brand',
+          hueOffset: null,
+          overlayAlpha: ADAPTIVE_ACCENT_BASE_ALPHA,
+          distance: brandDistance,
+          candidates: [{
+            hueOffset: null,
+            desired: brandAccent.hex,
+            color: brandAccent.hex,
+            actualHue: rgbToOklch(parseHex(brandAccent.hex)).h,
+            ratio: brandAccent.ratio,
+            distance: brandDistance,
+            hoverSurface: brandAccent.hoverSurface,
+            meetsTarget: brandAccent.ratio >= SEARCH_CONTROL_TARGET,
+          }],
+        },
+      };
+    }
+
+    const desiredChroma = clamp(backgroundOklch.c * 1.15, 0.1, 0.16);
+    const desiredLightness = darkText ? 0.62 : 0.72;
+    const solveCandidates = (overlayAlpha) => ADAPTIVE_ACCENT_HUE_OFFSETS.map((hueOffset, order) => {
+      const desired = toHex(gamutMappedOklch({
+        l: desiredLightness,
+        c: desiredChroma,
+        h: (backgroundOklch.h + hueOffset + 360) % 360,
+      }));
+      const result = readableOverlayColor(
+        input,
+        desired,
+        endpoint,
+        SEARCH_CONTROL_TARGET,
+        overlayAlpha,
+      );
+      return {
+        order,
+        hueOffset,
+        desired,
+        result,
+        actualHue: rgbToOklch(parseHex(result.hex)).h,
+        distance: colorDistance(searchControl.hex, result.hex),
+      };
+    });
+
+    let overlayAlpha = ADAPTIVE_ACCENT_BASE_ALPHA;
+    let candidates = solveCandidates(overlayAlpha);
+    const baseCandidates = candidates;
+    const distinctCandidates = candidates
+      .filter((candidate) => (
+        candidate.result.ratio >= SEARCH_CONTROL_TARGET
+        && candidate.distance >= ADAPTIVE_ACCENT_MIN_DISTANCE
+      ))
+      .sort((first, second) => (
+        Math.abs(first.hueOffset) - Math.abs(second.hueOffset)
+        || second.distance - first.distance
+        || first.order - second.order
+      ));
+    let selected = distinctCandidates[0];
+
+    if (!selected) {
+      overlayAlpha = ADAPTIVE_ACCENT_STRONG_ALPHA;
+      candidates = solveCandidates(overlayAlpha);
+      if (!candidates.some((candidate) => candidate.result.ratio >= SEARCH_CONTROL_TARGET)) {
+        overlayAlpha = ADAPTIVE_ACCENT_BASE_ALPHA;
+        candidates = baseCandidates;
+      }
+      selected = [...candidates].sort((first, second) => {
+        const firstMeetsTarget = first.result.ratio >= SEARCH_CONTROL_TARGET ? 1 : 0;
+        const secondMeetsTarget = second.result.ratio >= SEARCH_CONTROL_TARGET ? 1 : 0;
+        return secondMeetsTarget - firstMeetsTarget
+          || second.distance - first.distance
+          || Math.abs(first.hueOffset) - Math.abs(second.hueOffset)
+          || first.order - second.order;
+      })[0];
+    }
+
+    return {
+      result: selected.result,
+      diagnostics: {
+        strategy: 'analogous',
+        hueOffset: selected.hueOffset,
+        overlayAlpha,
+        distance: selected.distance,
+        candidates: candidates.map(searchAccentCandidateDiagnostics),
+      },
+    };
+  }
+
   function createSolidPalette(backgroundHex) {
     const background = parseHex(backgroundHex);
     if (!background) return null;
@@ -259,7 +438,7 @@
       c: Math.min(0.055, backgroundOklch.c * 0.28 + 0.012),
       h: hue,
     });
-    const brandAccent = darkText ? '#c87a3c' : '#e8964a';
+    const desiredBrandAccent = darkText ? '#e65f10' : '#e8964a';
     const canvasPrimary = readableColor([background], desiredPrimary, endpoint, 4.5);
     const canvasSecondary = readableColor([background], desiredSecondary, endpoint, 4.5);
     const canvasLargeSurfaces = [background, secondary, tertiary];
@@ -299,25 +478,49 @@
       controlEndpoint,
       SEARCH_CONTROL_TARGET,
     );
-    const searchAccent = readableOverlayColor(
+    const brandAccent = readableOverlayColor(
       input,
-      brandAccent,
+      desiredBrandAccent,
       accentEndpoint,
       SEARCH_CONTROL_TARGET,
     );
+    const adaptiveSearchAccent = solveAdaptiveSearchAccent(
+      backgroundOklch,
+      darkText,
+      input,
+      endpoint,
+      searchControl,
+      brandAccent,
+    );
+    const searchAccent = adaptiveSearchAccent.result;
     searchControl.meetsTarget = searchControl.ratio >= SEARCH_CONTROL_TARGET;
     searchControl.bestEffort = !searchControl.meetsTarget;
+    brandAccent.meetsTarget = brandAccent.ratio >= SEARCH_CONTROL_TARGET;
+    brandAccent.bestEffort = !brandAccent.meetsTarget;
     searchAccent.meetsTarget = searchAccent.ratio >= SEARCH_CONTROL_TARGET;
     searchAccent.bestEffort = !searchAccent.meetsTarget;
-    const accentColor = parseHex(searchAccent.hex);
-    const selectedSurface = composite(accentColor, input, 0.08);
-    const accentText = readableColor([selectedSurface], accentColor, endpoint, 4.5);
+    const brandAccentColor = parseHex(brandAccent.hex);
+    const brandSelectedSurface = composite(brandAccentColor, input, ADAPTIVE_ACCENT_BASE_ALPHA);
+    const accentText = readableColor([brandSelectedSurface], brandAccentColor, endpoint, 4.5);
+    const searchAccentColor = parseHex(searchAccent.hex);
+    const searchSelectedSurface = composite(
+      searchAccentColor,
+      input,
+      adaptiveSearchAccent.diagnostics.overlayAlpha,
+    );
+    const searchSelectedText = readableColor(
+      [searchSelectedSurface],
+      searchAccentColor,
+      endpoint,
+      4.5,
+    );
     const hierarchyDistance = colorDistance(canvasPrimary.hex, canvasSecondary.hex);
     const maximumPull = Math.max(
       canvasPrimary.amount,
       canvasSecondary.amount,
       searchText.amount,
       searchControl.amount,
+      brandAccent.amount,
       searchAccent.amount,
     );
     const rawExtreme = backgroundOklch.c >= 0.24 || backgroundOklch.l <= 0.1 || backgroundOklch.l >= 0.94;
@@ -339,11 +542,13 @@
         chroma: backgroundOklch.c,
         hierarchyDistance,
         maximumPull,
+        searchAccent: adaptiveSearchAccent.diagnostics,
       },
       surfaces: {
         input: toHex(input),
         secondary: bgSecondary,
         tertiary: bgTertiary,
+        searchSelected: toHex(searchSelectedSurface),
       },
       colors: {
         canvasPrimary: canvasPrimary.hex,
@@ -353,8 +558,10 @@
         searchText: searchText.hex,
         searchPlaceholder: searchPlaceholder.hex,
         searchControl: searchControl.hex,
+        brandAccent: brandAccent.hex,
         searchAccent: searchAccent.hex,
         accentText: accentText.hex,
+        searchSelectedText: searchSelectedText.hex,
       },
       results: {
         canvasPrimary,
@@ -364,13 +571,16 @@
         searchText,
         searchPlaceholder,
         searchControl,
+        brandAccent,
         searchAccent,
         accentText,
+        searchSelectedText,
       },
     };
   }
 
   const api = {
+    SOLID_COLOR_LIMITS,
     parseHex,
     toHex,
     mix,
@@ -381,6 +591,8 @@
     rgbToOklch,
     oklchToRgb,
     gamutMappedOklch,
+    inspectSolidBackground,
+    constrainSolidBackground,
     readableColor,
     createSolidPalette,
   };
