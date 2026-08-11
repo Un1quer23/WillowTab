@@ -14,8 +14,9 @@ Use the centered search box to start searching quickly. WillowTab supports Googl
 
 ### Personal Backgrounds
 
-Use a solid color background or local images, manage multiple wallpapers, and switch them manually or automatically. In wallpaper mode,
-WillowTab adapts text, controls, and the search surface to the selected image.
+Use a solid color background or local images, manage multiple wallpapers, and switch them manually or automatically. Solid color mode
+offers several soft presets and can also be adjusted manually. The search area adapts its accent color to the background; in wallpaper
+mode, WillowTab adapts text, controls, and the search surface to the selected image.
 
 ### Light and Dark Themes
 
@@ -61,6 +62,10 @@ flowchart TD
   including the base canvas, gradient endpoints, input surfaces, and selected or hover states. Body and search text plus search controls
   use separate targets; custom solid colors target `4.5:1` for ordinary text and `6.0:1` for the clock and two search icons. The solver
   tightens successful colors toward the limiting surface so they remain warm rather than jumping directly to pure black or white.
+  Custom solid colors are limited to OKLCH lightness `0.32–1.00` and chroma `0–0.14`; previously saved out-of-range colors are projected
+  to the nearest safe value on load. Chromatic backgrounds choose a search accent from the background hue and its `±25°` neighbors,
+  while low-chroma backgrounds retain the warm brand accent; the settings panel and search area use separate `brandAccent` and
+  `searchAccent` roles.
 - [`js/wallpaper-color.js`](js/wallpaper-color.js) samples the actual `cover` crop at the current viewport and DPR, composites the global
   overlay and readability layer, reproduces the glass blur, and masks the exact SVG control shapes. The control solver first tries one
   warm candidate for each icon region, then uses the candidate that maximizes the lower of the two final-surface contrast values. The
@@ -71,7 +76,7 @@ flowchart TD
   resized viewport result.
 - [`scripts/validate-colors.js`](scripts/validate-colors.js) checks a 4,096-color RGB grid, 12 representative colors, fixed theme roles,
   light/dark/split/high-complexity wallpaper surfaces, strict shared-color controls, maximin candidate selection, best-effort diagnostics,
-  and one-step color boundaries.
+  deterministic safe-gamut projection, neighboring-hue search accents, soft presets, and one-step color boundaries.
 
 ## Install
 
