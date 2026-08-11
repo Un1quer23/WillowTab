@@ -48,7 +48,7 @@ flowchart TD
     E --> F["Final surface composition<br/>Overlay, readability, glass blur and SVG masks"]
     D --> G["Role-specific contrast solver"]
     F --> G
-    H["Targets by role and mode<br/>Dark clock and input text 9.0:1<br/>Dark search icons and engine-menu text 7.0:1<br/>Light, solid and wallpaper clock/controls 6.0:1"] --> G
+    H["Targets by role and mode<br/><br/>Dark theme<br/>Clock and input text: 9.0:1<br/>Search icons and engine-menu text: 7.0:1<br/><br/>Light, solid and wallpaper modes<br/>Clock and search controls: 6.0:1"] --> G
     G --> I["Semantic CSS variables"]
     I --> J["Clock, text and search controls"]
     K["Versioned cache keys and generation tokens"] -. Guard asynchronous analysis .-> E
