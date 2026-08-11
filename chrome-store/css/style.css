@@ -37,6 +37,7 @@ body.has-wallpaper .wallpaper-confirm-dialog {
   --canvas-control-color: #8d8d7f;
   --search-surface: var(--input-bg);
   --search-text-color: #72726c;
+  --search-input-text: var(--search-text-color);
   --search-placeholder-color: #75745f;
   --search-control-color: #606054;
   --search-control-hover-color: #8c490b;
@@ -144,9 +145,10 @@ html[data-color-scheme="dark"] {
   --canvas-text-primary: #7f7d77;
   --canvas-text-secondary: #7e7e7a;
   --canvas-greeting-text: #969691;
-  --canvas-large-text: #c1beb5;
+  --canvas-large-text: #cdc9bf;
   --canvas-control-color: #656158;
   --search-text-color: #918e87;
+  --search-input-text: #c1bcb3;
   --search-placeholder-color: #848480;
   --search-control-color: #aaa79a;
   --search-control-hover-color: #e49c5a;
@@ -644,7 +646,7 @@ body.has-custom-bg .greeting {
   border: 1px solid var(--border);
   border-radius: var(--radius-ui);
   background: var(--search-surface);
-  color: var(--search-text-color);
+  color: var(--search-input-text);
   font-family: var(--font-body);
   font-size: 1.05rem;
   outline: none;

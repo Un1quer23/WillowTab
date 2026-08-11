@@ -48,7 +48,7 @@ flowchart TD
     E --> F["Final surface composition<br/>Overlay, readability, glass blur and SVG masks"]
     D --> G["Role-specific contrast solver"]
     F --> G
-    H["Targets by role and mode<br/>Dark clock 8.0:1; dark search controls 7.0:1<br/>Light, solid and wallpaper clock/controls 6.0:1"] --> G
+    H["Targets by role and mode<br/>Dark clock and input text 9.0:1<br/>Dark search icons and engine-menu text 7.0:1<br/>Light, solid and wallpaper clock/controls 6.0:1"] --> G
     G --> I["Semantic CSS variables"]
     I --> J["Clock, text and search controls"]
     K["Versioned cache keys and generation tokens"] -. Guard asynchronous analysis .-> E
@@ -56,8 +56,9 @@ flowchart TD
 
 - [`css/style.css`](css/style.css) exposes semantic tokens for canvas text, search surfaces and controls, panels, accents, danger states,
   and wallpaper glass. Components consume these roles instead of sharing raw light/dark color values. The fixed dark theme uses stronger
-  role-specific targets than the light theme: `8.0:1` for the clock, `7.0:1` for the two search icons and engine-menu text, `5.0:1` for
-  the greeting, and `3.8:1` for the decorative motto.
+  role-specific targets than the light theme: `9.0:1` for the clock and search input text, `7.0:1` for the two search icons and
+  engine-menu text, `5.0:1` for the greeting, and `3.8:1` for the decorative motto. The input text has its own semantic token so
+  raising its contrast does not also brighten the placeholder, motto, search suggestions, or other secondary copy.
 - [`js/color.js`](js/color.js) generates solid-background palettes in OKLCH and evaluates each role against every surface it may occupy,
   including the base canvas, gradient endpoints, input surfaces, and selected or hover states. Body and search text plus search controls
   use separate targets; custom solid colors target `4.5:1` for ordinary text and `6.0:1` for the clock and two search icons. The solver
@@ -98,11 +99,11 @@ For other Chromium-based browsers, install manually from GitHub Releases:
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-Download `WillowTab-v1.7.5.zip`, the generic build for Chromium-based browsers.
+Download `WillowTab-v1.7.6.zip`, the generic build for Chromium-based browsers.
 
 Manual installation steps:
 
-1. Download `WillowTab-v1.7.5.zip`.
+1. Download `WillowTab-v1.7.6.zip`.
 2. Extract it to a local folder.
 3. Open your browser's extension management page, such as `chrome://extensions`.
 4. Enable Developer mode.
@@ -110,7 +111,7 @@ Manual installation steps:
 
 ### Chrome Web Store Package
 
-`WillowTab-for-Chrome-v1.7.5.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
+`WillowTab-for-Chrome-v1.7.6.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
 
 ## Project Structure
 
