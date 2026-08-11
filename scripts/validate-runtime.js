@@ -95,6 +95,32 @@ function assertRuntimeWiring() {
   }
 }
 
+function assertPrivacyDisclosure() {
+  for (const prefix of ['', 'chrome-store/']) {
+    const label = prefix || 'generic';
+    const privacy = fs.readFileSync(path.join(root, prefix, 'privacy-policy.html'), 'utf8');
+    const html = fs.readFileSync(path.join(root, prefix, 'newtab.html'), 'utf8');
+    const i18n = fs.readFileSync(path.join(root, prefix, 'js', 'i18n.js'), 'utf8');
+
+    assert.match(privacy, /datetime="2026-08-11"/, `${label} privacy date is stale`);
+    assert.match(privacy, /privacy\.section4\.li3/, `${label} privacy policy omits the search permission`);
+    assert.match(privacy, /搜索联想开关/, `${label} privacy policy omits the local suggestions setting`);
+    assert.match(privacy, /IP 地址和浏览器请求头/, `${label} privacy policy omits routine network information`);
+    assert.doesNotMatch(privacy, /不收集、不存储、不传输|不存在服务器端数据泄露的风险/);
+
+    assert.match(html, /settings\.suggestionsDesc">开启后，输入的关键词会发送到当前选择的搜索引擎/);
+    assert.match(i18n, /'privacy\.section4\.li3':/);
+    assert.match(i18n, /August 11, 2026/);
+    assert.match(i18n, /such as an IP address and browser request headers/);
+    assert.doesNotMatch(i18n, /completely offline|no risk of server-side data breaches/);
+  }
+
+  const genericManifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
+  const chromeManifest = JSON.parse(fs.readFileSync(path.join(root, 'chrome-store', 'manifest.json'), 'utf8'));
+  assert.strictEqual(genericManifest.permissions?.includes('search') || false, false);
+  assert.strictEqual(chromeManifest.permissions?.includes('search'), true);
+}
+
 function runCustomColorMigration(settingsSource, bgColor) {
   const start = settingsSource.indexOf('  function normalizeLoadedCustomColor() {');
   const end = settingsSource.indexOf('  function loadSettings() {', start);
@@ -196,6 +222,7 @@ function assertMinuteClock() {
 
 assertPolicyBoundaries();
 assertRuntimeWiring();
+assertPrivacyDisclosure();
 assertCustomColorMigration();
 assertMinuteClock();
 console.log('Runtime validation passed.');

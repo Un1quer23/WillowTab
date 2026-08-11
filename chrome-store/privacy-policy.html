@@ -22,7 +22,7 @@
 <p class="update-date">
   <span data-i18n="privacy.effectiveLabel">生效日期：</span><time datetime="2026-05-08" data-i18n="privacy.effectiveValue">2026年5月8日</time>
   <span aria-hidden="true">　|　</span>
-  <span data-i18n="privacy.updatedLabel">最后更新：</span><time datetime="2026-06-13" data-i18n="privacy.updatedValue">2026年6月13日</time>
+  <span data-i18n="privacy.updatedLabel">最后更新：</span><time datetime="2026-08-11" data-i18n="privacy.updatedValue">2026年8月11日</time>
 </p>
 
 <h2 data-i18n="privacy.section1.title">一、引言</h2>
@@ -32,32 +32,33 @@
 <h2 data-i18n="privacy.section2.title">二、我们收集什么信息</h2>
 
 <h3 data-i18n="privacy.section2_1.title">2.1 我们不收集的信息</h3>
-<p data-i18n-html="privacy.section2_1.p">本扩展<strong>不收集、不存储、不传输</strong>任何可识别个人身份的信息，包括但不限于：姓名、电子邮箱、电话号码、地理位置、IP 地址、设备标识符、浏览历史、书签数据。</p>
+<p data-i18n="privacy.section2_1.p">WillowTab 开发者不会收集或保存你的姓名、电子邮箱、电话号码、精确地理位置、设备标识符、浏览历史或书签数据。本扩展不建立用户账户，也不使用这些信息进行用户画像或行为跟踪。搜索相关数据的传输方式见第三节。</p>
 
 <h3 data-i18n="privacy.section2_2.title">2.2 本地存储的信息</h3>
-<p data-i18n-html="privacy.section2_2.p1">以下数据仅存储在你设备的浏览器本地存储空间（localStorage 与 IndexedDB）中，<strong>完全离线</strong>，不会上传至任何服务器：</p>
+<p data-i18n-html="privacy.section2_2.p1">以下数据通过浏览器本地存储空间（localStorage 与 IndexedDB）<strong>仅保存在你的设备上</strong>，不会上传至 WillowTab 运营的服务器：</p>
 <ul>
   <li data-i18n="privacy.section2_2.li1">背景模式偏好（纯色 / 壁纸）</li>
   <li data-i18n="privacy.section2_2.li2">自定义背景颜色值</li>
-  <li data-i18n="privacy.section2_2.li3">壁纸图片文件（本地压缩后存储在 IndexedDB；localStorage 仅保存壁纸名称、ID 和亮度等元数据）</li>
-  <li data-i18n="privacy.section2_2.li4">字体、圆角、阴影强度等界面偏好</li>
+  <li data-i18n="privacy.section2_2.li3">壁纸图片文件，以及名称、相对路径、ID、亮度、复杂度和创建时间等本地元数据</li>
+  <li data-i18n="privacy.section2_2.li4">字体、圆角、阴影、遮罩强度、设置按钮位置和自定义标签页标题等界面偏好</li>
   <li data-i18n="privacy.section2_2.li5">显示模式偏好（跟随系统 / 深色 / 浅色）</li>
-  <li data-i18n="privacy.section2_2.li6">当前选择的搜索引擎</li>
-  <li data-i18n="privacy.section2_2.li7">设置按钮位置偏好</li>
+  <li data-i18n="privacy.section2_2.li6">当前选择的搜索引擎和搜索联想开关</li>
+  <li data-i18n="privacy.section2_2.li7">当前壁纸、可读性保护、搜索框样式和壁纸轮播设置</li>
 </ul>
-<p data-i18n="privacy.section2_2.p2">你可以随时通过浏览器清除网站数据来删除上述所有本地信息。</p>
+<p data-i18n="privacy.section2_2.p2">你可以通过卸载本扩展，或使用浏览器提供的扩展数据或网站数据清理功能，删除上述本地信息；具体可用方式取决于你使用的浏览器。</p>
 
 <h2 data-i18n="privacy.section3.title">三、网络请求</h2>
-<p data-i18n-html="privacy.section3.p">本扩展仅在以下场景发起网络请求，<strong>不附加任何用户标识信息</strong>：</p>
+<p data-i18n="privacy.section3.p">本扩展仅在以下场景发起网络请求；WillowTab 不运营用于接收或转发这些请求的中转服务器：</p>
 
 <h3 data-i18n="privacy.section3_1.title">3.1 搜索建议</h3>
-<p data-i18n="privacy.section3_1.p">当搜索联想开启时，你在搜索框中输入的关键词会被发送到当前选择的搜索引擎（Google、百度、Bing 或 DuckDuckGo）以获取自动补全建议。通用版默认开启搜索联想，可在设置中关闭；Chrome Web Store 版默认关闭，只有在你开启并授权后才会请求建议接口。提交搜索时，支持“浏览器默认”的版本会调用浏览器默认搜索服务；手动选择其他搜索引擎时，关键词会直接发送到所选搜索服务。这些请求不包含任何个人身份信息或设备标识符。</p>
+<p data-i18n="privacy.section3_1.p">当搜索联想开启时，你在搜索框中输入的关键词会直接发送到当前选择的搜索引擎（Google、百度、Bing 或 DuckDuckGo）以获取自动补全建议。通用版默认开启搜索联想，可在设置中关闭；Chrome Web Store 版默认关闭，只有在你主动开启并授权相应主机权限后才会请求建议接口。提交搜索时，支持“浏览器默认”的版本会通过浏览器的默认搜索服务提交查询；手动选择其他搜索引擎时，关键词会直接发送到该搜索服务。WillowTab 不会主动附加账户标识或设备 ID；所选搜索服务仍会接收查询词以及完成 HTTPS 请求所需的常规网络信息（例如 IP 地址和浏览器请求头），并按照其自身的隐私政策处理这些信息。</p>
 
 <h2 data-i18n="privacy.section4.title">四、权限说明</h2>
 <p data-i18n="privacy.section4.p">本扩展在浏览器中声明了以下权限，均仅用于实现核心功能：</p>
 <ul>
   <li data-i18n-html="privacy.section4.li1"><strong>新标签页覆盖（newtab）</strong>：用于替换浏览器默认新标签页，显示 WillowTab 界面。</li>
   <li data-i18n-html="privacy.section4.li2"><strong>主机权限（host_permissions / optional_host_permissions）</strong>：用于向所选搜索引擎发送搜索建议请求。通用版使用固定主机权限，并提供搜索联想开关；Chrome Web Store 版使用可选主机权限，仅在开启搜索联想时请求，关闭后会撤销。</li>
+  <li data-i18n-html="privacy.section4.li3"><strong>搜索权限（search，仅 Chrome Web Store 版）</strong>：用于通过浏览器的搜索 API 将查询词提交给当前配置的默认搜索服务，并在当前标签页打开结果。</li>
 </ul>
 
 <h2 data-i18n="privacy.section5.title">五、第三方服务</h2>
@@ -67,7 +68,7 @@
 </ul>
 
 <h2 data-i18n="privacy.section6.title">六、信息安全</h2>
-<p data-i18n="privacy.section6.p1">所有个性化设置和壁纸数据均存储在浏览器本地沙箱中，受浏览器自身的安全机制保护。由于数据完全不上传至任何外部服务器，不存在服务器端数据泄露的风险。</p>
+<p data-i18n="privacy.section6.p1">所有个性化设置和壁纸数据均存储在浏览器本地沙箱中，受浏览器自身的安全机制保护。WillowTab 不运营用于保存这些设置或壁纸的服务器；搜索建议和搜索提交涉及的查询词则由所选搜索服务处理，其安全和保留方式适用该服务的政策。</p>
 <p data-i18n="privacy.section6.p2">你应妥善保管自己的设备，避免他人物理接触导致本地数据被查看。</p>
 
 <h2 data-i18n="privacy.section7.title">七、未成年人保护</h2>
