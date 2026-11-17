@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const zlib = require('zlib');
 
 const root = path.resolve(__dirname, '..');
 const SUGGESTION_ORIGINS = [
@@ -43,35 +44,67 @@ function getPackageFiles() {
 
 function readZipEntries(zipPath) {
   const buf = fs.readFileSync(zipPath);
+  const label = path.relative(root, zipPath);
   let eocdOffset = -1;
-  for (let i = buf.length - 22; i >= 0; i--) {
-    if (buf.readUInt32LE(i) === 0x06054b50) {
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 22 - 0xffff); i--) {
+    if (buf.readUInt32LE(i) === 0x06054b50 && i + 22 + buf.readUInt16LE(i + 20) === buf.length) {
       eocdOffset = i;
       break;
     }
   }
-  if (eocdOffset < 0) fail(`Invalid zip, missing EOCD: ${path.relative(root, zipPath)}`);
+  if (eocdOffset < 0) fail(`Invalid zip, missing EOCD: ${label}`);
 
   const entryCount = buf.readUInt16LE(eocdOffset + 10);
+  const centralDirectorySize = buf.readUInt32LE(eocdOffset + 12);
   const centralDirectoryOffset = buf.readUInt32LE(eocdOffset + 16);
+  if (buf.readUInt32LE(eocdOffset + 4) !== 0 || buf.readUInt16LE(eocdOffset + 8) !== entryCount ||
+      centralDirectoryOffset + centralDirectorySize !== eocdOffset) {
+    fail(`Invalid zip central directory: ${label}`);
+  }
   const entries = [];
   let offset = centralDirectoryOffset;
 
   for (let i = 0; i < entryCount; i++) {
-    if (buf.readUInt32LE(offset) !== 0x02014b50) {
-      fail(`Invalid central directory entry in ${path.relative(root, zipPath)}`);
+    if (offset + 46 > eocdOffset || buf.readUInt32LE(offset) !== 0x02014b50) {
+      fail(`Invalid central directory entry in ${label}`);
     }
+    const flags = buf.readUInt16LE(offset + 8);
+    const method = buf.readUInt16LE(offset + 10);
+    const crc = buf.readUInt32LE(offset + 16);
+    const compressedSize = buf.readUInt32LE(offset + 20);
+    const uncompressedSize = buf.readUInt32LE(offset + 24);
     const nameLength = buf.readUInt16LE(offset + 28);
     const extraLength = buf.readUInt16LE(offset + 30);
     const commentLength = buf.readUInt16LE(offset + 32);
-    entries.push({
-      name: buf.toString('utf8', offset + 46, offset + 46 + nameLength),
-      crc: buf.readUInt32LE(offset + 16),
-      uncompressedSize: buf.readUInt32LE(offset + 24),
-    });
-    offset += 46 + nameLength + extraLength + commentLength;
+    const nextOffset = offset + 46 + nameLength + extraLength + commentLength;
+    const localOffset = buf.readUInt32LE(offset + 42);
+    if (!nameLength || nextOffset > eocdOffset || (flags & 9) || ![0, 8].includes(method) ||
+        localOffset + 30 > centralDirectoryOffset || buf.readUInt32LE(localOffset) !== 0x04034b50) {
+      fail(`Invalid zip entry in ${label}`);
+    }
+    const nameBytes = buf.subarray(offset + 46, offset + 46 + nameLength);
+    const name = nameBytes.toString('utf8');
+    const localNameLength = buf.readUInt16LE(localOffset + 26);
+    const dataOffset = localOffset + 30 + localNameLength + buf.readUInt16LE(localOffset + 28);
+    const dataEnd = dataOffset + compressedSize;
+    if (dataEnd > centralDirectoryOffset || localNameLength !== nameLength ||
+        !nameBytes.equals(buf.subarray(localOffset + 30, localOffset + 30 + localNameLength)) ||
+        buf.readUInt16LE(localOffset + 6) !== flags || buf.readUInt16LE(localOffset + 8) !== method ||
+        buf.readUInt32LE(localOffset + 14) !== crc || buf.readUInt32LE(localOffset + 18) !== compressedSize ||
+        buf.readUInt32LE(localOffset + 22) !== uncompressedSize) {
+      fail(`Invalid local zip entry in ${label}: ${name}`);
+    }
+    entries.push({ name, method, crc, uncompressedSize, data: buf.subarray(dataOffset, dataEnd), localOffset, dataEnd });
+    offset = nextOffset;
   }
 
+  if (offset !== eocdOffset) fail(`Unexpected zip directory data in ${label}`);
+  let localEnd = 0;
+  for (const entry of [...entries].sort((first, second) => first.localOffset - second.localOffset)) {
+    if (entry.localOffset !== localEnd) fail(`Unexpected local zip data in ${label}: ${entry.name}`);
+    localEnd = entry.dataEnd;
+  }
+  if (localEnd !== centralDirectoryOffset) fail(`Unexpected zip data before central directory in ${label}`);
   return entries;
 }
 
@@ -109,12 +142,26 @@ function crc32(buf) {
 }
 
 function assertZipFresh(target, entries) {
-  const byName = new Map(entries.map((entry) => [entry.name, entry]));
-  for (const [name, entry] of byName) {
-    const content = fs.readFileSync(path.join(target.cwd, name));
-    const actualCrc = crc32(content);
-    if (entry.uncompressedSize !== content.length || entry.crc !== actualCrc) {
-      fail(`${target.name} zip contains stale content for ${name}`);
+  for (const entry of entries) {
+    const source = fs.readFileSync(path.join(target.cwd, entry.name));
+    if (entry.uncompressedSize !== source.length) {
+      fail(`${target.name} zip contains stale content for ${entry.name}`);
+    }
+    let content = entry.data;
+    if (entry.method === 8) {
+      try {
+        const result = zlib.inflateRawSync(entry.data, { maxOutputLength: Math.max(1, source.length), info: true });
+        if (result.engine.bytesWritten !== entry.data.length) throw new Error('Unexpected trailing compressed data');
+        content = result.buffer;
+      } catch (error) {
+        fail(`${target.name} zip entry could not be extracted: ${entry.name} (${error.message})`);
+      }
+    }
+    if (content.length !== entry.uncompressedSize || crc32(content) !== entry.crc) {
+      fail(`${target.name} zip entry has corrupt content: ${entry.name}`);
+    }
+    if (!content.equals(source)) {
+      fail(`${target.name} zip contains stale content for ${entry.name}`);
     }
   }
 }
@@ -168,13 +215,6 @@ function assertExactStringSet(actual, expected, label) {
   }
 }
 
-function readSuggestionDefault(file, label) {
-  const source = fs.readFileSync(file, 'utf8');
-  const match = /\benableSuggestions:\s*(true|false)\b/.exec(source);
-  if (!match) fail(`Unable to read ${label} enableSuggestions default`);
-  return match[1] === 'true';
-}
-
 function assertVariantSemantics(manifests) {
   const generic = manifests.find(({ target }) => target.name === 'generic');
   const chrome = manifests.find(({ target }) => target.name === 'chrome');
@@ -188,27 +228,16 @@ function assertVariantSemantics(manifests) {
   assertExactStringSet(chrome.manifest.optional_host_permissions, SUGGESTION_ORIGINS, 'chrome optional_host_permissions');
   assertExactStringSet(chrome.manifest.host_permissions, [], 'chrome host_permissions');
 
-  const genericSettings = path.join(root, 'js', 'settings.js');
-  const chromeSettings = path.join(root, 'chrome-store', 'js', 'settings.js');
-  if (readSuggestionDefault(genericSettings, 'generic') !== true) {
-    fail('generic suggestions must default to enabled');
+  for (const { target } of manifests) {
+    const html = fs.readFileSync(path.join(target.cwd, 'newtab.html'), 'utf8');
+    if (/<html\b[^>]*\bdata-variant="chrome-store"/.test(html) !== (target.name === 'chrome')) {
+      fail(`${target.name} has an incorrect runtime variant`);
+    }
   }
-  if (readSuggestionDefault(chromeSettings, 'chrome') !== false) {
-    fail('Chrome Store suggestions must default to disabled');
-  }
-
-  const chromeSettingsSource = fs.readFileSync(chromeSettings, 'utf8');
-  if (!/chrome\.permissions\.request\(\{\s*origins:\s*SUGGESTION_ORIGINS\s*\}\)/.test(chromeSettingsSource)) {
-    fail('Chrome Store settings is missing the optional suggestion-permission request path');
-  }
-  if (!/chrome\.permissions\.remove\(\{\s*origins:\s*SUGGESTION_ORIGINS\s*\}\)/.test(chromeSettingsSource)) {
-    fail('Chrome Store settings is missing the optional suggestion-permission removal path');
-  }
-
-  const genericPolicy = fs.readFileSync(path.join(root, 'js', 'wallpaper-policy.js'));
-  const chromePolicy = fs.readFileSync(path.join(root, 'chrome-store', 'js', 'wallpaper-policy.js'));
-  if (!genericPolicy.equals(chromePolicy)) {
-    fail('generic and Chrome Store wallpaper-policy.js differ');
+  for (const file of ['assets.js', 'preferences.js', 'search.js', 'settings.js', 'theme.js', 'wallpaper-color.js', 'wallpaper-policy.js']) {
+    const genericFile = fs.readFileSync(path.join(generic.target.cwd, 'js', file));
+    const chromeFile = fs.readFileSync(path.join(chrome.target.cwd, 'js', file));
+    if (!genericFile.equals(chromeFile)) fail(`generic and Chrome Store ${file} differ`);
   }
 }
 

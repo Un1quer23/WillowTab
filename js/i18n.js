@@ -12,6 +12,7 @@
       'search.motto': 'Think Different.',
       'search.input': '搜索关键词',
       'search.toggleEngine': '切换搜索引擎',
+      'search.submit': '搜索',
       'search.settings': '设置',
 
       'engine.baidu': '百度',
@@ -135,6 +136,8 @@
       'toast.wallpaperFailed': '有 {failed} 张壁纸无法保存，已有壁纸已保留',
       'toast.wallpaperImportResult': '导入完成：成功 {added} 张，跳过 {skipped} 张，因大小限制拒绝 {limited} 张，失败 {failed} 张',
       'error.wallpaperImportUnavailable': '壁纸导入组件不可用，请重新加载页面。',
+      'error.wallpaperStorageUnavailable': '壁纸存储暂时不可用，请重试。',
+      'error.settingsSaveFailed': '设置暂时无法保存，请重试。',
       'error.wallpaperBatchCount': '一次最多导入 {limit} 张壁纸，未导入任何文件。',
       'error.wallpaperBatchSize': '一次导入总大小不能超过 {limit}，未导入任何文件。',
       'error.wallpaperImportRolledBack': '壁纸设置未能保存，本次导入已回滚。',
@@ -207,6 +210,7 @@
       'search.motto': 'Think Different.',
       'search.input': 'Search query',
       'search.toggleEngine': 'Switch search engine',
+      'search.submit': 'Search',
       'search.settings': 'Settings',
 
       'engine.baidu': 'Baidu',
@@ -330,6 +334,8 @@
       'toast.wallpaperFailed': '{failed} wallpapers could not be saved. Existing wallpapers were kept.',
       'toast.wallpaperImportResult': 'Import complete: {added} added, {skipped} skipped, {limited} rejected by size limits, {failed} failed',
       'error.wallpaperImportUnavailable': 'Wallpaper import is unavailable. Reload the page and try again.',
+      'error.wallpaperStorageUnavailable': 'Wallpaper storage is unavailable. Try again.',
+      'error.settingsSaveFailed': 'Settings could not be saved. Try again.',
       'error.wallpaperBatchCount': 'You can import up to {limit} wallpapers at once. No files were imported.',
       'error.wallpaperBatchSize': 'A wallpaper batch cannot exceed {limit}. No files were imported.',
       'error.wallpaperImportRolledBack': 'Wallpaper settings could not be saved, so this import was rolled back.',

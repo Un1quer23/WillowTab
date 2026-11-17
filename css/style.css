@@ -84,6 +84,7 @@ body.has-wallpaper .wallpaper-confirm-dialog {
   --font-body: Georgia, 'Times New Roman', 'Songti SC', 'SimSun', serif;
   --text-shadow-time: 0 2px 8px rgba(0, 0, 0, 0.15);
   --text-shadow-greeting: 0 1px 4px rgba(0, 0, 0, 0.1);
+  --wallpaper-background-color: #1a1a1a;
   --wallpaper-text-color: var(--text-primary);
   --wallpaper-motto-text: var(--motto-text);
   --wallpaper-surface-blur: 16px;
@@ -217,20 +218,46 @@ body {
   transition: background-color var(--transition-slow), color var(--transition-slow);
 }
 
+html[data-startup-background] body,
+html[data-startup-background] :is(.search-input, .engine-toggle, .search-submit, .actions-section .action-btn) {
+  transition: none;
+}
+
+html[data-startup-background="color"] body {
+  background-color: var(--startup-background-color);
+  background-image: none;
+}
+
+html[data-startup-background="wallpaper"] {
+  --wallpaper-text-color: var(--startup-wallpaper-text-color);
+  --wallpaper-input-bg: rgba(255, 255, 255, 0.16);
+  --wallpaper-button-bg: rgba(255, 255, 255, 0.14);
+  --wallpaper-button-hover-bg: rgba(255, 255, 255, 0.24);
+}
+
+html[data-startup-wallpaper-surface="dark"] {
+  --wallpaper-input-bg: rgba(18, 16, 14, 0.38);
+  --wallpaper-button-bg: rgba(18, 16, 14, 0.32);
+  --wallpaper-button-hover-bg: rgba(18, 16, 14, 0.48);
+  --wallpaper-surface-border: rgba(255, 255, 255, 0.24);
+}
+
+html[data-startup-background="wallpaper"] body,
 body.has-wallpaper {
-  background-color: #1a1a1a;
-  background-image: var(--wallpaper);
+  background-color: var(--wallpaper-background-color);
+  background-image: var(--wallpaper, var(--startup-wallpaper, none));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
 }
 
+html[data-startup-background="wallpaper"] body::before,
 body.has-wallpaper::before {
   content: '';
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, var(--overlay-strength, 0.25));
+  background: rgba(0, 0, 0, var(--overlay-strength, var(--startup-overlay-strength, 0.25)));
   z-index: 0;
   pointer-events: none;
 }
@@ -246,11 +273,13 @@ body.has-wallpaper.wallpaper-readable::after {
   pointer-events: none;
 }
 
+html[data-startup-background="wallpaper"] .container,
 body.has-wallpaper .container {
   position: relative;
   z-index: 1;
 }
 
+html[data-startup-background="wallpaper"] .search-input,
 body.has-wallpaper .search-input {
   backdrop-filter: blur(var(--wallpaper-surface-blur));
   -webkit-backdrop-filter: blur(var(--wallpaper-surface-blur));
@@ -259,18 +288,22 @@ body.has-wallpaper .search-input {
   color: var(--wallpaper-text-color);
 }
 
+html[data-startup-background="wallpaper"] .search-motto,
 body.has-wallpaper .search-motto {
   color: var(--wallpaper-motto-text);
 }
 
+html[data-startup-background="wallpaper"] .search-input:focus,
 body.has-wallpaper .search-input:focus {
   border-color: var(--wallpaper-search-focus-stroke);
 }
 
+html[data-startup-background="wallpaper"] .engine-toggle,
 body.has-wallpaper .engine-toggle {
   color: var(--wallpaper-engine-color);
 }
 
+html[data-startup-background="wallpaper"] .search-submit,
 body.has-wallpaper .search-submit {
   color: var(--wallpaper-submit-color);
 }
@@ -301,6 +334,7 @@ body.has-wallpaper .search-submit:hover .search-control-visual {
   background: var(--wallpaper-button-bg);
 }
 
+html[data-startup-background="wallpaper"] .actions-section .action-btn,
 body.has-wallpaper .action-btn {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -309,6 +343,7 @@ body.has-wallpaper .action-btn {
   color: var(--wallpaper-text-color);
 }
 
+html[data-startup-background="wallpaper"] .actions-section .action-btn:hover,
 body.has-wallpaper .action-btn:hover {
   background: var(--wallpaper-button-hover-bg);
   border-color: var(--wallpaper-action-border);
@@ -366,23 +401,32 @@ body.has-wallpaper .about-panel .action-btn.icon-only:hover {
 }
 
 body.has-wallpaper .suggestions-dropdown {
+  --suggestion-surface: rgba(245, 240, 222, 0.94);
+  --suggestion-text: #272016;
+  --suggestion-highlight: rgba(72, 50, 27, 0.12);
   backdrop-filter: blur(var(--wallpaper-surface-blur));
   -webkit-backdrop-filter: blur(var(--wallpaper-surface-blur));
-  background: var(--wallpaper-input-bg);
-  color: var(--wallpaper-text-color);
+  background: var(--suggestion-surface);
+  color: var(--suggestion-text);
+}
+
+body.has-wallpaper[data-wallpaper-surface="dark"] .suggestions-dropdown {
+  --suggestion-surface: rgba(28, 25, 21, 0.94);
+  --suggestion-text: #f3eddf;
+  --suggestion-highlight: rgba(255, 255, 255, 0.1);
 }
 
 body.has-wallpaper .suggest-item {
-  color: var(--wallpaper-text-color);
+  color: inherit;
 }
 
 body.has-wallpaper .suggest-item:hover,
 body.has-wallpaper .suggest-item.active {
-  background: var(--wallpaper-button-bg);
+  background: var(--suggestion-highlight);
 }
 
 body.has-wallpaper .suggest-icon {
-  color: var(--wallpaper-text-color);
+  color: inherit;
   opacity: 0.7;
 }
 
@@ -461,6 +505,7 @@ body.has-custom-bg {
   letter-spacing: 0.01em;
 }
 
+html[data-startup-background="color"] .greeting,
 body.has-custom-bg .greeting {
   color: var(--canvas-text-secondary);
 }
@@ -769,6 +814,10 @@ body.has-custom-bg .greeting {
   display: flex;
   gap: 12px;
   transform: translateX(-50%);
+}
+
+html[data-settings-btn-position="dropdown"] .actions-section {
+  display: none;
 }
 
 .action-btn {
@@ -1963,10 +2012,6 @@ html[lang="zh-CN"] .settings-panel-header h2 {
 .font-name {
   font-size: 0.9rem;
   font-family: var(--font-body);
-}
-
-.actions-section.hidden {
-  display: none;
 }
 
 .engine-dropdown-separator {

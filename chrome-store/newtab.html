@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-variant="chrome-store">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +7,8 @@
   <title>WillowTab</title>
   <link rel="icon" type="image/png" sizes="16x16" href="icons/ntp16.png">
   <script src="js/color.js"></script>
-  <script src="js/wallpaper-color.js"></script>
+  <script src="js/preferences.js"></script>
+  <script src="js/assets.js"></script>
   <script src="js/theme.js"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -38,7 +39,7 @@
             aria-controls="suggestions-dropdown"
           >
           <span id="search-motto" class="search-motto" data-i18n="search.motto" aria-hidden="true">Think Different.</span>
-          <button type="submit" id="search-submit" class="search-submit" aria-label="搜索" title="搜索">
+          <button type="submit" id="search-submit" class="search-submit" data-i18n-aria="search.submit" data-i18n-title="search.submit" aria-label="搜索" title="搜索">
             <span class="search-control-visual" aria-hidden="true">
               <svg class="search-icon" viewBox="1.5 1.5 22 22" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <circle cx="11" cy="11" r="7"/>
@@ -131,6 +132,7 @@
           </div>
         </div>
 
+      <!-- End of shared color controls -->
       </section>
 
       <div class="setting-group" id="wallpaper-section">
@@ -336,7 +338,7 @@
       <div class="about-info">
         <div class="about-row">
           <span class="about-label" data-i18n="about.version">版本</span>
-          <span class="about-value">v1.7.6</span>
+          <span class="about-value">v1.7.7</span>
         </div>
         <div class="about-row">
           <span class="about-label" data-i18n="about.author">作者</span>
@@ -362,7 +364,7 @@
   <script src="js/search.js"></script>
   <script src="js/clock.js"></script>
   <script src="js/wallpaper-policy.js"></script>
-  <script src="js/assets.js"></script>
+  <script src="js/wallpaper-color.js"></script>
   <script src="js/settings.js"></script>
 </body>
 </html>

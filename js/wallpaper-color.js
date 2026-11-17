@@ -1,6 +1,6 @@
 (() => {
   const ANALYSIS_CACHE_LIMIT = 32;
-  const SOLVER_VERSION = 'paired-6-shared-warm-controls-no-scrim-time-6-warm-no-scrim-v8';
+  const SOLVER_VERSION = 'paired-6-shared-warm-controls-no-scrim-time-6-warm-no-scrim-v9';
   const CONTROL_DARK_ENDPOINT = '#272016';
   const CONTROL_LIGHT_ENDPOINT = '#f3eddf';
   const analysisCache = new Map();
@@ -115,6 +115,7 @@
 
   function applyBackdropLayers(imageData, region, context) {
     const pixels = imageData.data;
+    const background = normalizeColor(context.backgroundColor, { r: 26, g: 26, b: 26, a: 1 });
     const dpr = context.viewport.dpr;
     const overlay = clamp(context.overlayAlpha || 0);
     const protection = normalizeColor(context.protectionColor);
@@ -130,7 +131,12 @@
     for (let y = 0; y < imageData.height; y += 1) {
       for (let x = 0; x < imageData.width; x += 1) {
         const index = (y * imageData.width + x) * 4;
-        let color = { r: pixels[index], g: pixels[index + 1], b: pixels[index + 2] };
+        let color = composite(background, {
+          r: pixels[index],
+          g: pixels[index + 1],
+          b: pixels[index + 2],
+          a: pixels[index + 3] / 255,
+        });
         color = composite(color, { r: 0, g: 0, b: 0, a: overlay });
         if (context.readability) {
           const cssX = region.left + (x + 0.5) / dpr;
@@ -245,6 +251,7 @@
       'controls',
       context.wallpaperId || context.wallpaperUrl,
       context.viewport,
+      context.backgroundColor,
       context.overlayAlpha,
       context.readability,
       context.protectionColor,
@@ -365,6 +372,7 @@
       'text',
       context.wallpaperId || context.wallpaperUrl,
       context.viewport,
+      context.backgroundColor,
       context.overlayAlpha,
       context.readability,
       context.protectionColor,

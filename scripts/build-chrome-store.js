@@ -17,6 +17,9 @@ const sharedFiles = [
   'js/wallpaper-color.js',
   'js/wallpaper-policy.js',
   'js/assets.js',
+  'js/preferences.js',
+  'js/search.js',
+  'js/settings.js',
   'js/theme.js',
   '_locales/en/messages.json',
   '_locales/zh_CN/messages.json',
@@ -29,15 +32,13 @@ const chromeOverrides = [
   'README.md',
   'privacy-policy.html',
   'js/i18n.js',
-  'js/search.js',
-  'js/settings.js',
 ];
 
 const sharedOverrideBlocks = [
   {
     file: 'newtab.html',
     start: '        <div class="setting-subgroup" id="color-section">',
-    end: '\n      </section>\n\n      <div class="setting-group" id="wallpaper-section">',
+    end: '      <!-- End of shared color controls -->',
   },
   {
     file: 'newtab.html',
@@ -63,51 +64,6 @@ const sharedOverrideBlocks = [
     file: 'js/i18n.js',
     start: "      'about.license': 'This program is open source software, licensed under the GNU General Public License v3.',",
     end: "      'wallpaper.empty':",
-  },
-  {
-    file: 'js/settings.js',
-    start: '  const PRESET_COLORS = [',
-    end: '  let settings = { ...DEFAULTS };',
-  },
-  {
-    file: 'js/settings.js',
-    start: "    bgMode: 'color',",
-    end: '    wallpapers: [],',
-  },
-  {
-    file: 'js/settings.js',
-    start: "  const shadowValue = document.getElementById('shadow-value');",
-    end: "  const themeSection = document.getElementById('theme-section');",
-  },
-  {
-    file: 'js/settings.js',
-    start: '  let resizeSyncTimer = null;',
-    end: '  const selectedWallpaperIds = new Set();',
-  },
-  {
-    file: 'js/settings.js',
-    start: '  function effectiveThemeIsDark() {',
-    end: '  async function migrateWallpaperStorage() {',
-  },
-  {
-    file: 'js/settings.js',
-    start: '  function clearColorReadabilityVars() {',
-    end: '  function summarizeImageData(imageData, width, height) {',
-  },
-  {
-    file: 'js/settings.js',
-    start: "    colorPresets.querySelectorAll('.color-swatch').forEach((swatch) => {",
-    end: '    renderWallpaperGallery();',
-  },
-  {
-    file: 'js/settings.js',
-    start: '  function applyAll() {',
-    end: '  function createOverlay() {',
-  },
-  {
-    file: 'js/settings.js',
-    start: "  colorPresets.addEventListener('click', (e) => {",
-    end: '  function isWallpaperFile(file) {',
   },
 ];
 

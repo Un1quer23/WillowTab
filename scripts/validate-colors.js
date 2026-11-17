@@ -78,7 +78,9 @@ assert.deepStrictEqual(
   ['#BFBB98', '#E7E1D3', '#C9D5CF', '#C8D4E3', '#D7CEDC', '#DDBFB2'],
   'The curated soft preset palette changed unexpectedly',
 );
-assert.match(settingsSource, /const DEFAULTS = \{[\s\S]*?bgColor: '#BFBB98'/);
+const themeSource = fs.readFileSync(path.join(__dirname, '..', 'js', 'theme.js'), 'utf8');
+assert.match(themeSource, /const DEFAULT_BACKGROUND_COLOR = '#BFBB98'/);
+assert.match(settingsSource, /const DEFAULTS = \{[\s\S]*?bgColor: window\.__theme\.defaultBackgroundColor/);
 assert.strictEqual(presetColors[0], '#BFBB98', 'Sage must be the first preset and the default background');
 assert.doesNotMatch(presetBlock, /#F5F5DC/i, 'Beige must not remain in the preset list');
 
@@ -126,8 +128,8 @@ assert.match(
   'The engine menu must use the search-specific focus ring',
 );
 assert.match(
-  settingsSource,
-  /const brandAccent = palette\.colors\.brandAccent;[\s\S]*--accent', brandAccent\);[\s\S]*--search-control-hover-color', searchAccent\);/,
+  themeSource,
+  /--accent', colors\.brandAccent\);[\s\S]*--search-control-hover-color', colors\.searchAccent\);/,
   'Custom colors must keep brand and search accents wired to separate roles',
 );
 

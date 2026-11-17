@@ -1,16 +1,16 @@
 (() => {
-  const SETTINGS_KEY = 'newtab-settings';
+  const preferences = window.__willowPreferences;
   const WALLPAPER_CONTROL_TARGET = 6.0;
   const WALLPAPER_TIME_TARGET = 6.0;
   const wallpaperPolicy = window.__willowWallpaperPolicy;
 
   const DEFAULTS = {
     bgMode: 'color',
-    bgColor: '#BFBB98',
+    bgColor: window.__theme.defaultBackgroundColor,
     wallpapers: [],
     activeWallpaperId: '',
     font: 'serif',
-    radius: '28px',
+    radius: window.__theme.defaultRadius,
     overlayStrength: 25,
     shadowStrength: 25,
     settingsBtnPosition: 'footer',
@@ -20,7 +20,6 @@
     wallpaperRotation: 'off',
     wallpaperRotationMode: 'sequence',
     lastWallpaperRotationAt: 0,
-    enableSuggestions: true,
   };
 
   const FONT_STACKS = {
@@ -110,8 +109,20 @@
   const aboutOverlay = document.getElementById('about-overlay');
 
   const wallpaperAssets = window.__wallpaperAssets;
+  const thumbnailObserver = new IntersectionObserver((entries) => {
+    for (const { isIntersecting, target: image } of entries) {
+      if (!isIntersecting || !image.isConnected || !wallpaperLibraryVisible()) continue;
+      thumbnailObserver.unobserve(image);
+      wallpaperAssets.getThumbnail(image.dataset.wallpaperId).then((data) => {
+        if (data && image.isConnected) image.src = data;
+      }).catch(() => {});
+    }
+  });
   let settingsOverlay = null;
+  const pendingSettings = new Map();
   let saveTimer = null;
+  let libraryInitialization;
+  let libraryRevision = 0;
   let toastHideTimer = null;
   let wallpaperApplyToken = 0;
   let lastFocusedBeforePanel = null;
@@ -141,13 +152,7 @@
     document.querySelector('.actions-section'),
   ].filter(Boolean);
 
-  const ROTATION_INTERVALS = {
-    off: 0,
-    '30m': 30 * 60 * 1000,
-    '1h': 60 * 60 * 1000,
-    '2h': 2 * 60 * 60 * 1000,
-    '24h': 24 * 60 * 60 * 1000,
-  };
+  const { ROTATION_INTERVALS } = wallpaperAssets;
 
   function t(key, vars) {
     return (window.__i18n && window.__i18n.t(key, vars)) || key;
@@ -303,73 +308,53 @@
   }
 
   function loadSettings() {
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.wallpaper && typeof parsed.wallpaper === 'string') {
-          const id = generateId();
-          const oldName = (window.__i18n && window.__i18n.t('wallpaper.oldWallpaper')) || '旧壁纸';
-          parsed.wallpapers = [{ id, data: parsed.wallpaper, name: oldName }];
-          parsed.activeWallpaperId = id;
-          parsed.bgMode = 'wallpaper';
-          delete parsed.wallpaper;
-        }
-        settings = { ...DEFAULTS, ...parsed };
-        const customColorChanged = normalizeLoadedCustomColor();
-        normalizeSettings();
-        if (customColorChanged) saveSettingsNow();
-      }
-    } catch (_) {
-      settings = { ...DEFAULTS };
-    }
+    settings = { ...DEFAULTS, ...preferences.read(), ...wallpaperAssets.readStartupLibrary() };
+    if (!['auto', 'light', 'dark'].includes(settings.wallpaperSurfaceMode)) settings.wallpaperSurfaceMode = 'light';
+    if (normalizeLoadedCustomColor()) saveSetting('bgColor');
   }
 
-  async function migrateWallpaperStorage() {
-    if (!wallpaperAssets) return;
-    const oldName = (window.__i18n && window.__i18n.t('wallpaper.oldWallpaper')) || '旧壁纸';
-    const result = await wallpaperAssets.migrateSettings(settings, generateId, oldName);
-    settings = { ...DEFAULTS, ...result.settings };
-    normalizeSettings();
-    if (result.changed) {
-      saveSettingsNow();
+  function ensureLibrary() {
+    if (!libraryInitialization) {
+      libraryInitialization = wallpaperAssets.initialize(t('wallpaper.oldWallpaper')).catch((error) => {
+        libraryInitialization = undefined;
+        throw error;
+      });
     }
+    return libraryInitialization;
   }
 
-  async function reconcileWallpaperStorage() {
-    if (!wallpaperAssets || typeof wallpaperAssets.list !== 'function') return;
-    const storedWallpapers = await wallpaperAssets.list();
-    const storedIds = new Set(storedWallpapers.map((item) => item.id));
-    const referencedIds = new Set(settings.wallpapers.map((item) => item.id));
-    const orphanedIds = storedWallpapers
-      .filter((item) => !referencedIds.has(item.id))
-      .map((item) => item.id);
-    const validWallpapers = settings.wallpapers.filter((item) => item.data || storedIds.has(item.id));
-
-    if (orphanedIds.length) {
-      await wallpaperAssets.removeMany(orphanedIds);
-    }
-    settings.wallpapers = validWallpapers;
-    normalizeSettings();
-    if (!saveSettingsNow()) {
-      console.error('Failed to persist reconciled wallpaper settings');
-    }
-  }
-
-  function normalizeSettings() {
-    if (!Array.isArray(settings.wallpapers)) settings.wallpapers = [];
-    if (!Object.prototype.hasOwnProperty.call(ROTATION_INTERVALS, settings.wallpaperRotation)) {
-      settings.wallpaperRotation = 'off';
-    }
-    if (!['sequence', 'random'].includes(settings.wallpaperRotationMode)) {
-      settings.wallpaperRotationMode = 'sequence';
-    }
-    if (!['auto', 'light', 'dark'].includes(settings.wallpaperSurfaceMode)) {
-      settings.wallpaperSurfaceMode = 'light';
-    }
-    settings.wallpaperReadability = settings.wallpaperReadability !== false;
-    settings.lastWallpaperRotationAt = Number(settings.lastWallpaperRotationAt) || 0;
+  function applyLibrary(state, render = true) {
+    if (!state || state.revision <= libraryRevision) return;
+    const previous = settings.wallpapers.find((item) => item.id === settings.activeWallpaperId);
+    const active = state.wallpapers.find((item) => item.id === state.activeWallpaperId);
+    const backgroundChanged = settings.bgMode !== state.bgMode || previous?.id !== active?.id
+      || previous?.brightness !== active?.brightness || previous?.complexity !== active?.complexity;
+    const { revision, ...snapshot } = state;
+    libraryRevision = revision;
+    Object.assign(settings, snapshot);
     reconcileWallpaperState();
+    if (!render) return;
+    if (backgroundChanged || (settings.bgMode === 'wallpaper' && active && !activeWallpaperData)) applyBackground();
+    if (!panel.hidden) syncUI();
+    scheduleWallpaperRotation();
+  }
+
+  async function refreshLibrary() {
+    await ensureLibrary();
+    applyLibrary(await wallpaperAssets.getLibrary());
+  }
+
+  async function updateLibrary(action, reportFailure = true) {
+    try {
+      await ensureLibrary();
+      const result = await action();
+      applyLibrary(result.state);
+      return result;
+    } catch (error) {
+      console.error('Wallpaper library update failed', error);
+      if (reportFailure) showToast(t('error.wallpaperStorageUnavailable'));
+      return null;
+    }
   }
 
   function showToast(message) {
@@ -386,69 +371,64 @@
     }, 2500);
   }
 
-  function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  }
-
-  function saveSettings() {
+  function saveSetting(field) {
+    pendingSettings.set(field, settings[field]);
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveSettingsNow, 150);
+    saveTimer = setTimeout(flushSettings, 150);
   }
 
-  function saveSettingsNow() {
+  function flushSettings() {
     clearTimeout(saveTimer);
     saveTimer = null;
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(serializeSettings(settings)));
-      return true;
-    } catch (e) {
-      if (e.name === 'QuotaExceededError') {
-        alert((window.__i18n && window.__i18n.t('error.quotaExceeded')) || '存储空间不足，新的设置未能保存，已有壁纸已保留。');
+    const entries = Array.from(pendingSettings);
+    pendingSettings.clear();
+    for (const [field, value] of entries) {
+      try {
+        preferences.write(field, value);
+      } catch (error) {
+        console.error('Preference update failed', error);
+        showToast(t('error.settingsSaveFailed'));
       }
-      return false;
     }
   }
 
-  function serializeSettings(value) {
-    return {
-      ...value,
-      wallpapers: (value.wallpapers || []).map((w) => {
-        const meta = {
-          id: w.id,
-          name: w.name,
-          sourcePath: w.sourcePath || '',
-          brightness: w.brightness,
-          complexity: w.complexity,
-          createdAt: w.createdAt,
-        };
-        if (w.data) meta.data = w.data;
-        return meta;
-      }),
-    };
+  function syncSavedPreferences(changedField) {
+    if (changedField === 'enableSuggestions') return;
+    const saved = preferences.read();
+    const fields = changedField ? [changedField] : Object.keys(preferenceEffects);
+    let changed = false;
+    for (const field of fields) {
+      if (!Object.hasOwn(preferenceEffects, field) || pendingSettings.has(field)) continue;
+      const value = Object.hasOwn(saved, field) ? saved[field] : DEFAULTS[field];
+      if (settings[field] === value) continue;
+      settings[field] = value;
+      preferenceEffects[field]();
+      changed = true;
+    }
+    if (changed && !panel.hidden) syncUI();
   }
+
+  const preferenceEffects = {
+    bgColor() { normalizeLoadedCustomColor(); applyBackground(); },
+    font: applyFont,
+    radius: applyRadius,
+    overlayStrength: updateWallpaperPresentation,
+    shadowStrength: applyShadowStrength,
+    settingsBtnPosition: applySettingsBtnPosition,
+    tabTitle: applyTabTitle,
+    wallpaperReadability: updateWallpaperPresentation,
+    wallpaperSurfaceMode: updateWallpaperPresentation,
+  };
 
   function hasEnoughWallpapersForRotation() {
     return settings.wallpapers.length >= 2;
   }
 
   function reconcileWallpaperState() {
+    if (!settings.wallpapers.length) wallpaperSelectionMode = false;
     selectedWallpaperIds.forEach((id) => {
-      if (!settings.wallpapers.some((w) => w.id === id)) selectedWallpaperIds.delete(id);
+      if (!settings.wallpapers.some((item) => item.id === id)) selectedWallpaperIds.delete(id);
     });
-    if (settings.activeWallpaperId && !settings.wallpapers.some((w) => w.id === settings.activeWallpaperId)) {
-      settings.activeWallpaperId = settings.wallpapers[0] ? settings.wallpapers[0].id : '';
-    }
-    if (!settings.wallpapers.length) {
-      settings.activeWallpaperId = '';
-    }
-    if (!hasEnoughWallpapersForRotation()) {
-      settings.wallpaperRotation = 'off';
-    }
-  }
-
-  function resetWallpaperRotationClock() {
-    settings.lastWallpaperRotationAt = Date.now();
-    scheduleWallpaperRotation();
   }
 
   function getRotationInterval() {
@@ -459,47 +439,9 @@
     return settings.bgMode === 'wallpaper' && settings.activeWallpaperId && hasEnoughWallpapersForRotation() && getRotationInterval() > 0;
   }
 
-  function chooseNextWallpaperId() {
-    if (!hasEnoughWallpapersForRotation()) return '';
-    if (settings.wallpaperRotationMode === 'random') {
-      const candidates = settings.wallpapers.filter((w) => w.id !== settings.activeWallpaperId);
-      return candidates[Math.floor(Math.random() * candidates.length)].id;
-    }
-    const currentIndex = settings.wallpapers.findIndex((w) => w.id === settings.activeWallpaperId);
-    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % settings.wallpapers.length : 0;
-    return settings.wallpapers[nextIndex].id;
-  }
-
-  function rotateWallpaperIfDue(force = false) {
-    clearTimeout(wallpaperRotationTimer);
-    wallpaperRotationTimer = null;
-    reconcileWallpaperState();
+  async function rotateWallpaperIfDue() {
     if (!canRotateWallpaper()) return;
-
-    const interval = getRotationInterval();
-    const now = Date.now();
-    if (!settings.lastWallpaperRotationAt) {
-      settings.lastWallpaperRotationAt = now;
-      saveSettings();
-      scheduleWallpaperRotation();
-      return;
-    }
-    if (!force && now - settings.lastWallpaperRotationAt < interval) {
-      scheduleWallpaperRotation();
-      return;
-    }
-
-    const nextId = chooseNextWallpaperId();
-    if (!nextId || nextId === settings.activeWallpaperId) {
-      scheduleWallpaperRotation();
-      return;
-    }
-    settings.activeWallpaperId = nextId;
-    settings.bgMode = 'wallpaper';
-    settings.lastWallpaperRotationAt = now;
-    saveSettingsNow();
-    applyBackground();
-    if (!panel.hasAttribute('hidden')) syncUI();
+    await updateLibrary(() => wallpaperAssets.rotateIfDue(Date.now()), false);
     scheduleWallpaperRotation();
   }
 
@@ -511,38 +453,22 @@
     const interval = getRotationInterval();
     const elapsed = Date.now() - (settings.lastWallpaperRotationAt || Date.now());
     const delay = Math.max(1000, interval - elapsed);
-    wallpaperRotationTimer = setTimeout(() => rotateWallpaperIfDue(true), Math.min(delay, 2147483647));
+    wallpaperRotationTimer = setTimeout(rotateWallpaperIfDue, Math.min(delay, 2147483647));
   }
 
-  function compressImage(dataUrl, maxWidth) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width;
-        let h = img.height;
-        const sourceWidth = w;
-        const sourceHeight = h;
-        if (w <= maxWidth) {
-          resolve({ data: dataUrl, sourceWidth, sourceHeight });
-          return;
-        }
-        const ratio = maxWidth / w;
-        w = maxWidth;
-        h = Math.round(h * ratio);
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
-        resolve({
-          data: canvas.toDataURL('image/jpeg', 0.85),
-          sourceWidth,
-          sourceHeight,
-        });
-      };
-      img.onerror = () => reject(new Error('Failed to decode wallpaper'));
-      img.src = dataUrl;
-    });
+  async function compressImage(dataUrl, maxWidth) {
+    const image = new Image();
+    image.src = dataUrl;
+    await image.decode();
+    const { naturalWidth: sourceWidth, naturalHeight: sourceHeight } = image;
+    if (sourceWidth <= maxWidth || sourceWidth * sourceHeight > wallpaperPolicy.LIMITS.maxPixels) {
+      return { data: dataUrl, sourceWidth, sourceHeight };
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = maxWidth;
+    canvas.height = Math.max(1, Math.round(sourceHeight * maxWidth / sourceWidth));
+    canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+    return { data: canvas.toDataURL('image/jpeg', 0.85), sourceWidth, sourceHeight };
   }
 
   function parseHexColor(value) {
@@ -685,50 +611,8 @@
 
   function applyColorReadabilityVars(bgColor) {
     if (window.__willowColor) {
-      const palette = window.__willowColor.createSolidPalette(bgColor);
-      if (!palette) return;
-      const root = document.documentElement;
-      const brandAccent = palette.colors.brandAccent;
-      const brandAccentRgb = window.__willowColor.parseHex(brandAccent);
-      const searchAccent = palette.colors.searchAccent;
-      const searchAccentRgb = window.__willowColor.parseHex(searchAccent);
-      const searchAccentAlpha = palette.diagnostics.searchAccent.overlayAlpha;
-      const searchAccentSurface = `rgba(${searchAccentRgb.r}, ${searchAccentRgb.g}, ${searchAccentRgb.b}, ${searchAccentAlpha})`;
-      activeColorPalette = palette;
-      document.body.dataset.colorReadable = palette.mode;
-      root.style.setProperty('--bg-secondary', palette.surfaces.secondary);
-      root.style.setProperty('--bg-tertiary', palette.surfaces.tertiary);
-      root.style.setProperty('--text-primary', palette.colors.canvasPrimary);
-      root.style.setProperty('--text-secondary', palette.colors.canvasSecondary);
-      root.style.setProperty('--text-tertiary', palette.colors.canvasControl);
-      root.style.setProperty('--placeholder-text', palette.colors.searchPlaceholder);
-      root.style.setProperty('--input-bg', palette.surfaces.input);
-      root.style.setProperty('--accent', brandAccent);
-      root.style.setProperty('--accent-hover', brandAccent);
-      root.style.setProperty('--accent-text', palette.colors.accentText);
-      root.style.setProperty('--accent-subtle', `rgba(${brandAccentRgb.r}, ${brandAccentRgb.g}, ${brandAccentRgb.b}, 0.08)`);
-      root.style.setProperty('--border-focus', brandAccent);
-      root.style.setProperty('--focus-ring-color', brandAccent);
-      root.style.setProperty('--canvas-text-primary', palette.colors.canvasPrimary);
-      root.style.setProperty('--canvas-text-secondary', palette.colors.canvasSecondary);
-      root.style.setProperty('--canvas-large-text', palette.colors.canvasLarge);
-      root.style.setProperty('--canvas-control-color', palette.colors.canvasControl);
-      root.style.setProperty('--search-surface', palette.surfaces.input);
-      root.style.setProperty('--search-text-color', palette.colors.searchText);
-      root.style.setProperty('--search-placeholder-color', palette.colors.searchPlaceholder);
-      root.style.setProperty('--search-control-color', palette.colors.searchControl);
-      root.style.setProperty('--search-control-hover-color', searchAccent);
-      root.style.setProperty('--search-control-hover-surface', searchAccentSurface);
-      root.style.setProperty('--search-control-focus-color', searchAccent);
-      root.style.setProperty('--search-control-focus-ring', searchAccent);
-      root.style.setProperty('--search-focus-stroke', searchAccent);
-      root.style.setProperty('--search-selected-surface', searchAccentSurface);
-      root.style.setProperty('--search-selected-text', palette.colors.searchSelectedText);
-      root.style.setProperty('--engine-menu-hover-surface', searchAccentSurface);
-      root.style.setProperty('--engine-menu-hover-text', searchAccent);
-      root.style.setProperty('--border', palette.mode === 'dark-text'
-        ? `color-mix(in srgb, ${bgColor} 75%, black)`
-        : 'rgba(255, 255, 255, 0.24)');
+      activeColorPalette = window.__theme.applySolidPalette(bgColor);
+      if (activeColorPalette) document.body.dataset.colorReadable = activeColorPalette.mode;
       return;
     }
     const color = parseHexColor(bgColor);
@@ -944,10 +828,9 @@
     const inspection = colorApi && colorApi.inspectSolidBackground(color);
     if (!inspection || !inspection.valid || !inspection.safe) return false;
     if (!preserveSliderState) customColorSliderState = null;
-    settings.bgMode = 'color';
     settings.bgColor = inspection.normalized;
     setCustomColorValidation();
-    saveSettings();
+    saveSetting('bgColor');
     applyBackground();
     scheduleWallpaperRotation();
     syncUI();
@@ -1033,22 +916,27 @@
     };
   }
 
-  function analyzeWallpaperImage(dataUrl) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const size = 64;
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, size, size);
-        const imageData = ctx.getImageData(0, 0, size, size);
-        resolve(summarizeImageData(imageData, size, size));
-      };
-      img.onerror = () => resolve({ brightness: -1, complexity: 0 });
-      img.src = dataUrl;
-    });
+  async function analyzeWallpaperImage(dataUrl, includeThumbnail = false) {
+    const image = new Image();
+    image.src = dataUrl;
+    try {
+      await image.decode();
+      const size = 64;
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--wallpaper-background-color').trim();
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(image, 0, 0, size, size);
+      const analysis = summarizeImageData(ctx.getImageData(0, 0, size, size), size, size);
+      if (includeThumbnail) {
+        try { analysis.thumbnail = wallpaperAssets.makeThumbnail(image); } catch (_) {}
+      }
+      return analysis;
+    } catch (_) {
+      return { brightness: -1, complexity: 0 };
+    }
   }
 
   function analyzeWallpaperSurfaceRegion(dataUrl) {
@@ -1086,6 +974,8 @@
           canvas.width = sampleWidth;
           canvas.height = sampleHeight;
           const ctx = canvas.getContext('2d');
+          ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--wallpaper-background-color').trim();
+          ctx.fillRect(0, 0, sampleWidth, sampleHeight);
           ctx.drawImage(img, regionSx, regionSy, regionSw, regionSh, 0, 0, sampleWidth, sampleHeight);
           return summarizeImageData(ctx.getImageData(0, 0, sampleWidth, sampleHeight), sampleWidth, sampleHeight);
         };
@@ -1100,8 +990,12 @@
     const token = ++wallpaperApplyToken;
     const root = document.documentElement;
     const body = document.body;
+    const active = settings.bgMode === 'wallpaper'
+      ? settings.wallpapers.find((wallpaper) => wallpaper.id === settings.activeWallpaperId)
+      : null;
     body.classList.remove('has-wallpaper', 'has-custom-bg', 'wallpaper-readable');
-    body.style.setProperty('--wallpaper', '');
+    delete body.dataset.wallpaperSurface;
+    if (!active) body.style.removeProperty('--wallpaper');
     activeWallpaperData = '';
     wallpaperSurfaceAnalysisToken++;
     root.style.removeProperty('--bg-primary');
@@ -1109,57 +1003,64 @@
     clearColorReadabilityVars();
     clearWallpaperAdaptiveVars();
 
-    if (settings.bgMode === 'wallpaper' && settings.activeWallpaperId) {
-      const active = settings.wallpapers.find((w) => w.id === settings.activeWallpaperId);
-      if (active) {
-        body.classList.add('has-wallpaper');
-        body.classList.toggle('wallpaper-readable', settings.wallpaperReadability);
-        root.style.setProperty('--overlay-strength', settings.overlayStrength / 100);
+    if (active) {
+      body.classList.add('has-wallpaper');
+      body.classList.toggle('wallpaper-readable', settings.wallpaperReadability);
+      root.style.setProperty('--overlay-strength', settings.overlayStrength / 100);
 
-        const renderWallpaper = (record) => {
-          const source = (record && record.data) ? record : active;
-          if (token !== wallpaperApplyToken) return;
-          if (!source || !source.data) {
-            body.classList.remove('has-wallpaper');
-            root.style.removeProperty('--overlay-strength');
-            return;
-          }
-          body.style.setProperty('--wallpaper', `url(${source.data})`);
-          activeWallpaperData = source.data;
+      const renderWallpaper = async (record) => {
+        if (token !== wallpaperApplyToken) return;
+        const source = record?.data ? record : active;
+        if (!source.data) {
+          body.classList.remove('has-wallpaper');
+          body.style.removeProperty('--wallpaper');
+          root.style.removeProperty('--overlay-strength');
+          window.__theme.finishStartupBackground();
+          return;
+        }
 
-          let brightness = active.brightness;
-          let complexity = active.complexity;
-          if (brightness == null) brightness = source.brightness;
-          if (complexity == null) complexity = source.complexity;
-          if (brightness == null || complexity == null) {
-            analyzeWallpaperImage(source.data).then((analysis) => {
-              if (token !== wallpaperApplyToken) return;
-              active.brightness = analysis.brightness;
-              active.complexity = analysis.complexity;
-              if (record && wallpaperAssets) {
-                wallpaperAssets.put({ ...record, brightness: analysis.brightness, complexity: analysis.complexity }).catch(() => {});
-              }
-              saveSettings();
-              applyBackground();
-            });
-          } else if (brightness >= 0) {
-            applyWallpaperTextColor(brightness, complexity);
-            syncWallpaperSurfaceAnalysis(brightness, complexity, token);
-          }
-        };
+        const needsPreview = record?.data && !wallpaperAssets.getStartupPreview(active.id);
+        let decodedImage = null;
+        if (root.dataset.startupBackground === 'wallpaper' || needsPreview) {
+          const image = new Image();
+          image.src = source.data;
+          try {
+            await image.decode();
+            decodedImage = image;
+          } catch (_) {}
+        }
+        if (token !== wallpaperApplyToken) return;
+        body.style.setProperty('--wallpaper', `url(${source.data})`);
+        activeWallpaperData = source.data;
+        window.__theme.finishStartupBackground();
+        if (decodedImage && needsPreview) wallpaperAssets.saveStartupPreview(active.id, decodedImage);
 
-        if (wallpaperAssets) {
-          wallpaperAssets.get(active.id).then(renderWallpaper).catch(() => {
+        const brightness = active.brightness ?? source.brightness;
+        const complexity = active.complexity ?? source.complexity;
+        if (brightness == null || complexity == null) {
+          analyzeWallpaperImage(source.data).then((analysis) => {
             if (token !== wallpaperApplyToken) return;
-            renderWallpaper(active);
-            if (!active.data) {
-              body.classList.remove('has-wallpaper');
-              root.style.removeProperty('--overlay-strength');
+            if (analysis.brightness >= 0) {
+              applyWallpaperTextColor(analysis.brightness, analysis.complexity);
+              syncWallpaperSurfaceAnalysis(analysis.brightness, analysis.complexity, token);
+            }
+            if (record) {
+              wallpaperAssets.updateAnalysis(active.id, analysis.brightness, analysis.complexity)
+                .then(({ state }) => applyLibrary(state)).catch(() => {});
             }
           });
-        } else {
-          renderWallpaper(active);
+        } else if (brightness >= 0) {
+          applyWallpaperTextColor(brightness, complexity);
+          syncWallpaperSurfaceAnalysis(brightness, complexity, token);
         }
+      };
+
+      if (wallpaperAssets) {
+        wallpaperAssets.get(active.id).then(renderWallpaper, () => {
+          if (active.data) return renderWallpaper(null);
+        });
+      } else {
+        renderWallpaper(null);
       }
     }
 
@@ -1169,6 +1070,7 @@
       applyColorReadabilityVars(settings.bgColor);
     }
 
+    if (!active) window.__theme.finishStartupBackground();
     applyShadowStrength();
   }
 
@@ -1330,6 +1232,7 @@
           dpr: window.devicePixelRatio || 1,
         },
         overlayAlpha: settings.overlayStrength / 100,
+        backgroundColor: styles.getPropertyValue('--wallpaper-background-color').trim(),
         readability: settings.wallpaperReadability,
         protectionColor: protection,
         protectionAlpha: protection.a,
@@ -1372,6 +1275,7 @@
           dpr: window.devicePixelRatio || 1,
         },
         overlayAlpha: settings.overlayStrength / 100,
+        backgroundColor: styles.getPropertyValue('--wallpaper-background-color').trim(),
         readability: settings.wallpaperReadability,
         protectionColor: protection,
         protectionAlpha: protection.a,
@@ -1428,8 +1332,10 @@
     const surfaceMode = settings.wallpaperSurfaceMode || 'light';
     const surfaceBrightness = surfaceAnalysis ? surfaceAnalysis.brightness : brightness;
     const surfaceEffective = surfaceBrightness * (1 - settings.overlayStrength / 100);
-    const adaptiveLightSurface = surfaceBrightness >= 0.62 || surfaceEffective >= 0.5;
+    const adaptiveLightSurface = window.__theme.isLightWallpaperSurface(surfaceBrightness, surfaceEffective);
     const useLightSurface = surfaceMode === 'light' || (surfaceMode === 'auto' && adaptiveLightSurface);
+    const useDarkPanel = settings.wallpaperReadability ? !useLightSurface : surfaceMode === 'dark';
+    document.body.dataset.wallpaperSurface = useDarkPanel ? 'dark' : 'light';
     const protectionBoost = Math.min(0.18, Math.max(0, complexity) * 0.18);
     const surfaceBoost = Math.min(0.18, Math.max(0, surfaceAnalysis ? surfaceAnalysis.complexity : complexity) * 0.18);
     if (settings.wallpaperReadability) {
@@ -1648,37 +1554,20 @@
   }
 
   function applySettingsBtnPosition() {
-    const actionsSection = document.querySelector('.actions-section');
-    document.body.dataset.settingsBtnPosition = settings.settingsBtnPosition;
-    if (settings.settingsBtnPosition === 'dropdown') {
-      actionsSection.classList.add('hidden');
-    } else {
-      actionsSection.classList.remove('hidden');
-    }
+    window.__theme.setSettingsButtonPosition(settings.settingsBtnPosition);
   }
 
   function applyTabTitle() {
     document.title = settings.tabTitle || 'WillowTab';
   }
 
-  function handleSuggestionsToggle() {
-    settings.enableSuggestions = !settings.enableSuggestions;
-    saveSettingsNow();
-    applySuggestions();
-    syncUISuggestions();
-  }
-
-  function applySuggestions() {
-    document.body.dataset.suggestionsEnabled = settings.enableSuggestions ? 'true' : 'false';
-  }
-
   function syncUISuggestions() {
     if (!suggestionsToggle) return;
-    suggestionsToggle.dataset.enabled = settings.enableSuggestions ? 'true' : 'false';
-    suggestionsToggle.setAttribute('aria-pressed', String(settings.enableSuggestions));
-    suggestionsToggle.textContent = settings.enableSuggestions
-      ? t('settings.suggestionsOn')
-      : t('settings.suggestionsOff');
+    const enabled = window.__willowSearch.suggestionsEnabled;
+    document.body.dataset.suggestionsEnabled = String(enabled);
+    suggestionsToggle.dataset.enabled = String(enabled);
+    suggestionsToggle.setAttribute('aria-pressed', String(enabled));
+    suggestionsToggle.textContent = t(enabled ? 'settings.suggestionsOn' : 'settings.suggestionsOff');
   }
 
   function applyAll() {
@@ -1689,7 +1578,7 @@
     applyShadowStrength();
     applySettingsBtnPosition();
     applyTabTitle();
-    applySuggestions();
+    syncUISuggestions();
     rotateWallpaperIfDue();
     if (customColorMigrationNotice) {
       showToast(t(customColorMigrationNotice));
@@ -1739,6 +1628,7 @@
       });
     }
     if (wallpaperSettingsView) wallpaperSettingsView.scrollTop = 0;
+    renderWallpaperGallery();
   }
 
   function setSettingsView(view) {
@@ -1937,7 +1827,7 @@
       syncRadioOptions(btnPosOptions, '.theme-option', 'position', settings.settingsBtnPosition);
     }
 
-    tabTitleInput.value = settings.tabTitle || '';
+    if (document.activeElement !== tabTitleInput) tabTitleInput.value = settings.tabTitle || '';
     syncUISuggestions();
   }
 
@@ -2013,7 +1903,14 @@
     wallpaperSummary.textContent = pieces.join(' · ');
   }
 
+  function wallpaperLibraryVisible() {
+    return !panel.hidden && !panel.classList.contains('is-closing')
+      && settingsPanelView === 'wallpaper' && wallpaperSubView === 'library';
+  }
+
   function renderWallpaperGallery() {
+    thumbnailObserver.disconnect();
+    if (!wallpaperLibraryVisible()) return;
     wallpaperGallery.innerHTML = '';
     wallpaperGallery.classList.toggle('selecting', wallpaperSelectionMode);
     if (!settings.wallpapers.length) {
@@ -2048,14 +1945,8 @@
       const img = document.createElement('img');
       img.alt = '';
       img.loading = 'lazy';
+      img.dataset.wallpaperId = w.id;
       if (w.data) img.src = w.data;
-      if (wallpaperAssets) {
-        wallpaperAssets.get(w.id).then((record) => {
-          if (record && record.data && img.isConnected) {
-            img.src = record.data;
-          }
-        }).catch(() => {});
-      }
 
       const name = document.createElement('span');
       name.className = 'wallpaper-thumb-name';
@@ -2087,58 +1978,15 @@
       mainButton.append(visual, name);
       thumb.append(mainButton, selectedMark, reorderHandle);
       wallpaperGallery.appendChild(thumb);
+      if (!w.data) thumbnailObserver.observe(img);
     });
   }
 
   async function removeWallpapers(ids) {
-    const requestedIds = new Set(ids);
-    const originalWallpapers = [...settings.wallpapers];
-    const requestedWallpapers = originalWallpapers.filter((item) => requestedIds.has(item.id));
-    const removedIds = new Set();
-    let failedCount = 0;
-
-    for (const item of requestedWallpapers) {
-      try {
-        if (wallpaperAssets) {
-          await wallpaperAssets.remove(item.id);
-        } else if (!item.data) {
-          throw new Error('Wallpaper storage is unavailable');
-        }
-        removedIds.add(item.id);
-      } catch (_) {
-        failedCount += 1;
-      }
-    }
-
-    if (!removedIds.size) {
-      return { deletedCount: 0, failedCount };
-    }
-
-    const activeIndex = originalWallpapers.findIndex((item) => item.id === settings.activeWallpaperId);
-    const activeWasRemoved = removedIds.has(settings.activeWallpaperId);
-    settings.wallpapers = originalWallpapers.filter((item) => !removedIds.has(item.id));
-    removedIds.forEach((id) => selectedWallpaperIds.delete(id));
-
-    if (activeWasRemoved) {
-      const next = originalWallpapers.slice(activeIndex + 1).find((item) => !removedIds.has(item.id));
-      const previous = originalWallpapers.slice(0, activeIndex).reverse().find((item) => !removedIds.has(item.id));
-      settings.activeWallpaperId = (next || previous || {}).id || '';
-    }
-
-    if (!settings.wallpapers.length) {
-      wallpaperSelectionMode = false;
-      selectedWallpaperIds.clear();
-      settings.activeWallpaperId = '';
-      settings.wallpaperRotation = 'off';
-      settings.lastWallpaperRotationAt = Date.now();
-    }
-
-    reconcileWallpaperState();
-    saveSettingsNow();
-    applyBackground();
-    syncUI();
-    scheduleWallpaperRotation();
-    return { deletedCount: removedIds.size, failedCount };
+    const result = await updateLibrary(() => wallpaperAssets.removeWallpapers(ids), false);
+    return result
+      ? { deletedCount: result.deletedCount, failedCount: 0 }
+      : { deletedCount: 0, failedCount: ids.length };
   }
 
   function toggleWallpaperSelection(id) {
@@ -2193,19 +2041,15 @@
     });
   }
 
-  function reorderWallpaperToIndex(id, targetIndex, restoreHandleFocus = false) {
+  async function reorderWallpaperToIndex(id, targetIndex, restoreHandleFocus = false) {
     const from = settings.wallpapers.findIndex((item) => item.id === id);
-    if (from < 0) return from;
+    if (from < 0) return;
     const to = Math.max(0, Math.min(targetIndex, settings.wallpapers.length - 1));
-    if (from === to) return from;
-    const [item] = settings.wallpapers.splice(from, 1);
-    settings.wallpapers.splice(to, 0, item);
-    saveSettingsNow();
-    renderWallpaperGallery();
-    scheduleWallpaperRotation();
-    announceWallpaperPosition(id, to);
+    if (from === to) return;
+    const neighbor = settings.wallpapers[to].id;
+    const result = await updateLibrary(() => wallpaperAssets.reorder(id, neighbor, from < to));
+    if (result?.changed) announceWallpaperPosition(id, settings.wallpapers.findIndex((item) => item.id === id));
     if (restoreHandleFocus) focusWallpaperHandleAfterRender(id);
-    return to;
   }
 
   function reorderWallpaperAtBoundary(id, boundaryIndex) {
@@ -2253,12 +2097,7 @@
   modeToggle.addEventListener('click', (e) => {
     const opt = e.target.closest('.mode-option');
     if (!opt) return;
-    settings.bgMode = opt.dataset.mode;
-    if (settings.bgMode === 'wallpaper') resetWallpaperRotationClock();
-    saveSettings();
-    applyBackground();
-    scheduleWallpaperRotation();
-    syncUI();
+    updateLibrary(() => wallpaperAssets.setMode(opt.dataset.mode));
   });
 
   themeOptions.addEventListener('click', (e) => {
@@ -2314,129 +2153,69 @@
       return;
     }
 
-    const settingsSnapshot = JSON.parse(JSON.stringify(settings));
-    const wasEmpty = settings.wallpapers.length === 0;
-    const previousActiveId = settings.activeWallpaperId;
-    const previousBgMode = settings.bgMode;
-    const singlePhotoImport = source === 'photo' && files.length === 1;
-    const existingIdentities = new Set(settings.wallpapers.map((item) => wallpaperPolicy.getFileIdentity(item)));
-    const addedIds = [];
+    const activate = source === 'photo' && files.length === 1;
+    let added = 0;
     let skipped = selectedFiles.length - files.length;
     let limited = 0;
     let failed = 0;
-    let committed = false;
-    let rolledBack = false;
+    let latest;
 
     wallpaperImportInProgress = true;
     wallpaperImportProgress = { current: 0, total: files.length };
     closeWallpaperAddMenu(false);
     syncWallpaperControls();
 
-    const rollbackImport = async () => {
-      settings = { ...DEFAULTS, ...settingsSnapshot };
-      normalizeSettings();
-      if (addedIds.length && wallpaperAssets && typeof wallpaperAssets.removeMany === 'function') {
-        try {
-          await wallpaperAssets.removeMany(addedIds);
-        } catch (error) {
-          console.error('Failed to roll back imported wallpapers', error);
-        }
-      }
-      addedIds.length = 0;
-      rolledBack = true;
-      applyBackground();
-      scheduleWallpaperRotation();
-    };
-
     try {
-      for (let index = 0; index < files.length; index += 1) {
-        const file = files[index];
+      await ensureLibrary();
+      for (const [index, file] of files.entries()) {
         wallpaperImportProgress = { current: index + 1, total: files.length };
         syncWallpaperControls();
-        const sourcePath = wallpaperPolicy.getImportPath(file, source);
-        const identity = wallpaperPolicy.getFileIdentity({ name: file.name, sourcePath }, source);
-        if (existingIdentities.has(identity)) {
-          skipped += 1;
-          continue;
-        }
-
-        const encodedValidation = wallpaperPolicy.validateFile(file);
-        if (!encodedValidation.ok) {
+        if (!wallpaperPolicy.validateFile(file).ok) {
           limited += 1;
           continue;
         }
 
         try {
-          const dataUrl = await new Promise((resolve) => {
+          const dataUrl = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result);
-            reader.onerror = () => resolve(null);
+            reader.onerror = () => reject(reader.error);
             reader.readAsDataURL(file);
           });
-          if (!dataUrl) throw new Error('Failed to read wallpaper');
           const processed = await compressImage(dataUrl, 1920);
-          const pixelValidation = wallpaperPolicy.validateFile(file, processed.sourceWidth, processed.sourceHeight);
-          if (!pixelValidation.ok) {
+          if (!wallpaperPolicy.validateFile(file, processed.sourceWidth, processed.sourceHeight).ok) {
             limited += 1;
             continue;
           }
-          const analysis = await analyzeWallpaperImage(processed.data);
-          const id = generateId();
-          if (!wallpaperAssets) throw new Error('Wallpaper storage is unavailable');
-          const meta = await wallpaperAssets.put({
-            id,
+          const { brightness, complexity, thumbnail } = await analyzeWallpaperImage(processed.data, true);
+          if (brightness < 0) throw new Error('Failed to analyze wallpaper');
+          const result = await wallpaperAssets.addWallpaper({
+            id: crypto.randomUUID(),
             data: processed.data,
             name: file.name,
-            sourcePath,
-            brightness: analysis.brightness,
-            complexity: analysis.complexity,
-            createdAt: Date.now() + index,
-          });
-          settings.wallpapers.push(meta);
-          existingIdentities.add(identity);
-          addedIds.push(meta.id);
+            sourcePath: wallpaperPolicy.getImportPath(file, source),
+            brightness,
+            complexity,
+            createdAt: Date.now(),
+          }, thumbnail, activate);
+          latest = result.state;
+          if (result.duplicate) skipped += 1;
+          else added += 1;
         } catch (_) {
           failed += 1;
         }
       }
-
-      if (addedIds.length) {
-        const shouldActivateImported = wasEmpty || (singlePhotoImport && addedIds.length === 1);
-        if (shouldActivateImported) {
-          settings.activeWallpaperId = addedIds[0];
-          settings.bgMode = 'wallpaper';
-          resetWallpaperRotationClock();
-        } else {
-          settings.activeWallpaperId = settings.wallpapers.some((item) => item.id === previousActiveId)
-            ? previousActiveId
-            : settings.wallpapers[0].id;
-          settings.bgMode = previousBgMode;
-        }
-        if (!saveSettingsNow()) {
-          await rollbackImport();
-        } else {
-          committed = true;
-          applyBackground();
-          scheduleWallpaperRotation();
-        }
-      }
     } catch (error) {
       console.error('Wallpaper import failed', error);
-      if (!committed) await rollbackImport();
+      failed += files.length;
     } finally {
       wallpaperImportInProgress = false;
       wallpaperImportProgress = { current: 0, total: 0 };
+      applyLibrary(latest);
       syncUI();
     }
 
-    showToast(rolledBack
-      ? t('error.wallpaperImportRolledBack')
-      : t('toast.wallpaperImportResult', {
-        added: addedIds.length,
-        skipped,
-        limited,
-        failed,
-      }));
+    showToast(t('toast.wallpaperImportResult', { added, skipped, limited, failed }));
   }
 
   wallpaperAddBtn.addEventListener('click', () => {
@@ -2520,12 +2299,7 @@
       return;
     }
 
-    settings.activeWallpaperId = id;
-    settings.bgMode = 'wallpaper';
-    resetWallpaperRotationClock();
-    saveSettingsNow();
-    applyBackground();
-    syncUI();
+    updateLibrary(() => wallpaperAssets.activate(id));
   });
 
   wallpaperGallery.addEventListener('keydown', (event) => {
@@ -2595,7 +2369,7 @@
   if (wallpaperReadabilityToggle) {
     wallpaperReadabilityToggle.addEventListener('change', () => {
       settings.wallpaperReadability = wallpaperReadabilityToggle.checked;
-      saveSettings();
+      saveSetting('wallpaperReadability');
       updateWallpaperPresentation();
     });
   }
@@ -2605,7 +2379,7 @@
       const opt = e.target.closest('.theme-option');
       if (!opt) return;
       settings.wallpaperSurfaceMode = opt.dataset.surfaceMode;
-      saveSettings();
+      saveSetting('wallpaperSurfaceMode');
       updateWallpaperPresentation();
       syncUI();
     });
@@ -2615,10 +2389,7 @@
     wallpaperRotationOptions.addEventListener('click', (e) => {
       const opt = e.target.closest('.theme-option');
       if (!opt || opt.disabled) return;
-      settings.wallpaperRotation = opt.dataset.rotation;
-      resetWallpaperRotationClock();
-      saveSettingsNow();
-      syncUI();
+      updateLibrary(() => wallpaperAssets.setRotation({ wallpaperRotation: opt.dataset.rotation }));
     });
   }
 
@@ -2626,10 +2397,7 @@
     wallpaperRotationModeOptions.addEventListener('click', (e) => {
       const opt = e.target.closest('.theme-option');
       if (!opt || opt.disabled) return;
-      settings.wallpaperRotationMode = opt.dataset.rotationMode;
-      resetWallpaperRotationClock();
-      saveSettingsNow();
-      syncUI();
+      updateLibrary(() => wallpaperAssets.setRotation({ wallpaperRotationMode: opt.dataset.rotationMode }));
     });
   }
 
@@ -2704,24 +2472,27 @@
     settings.shadowStrength = parseInt(shadowSlider.value);
     shadowValue.textContent = settings.shadowStrength;
     applyShadowStrength();
-    saveSettings();
+    saveSetting('shadowStrength');
   });
 
   overlaySlider.addEventListener('input', () => {
     settings.overlayStrength = parseInt(overlaySlider.value);
     overlayValue.textContent = `${settings.overlayStrength}%`;
     updateWallpaperPresentation();
-    saveSettings();
+    saveSetting('overlayStrength');
   });
 
   tabTitleInput.addEventListener('input', () => {
     settings.tabTitle = tabTitleInput.value.trim();
     applyTabTitle();
-    saveSettings();
+    saveSetting('tabTitle');
+  });
+  tabTitleInput.addEventListener('blur', () => {
+    tabTitleInput.value = settings.tabTitle || '';
   });
 
   if (suggestionsToggle) {
-    suggestionsToggle.addEventListener('click', handleSuggestionsToggle);
+    suggestionsToggle.addEventListener('click', () => window.__willowSearch.toggleSuggestions());
   }
 
   document.addEventListener('keydown', (e) => {
@@ -2752,11 +2523,19 @@
   });
 
   loadSettings();
-  const settingsReady = migrateWallpaperStorage()
-    .then(reconcileWallpaperStorage)
-    .catch((error) => {
-      console.error('Failed to reconcile wallpaper storage', error);
-    });
+  const settingsReady = ensureLibrary()
+    .then((state) => applyLibrary(state, false))
+    .catch((error) => console.error('Failed to initialize wallpaper storage', error));
+  preferences.subscribe(syncSavedPreferences);
+  window.__willowSearch.subscribe(syncUISuggestions);
+  const refreshFromStorage = () => refreshLibrary().catch(() => {});
+  wallpaperAssets.subscribe(refreshFromStorage);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshFromStorage();
+  });
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) refreshFromStorage();
+  });
 
   PRESET_COLORS.forEach((c) => {
     const btn = document.createElement('button');
@@ -2791,7 +2570,7 @@
     const opt = e.target.closest('.font-option');
     if (!opt) return;
     settings.font = opt.dataset.font;
-    saveSettings();
+    saveSetting('font');
     applyFont();
     syncUI();
   });
@@ -2800,7 +2579,7 @@
     const opt = e.target.closest('.theme-option');
     if (!opt) return;
     settings.radius = opt.dataset.radius;
-    saveSettings();
+    saveSetting('radius');
     applyRadius();
     syncUI();
   });
@@ -2811,7 +2590,7 @@
       const opt = e.target.closest('.theme-option');
       if (!opt) return;
       settings.settingsBtnPosition = opt.dataset.position;
-      saveSettings();
+      saveSetting('settingsBtnPosition');
       applySettingsBtnPosition();
       syncUI();
     });
@@ -2863,7 +2642,7 @@
   window.__settingsPanel = { open: openPanel };
 
   window.addEventListener('pagehide', () => {
-    if (saveTimer) saveSettingsNow();
+    if (saveTimer) flushSettings();
     clearTimeout(toastHideTimer);
     clearTimeout(wallpaperRotationTimer);
     clearTimeout(resizeSyncTimer);

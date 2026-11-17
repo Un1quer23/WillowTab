@@ -1,13 +1,7 @@
 (() => {
+  const preferences = window.__willowPreferences;
+  const { isChromeStore } = preferences;
   const ENGINES = [
-    {
-      id: 'default',
-      get name() { return (window.__i18n && window.__i18n.t('engine.default')) || '浏览器默认'; },
-      url: '',
-      suggestUrl: '',
-      iconClass: 'engine-icon-default',
-      logo: '<svg viewBox="1 1 22 22" fill="none"><g transform="translate(3.05 3.05) scale(0.746)" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></g></svg>',
-    },
     {
       id: 'google',
       name: 'Google',
@@ -57,7 +51,19 @@
     },
   ];
 
+  if (isChromeStore) ENGINES.unshift({
+      id: 'default',
+      get name() { return (window.__i18n && window.__i18n.t('engine.default')) || '浏览器默认'; },
+      url: '',
+      suggestUrl: '',
+      iconClass: 'engine-icon-default',
+      logo: '<svg viewBox="1 1 22 22" fill="none"><g transform="translate(3.05 3.05) scale(0.746)" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></g></svg>',
+    });
+
   const STORAGE_KEY = 'search-engine';
+  const permissionApi = isChromeStore ? globalThis.chrome?.permissions : null;
+  const SUGGESTION_ORIGINS = ENGINES.filter((engine) => engine.suggestUrl).map(suggestionOrigin);
+  const availabilityListeners = new Set();
 
   const toggle = document.getElementById('engine-toggle');
   const engineDropdown = document.getElementById('engine-dropdown');
@@ -72,6 +78,13 @@
   let selectedSuggestIndex = -1;
   let abortController = null;
   let suggestionRequestId = 0;
+  let debounceTimer = null;
+  let composing = false;
+  let displayedSuggestions = null;
+  let suggestionsEnabled = false;
+  let availabilityRequest = 0;
+  let permissionRequestPending = false;
+  let closingSuggestions = false;
 
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
@@ -88,7 +101,7 @@
       </li>
     `).join('');
 
-    const suffix = document.body.dataset.settingsBtnPosition === 'dropdown' ? `
+    const suffix = document.documentElement.dataset.settingsBtnPosition === 'dropdown' ? `
       <li class="engine-dropdown-separator" role="separator"></li>
       <li role="none">
         <button type="button" class="engine-dropdown-item engine-dropdown-settings" data-action="settings" role="menuitem" tabindex="-1">
@@ -115,7 +128,7 @@
   }
 
   function openEngineDropdown(source = 'pointer', focusIndex = activeIndex) {
-    closeSuggestions();
+    cancelSuggestions();
     selectedMenuIndex = focusIndex;
     renderEngineDropdown();
     engineDropdown.dataset.openSource = source;
@@ -143,22 +156,19 @@
   }
 
   function selectEngine(index) {
-    if (abortController) {
-      abortController.abort();
-      abortController = null;
-    }
-    suggestionRequestId += 1;
-    closeSuggestions();
+    cancelSuggestions();
     activeIndex = index;
     localStorage.setItem(STORAGE_KEY, ENGINES[index].id);
     updateToggleIcon();
     closeEngineDropdown();
     input.focus();
+    refreshAvailability();
   }
 
   function closeSuggestions() {
     suggestionsEl.hidden = true;
     suggestionsEl.innerHTML = '';
+    displayedSuggestions = null;
     selectedSuggestIndex = -1;
     wrapper.classList.remove('has-suggestions');
     input.setAttribute('aria-expanded', 'false');
@@ -166,7 +176,6 @@
   }
 
   function showSuggestions() {
-    closeEngineDropdown();
     suggestionsEl.hidden = false;
     wrapper.classList.add('has-suggestions');
     input.setAttribute('aria-expanded', 'true');
@@ -176,13 +185,13 @@
     const q = query.trim();
     if (!q) return;
     if (ENGINES[activeIndex].id === 'default') {
-      chrome.search.query({ text: q, disposition: 'CURRENT_TAB' });
+      globalThis.chrome?.search?.query({ text: q, disposition: 'CURRENT_TAB' });
       return;
     }
     window.location.href = ENGINES[activeIndex].url + encodeURIComponent(q);
   }
 
-  function renderSuggestions(suggestions) {
+  function renderSuggestions(suggestions, query, engine) {
     selectedSuggestIndex = -1;
     if (!suggestions || suggestions.length === 0) {
       closeSuggestions();
@@ -196,6 +205,7 @@
         <span class="suggest-text">${escapeHtml(text)}</span>
       </li>
     `).join('');
+    displayedSuggestions = { query, engineId: engine.id };
     showSuggestions();
   }
 
@@ -205,77 +215,129 @@
     return div.innerHTML;
   }
 
-  async function fetchSuggestions(query) {
-    if (document.body.dataset.suggestionsEnabled !== 'true') {
-      closeSuggestions();
-      return;
-    }
-    if (abortController) {
-      abortController.abort();
-    }
-    abortController = new AbortController();
-    const requestController = abortController;
-    const requestId = ++suggestionRequestId;
+  function suggestionOrigin(engine) {
+    return new URL(engine.suggestUrl).origin + '/*';
+  }
 
-    const engine = ENGINES[activeIndex];
-    if (!engine.suggestUrl) {
-      closeSuggestions();
-      return;
-    }
-
-    const isCurrentRequest = () => (
-      requestController === abortController &&
-      requestId === suggestionRequestId &&
-      ENGINES[activeIndex].id === engine.id &&
-      input.value.trim() === query &&
-      document.body.dataset.suggestionsEnabled === 'true'
-    );
-
+  function savedSuggestions() {
     try {
-      const resp = await fetch(engine.suggestUrl + encodeURIComponent(query), {
-        signal: requestController.signal,
-      });
-      if (!isCurrentRequest()) return;
-      if (!resp.ok) {
-        closeSuggestions();
-        return;
-      }
-      const data = await resp.json();
-      if (!isCurrentRequest()) return;
-      const suggestions = engine.parseSuggestions(data).slice(0, 8);
-      renderSuggestions(suggestions);
-    } catch (err) {
-      if (err.name !== 'AbortError' && isCurrentRequest()) {
-        closeSuggestions();
-      }
+      const { value, version } = preferences.readEntry('enableSuggestions');
+      return { enabled: value === undefined ? !isChromeStore : value === true, version };
+    } catch (_) {
+      return { enabled: false, version: null };
     }
   }
 
-  let debounceTimer = null;
+  async function hasPermission(origins) {
+    try {
+      return await permissionApi.contains({ origins });
+    } catch (_) {
+      return false;
+    }
+  }
+
+  async function refreshAvailability() {
+    const request = ++availabilityRequest;
+    cancelSuggestions();
+    const { enabled } = savedSuggestions();
+    const engine = ENGINES[activeIndex];
+    const available = enabled && (!isChromeStore || await hasPermission(
+      engine.suggestUrl ? [suggestionOrigin(engine)] : SUGGESTION_ORIGINS,
+    ));
+    if (request !== availabilityRequest) return;
+    suggestionsEnabled = available;
+    availabilityListeners.forEach((listener) => listener());
+  }
+
+  async function toggleSuggestions() {
+    if (permissionRequestPending || closingSuggestions) return;
+    const turningOn = !suggestionsEnabled;
+    try {
+      if (!isChromeStore) {
+        preferences.write('enableSuggestions', turningOn);
+        return;
+      }
+      if (!turningOn) {
+        closingSuggestions = true;
+        cancelSuggestions();
+        await navigator.locks.request('willowtab-search-suggestions', async () => {
+          preferences.write('enableSuggestions', false);
+          await permissionApi.remove({ origins: SUGGESTION_ORIGINS });
+        });
+        return;
+      }
+      const { version } = savedSuggestions();
+      if (version === null) return;
+      permissionRequestPending = true;
+      const granted = await permissionApi.request({ origins: SUGGESTION_ORIGINS });
+      if (granted) {
+        // The prompt waits outside the lock so another tab can turn suggestions off.
+        await navigator.locks.request('willowtab-search-suggestions', async () => {
+          const current = savedSuggestions();
+          if (current.version === version) preferences.write('enableSuggestions', true);
+          else if (!current.enabled) await permissionApi.remove({ origins: SUGGESTION_ORIGINS });
+        });
+      }
+    } catch (_) {
+      // Sending a request still requires a saved preference and permission for its host.
+    } finally {
+      permissionRequestPending = false;
+      closingSuggestions = false;
+      refreshAvailability();
+    }
+  }
+
+  function cancelSuggestions() {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+    abortController?.abort();
+    abortController = null;
+    suggestionRequestId += 1;
+    closeSuggestions();
+  }
+
+  function canUseSuggestions(query, engineId) {
+    return document.activeElement === input && !document.hidden && !composing && !closingSuggestions &&
+      !engineDropdown.classList.contains('visible') && ENGINES[activeIndex].id === engineId &&
+      input.value.trim() === query && savedSuggestions().enabled;
+  }
+
+  async function fetchSuggestions(query, requestId) {
+    const engine = ENGINES[activeIndex];
+    const isCurrentRequest = () => requestId === suggestionRequestId && canUseSuggestions(query, engine.id);
+    if (!engine.suggestUrl || !isCurrentRequest()) return;
+    if (isChromeStore && !(await hasPermission([suggestionOrigin(engine)]))) return;
+    if (!isCurrentRequest()) return;
+    const controller = new AbortController();
+    abortController = controller;
+    try {
+      const response = await fetch(engine.suggestUrl + encodeURIComponent(query), { signal: controller.signal });
+      if (!response.ok || !isCurrentRequest()) return;
+      const data = await response.json();
+      if (!isCurrentRequest()) return;
+      renderSuggestions(engine.parseSuggestions(data).filter((item) => typeof item === 'string').slice(0, 8), query, engine);
+    } catch (error) {
+      if (error.name !== 'AbortError' && isCurrentRequest()) closeSuggestions();
+    } finally {
+      if (abortController === controller) abortController = null;
+    }
+  }
+
   function syncMottoVisibility() {
     if (motto) motto.hidden = input.value.length > 0;
   }
 
-  function onInput() {
+  function onInput(event) {
     syncMottoVisibility();
-    clearTimeout(debounceTimer);
+    cancelSuggestions();
     const query = input.value.trim();
-
-    if (query.length < 2) {
-      if (abortController) {
-        abortController.abort();
-        abortController = null;
-      }
-      suggestionRequestId += 1;
-      closeSuggestions();
-      return;
-    }
-
+    if (query.length < 2 || composing || event?.isComposing || !savedSuggestions().enabled) return;
+    const requestId = suggestionRequestId;
     debounceTimer = setTimeout(() => {
-      fetchSuggestions(query);
+      debounceTimer = null;
+      fetchSuggestions(query, requestId);
     }, 250);
   }
-
 
   toggle.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -333,9 +395,13 @@
     }
   });
 
+  suggestionsEl.addEventListener('mousedown', (event) => {
+    if (event.target.closest('.suggest-item')) event.preventDefault();
+  });
+
   suggestionsEl.addEventListener('click', (e) => {
     const item = e.target.closest('.suggest-item');
-    if (!item) return;
+    if (!item || !displayedSuggestions || !canUseSuggestions(displayedSuggestions.query, displayedSuggestions.engineId)) return;
     const text = item.querySelector('.suggest-text').textContent;
     doSearch(text);
   });
@@ -351,30 +417,41 @@
   });
 
   input.addEventListener('input', onInput);
+  input.addEventListener('blur', cancelSuggestions);
+  input.addEventListener('compositionstart', () => {
+    composing = true;
+    cancelSuggestions();
+  });
+  input.addEventListener('compositionend', () => {
+    composing = false;
+    onInput();
+  });
+  window.addEventListener('blur', cancelSuggestions);
+  window.addEventListener('pagehide', cancelSuggestions);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) cancelSuggestions();
+  });
 
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      if (!suggestionsEl.hidden) {
-        closeSuggestions();
-        return;
-      }
+  input.addEventListener('keydown', (event) => {
+    if (composing || event.isComposing || event.keyCode === 229) return;
+    if (event.key === 'Escape') {
+      if (!suggestionsEl.hidden) event.preventDefault();
+      cancelSuggestions();
+      return;
     }
-
-    if (!suggestionsEl.hidden) {
-      const items = suggestionsEl.querySelectorAll('.suggest-item');
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        selectedSuggestIndex = Math.min(selectedSuggestIndex + 1, items.length - 1);
-        updateSuggestHighlight(items);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        selectedSuggestIndex = Math.max(selectedSuggestIndex - 1, -1);
-        updateSuggestHighlight(items);
-      } else if (e.key === 'Enter' && selectedSuggestIndex >= 0) {
-        e.preventDefault();
-        const text = items[selectedSuggestIndex].querySelector('.suggest-text').textContent;
-        doSearch(text);
-      }
+    if (!displayedSuggestions || !canUseSuggestions(displayedSuggestions.query, displayedSuggestions.engineId)) return;
+    const items = suggestionsEl.querySelectorAll('.suggest-item');
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      selectedSuggestIndex = Math.min(selectedSuggestIndex + 1, items.length - 1);
+      updateSuggestHighlight(items);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      selectedSuggestIndex = Math.max(selectedSuggestIndex - 1, -1);
+      updateSuggestHighlight(items);
+    } else if (event.key === 'Enter' && items[selectedSuggestIndex]) {
+      event.preventDefault();
+      doSearch(items[selectedSuggestIndex].querySelector('.suggest-text').textContent);
     }
   });
 
@@ -385,7 +462,12 @@
       item.setAttribute('aria-selected', selected ? 'true' : 'false');
     });
     if (selectedSuggestIndex >= 0 && items[selectedSuggestIndex]) {
-      input.setAttribute('aria-activedescendant', items[selectedSuggestIndex].id);
+      const selected = items[selectedSuggestIndex];
+      input.setAttribute('aria-activedescendant', selected.id);
+      const item = selected.getBoundingClientRect();
+      const viewport = suggestionsEl.getBoundingClientRect();
+      if (item.top < viewport.top) suggestionsEl.scrollTop += item.top - viewport.top;
+      else if (item.bottom > viewport.bottom) suggestionsEl.scrollTop += item.bottom - viewport.bottom;
     } else {
       input.removeAttribute('aria-activedescendant');
     }
@@ -393,10 +475,21 @@
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
-    doSearch(input.value);
+    if (!composing) doSearch(input.value);
   });
 
+  preferences.subscribe((field) => {
+    if (field === 'enableSuggestions' || field === null) refreshAvailability();
+  });
+  permissionApi?.onAdded?.addListener(refreshAvailability);
+  permissionApi?.onRemoved?.addListener(refreshAvailability);
+  window.__willowSearch = {
+    get suggestionsEnabled() { return suggestionsEnabled; },
+    toggleSuggestions,
+    subscribe(listener) { availabilityListeners.add(listener); },
+  };
   renderEngineDropdown();
   updateToggleIcon();
   syncMottoVisibility();
+  refreshAvailability();
 })();
