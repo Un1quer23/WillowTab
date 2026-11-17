@@ -3,7 +3,7 @@
   const FIELD_PREFIX = 'newtab-setting:';
   const FIELDS = [
     'bgColor', 'font', 'radius', 'overlayStrength', 'shadowStrength',
-    'settingsBtnPosition', 'tabTitle', 'wallpaperReadability',
+    'settingsBtnPosition', 'tabTitle', 'showGreeting', 'wallpaperReadability',
     'wallpaperSurfaceMode', 'enableSuggestions',
   ];
   const listeners = new Set();

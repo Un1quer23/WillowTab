@@ -99,19 +99,19 @@ For other Chromium-based browsers, install manually from GitHub Releases:
 
 [GitHub Releases](https://github.com/Un1quer23/WillowTab/releases/latest)
 
-Download `WillowTab-v1.7.7.zip`, the generic build for Chromium-based browsers.
+Download the generic `WillowTab-v*.zip` package from that release.
 
 Manual installation steps:
 
-1. Download `WillowTab-v1.7.7.zip`.
+1. Download the generic ZIP package.
 2. Extract it to a local folder.
 3. Open your browser's extension management page, such as `chrome://extensions`.
 4. Enable Developer mode.
 5. Click "Load unpacked" and select the extracted folder.
 
-### Chrome Web Store Package
+### Build Packages
 
-`WillowTab-for-Chrome-v1.7.7.zip` is a dedicated Chrome Web Store build for Google compliance. It is mainly intended for Chrome Web Store submission and review.
+This source builds `WillowTab-v1.7.9.zip` for Chromium-based browsers and `WillowTab-for-Chrome-v1.7.9.zip` for Chrome Web Store submission and review.
 
 ## Project Structure
 

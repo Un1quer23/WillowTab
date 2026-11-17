@@ -171,19 +171,27 @@
     displayedSuggestions = null;
     selectedSuggestIndex = -1;
     wrapper.classList.remove('has-suggestions');
+    wrapper.style.removeProperty('--suggestions-height');
     input.setAttribute('aria-expanded', 'false');
     input.removeAttribute('aria-activedescendant');
+  }
+
+  function syncSuggestionHeight() {
+    if (suggestionsEl.hidden) return;
+    wrapper.style.setProperty('--suggestions-height', `${suggestionsEl.getBoundingClientRect().height}px`);
   }
 
   function showSuggestions() {
     suggestionsEl.hidden = false;
     wrapper.classList.add('has-suggestions');
+    syncSuggestionHeight();
     input.setAttribute('aria-expanded', 'true');
   }
 
   function doSearch(query) {
     const q = query.trim();
     if (!q) return;
+    cancelSuggestions();
     if (ENGINES[activeIndex].id === 'default') {
       globalThis.chrome?.search?.query({ text: q, disposition: 'CURRENT_TAB' });
       return;
@@ -306,7 +314,10 @@
     const engine = ENGINES[activeIndex];
     const isCurrentRequest = () => requestId === suggestionRequestId && canUseSuggestions(query, engine.id);
     if (!engine.suggestUrl || !isCurrentRequest()) return;
-    if (isChromeStore && !(await hasPermission([suggestionOrigin(engine)]))) return;
+    if (isChromeStore && !(await hasPermission([suggestionOrigin(engine)]))) {
+      if (isCurrentRequest()) cancelSuggestions();
+      return;
+    }
     if (!isCurrentRequest()) return;
     const controller = new AbortController();
     abortController = controller;
@@ -315,7 +326,8 @@
       if (!response.ok || !isCurrentRequest()) return;
       const data = await response.json();
       if (!isCurrentRequest()) return;
-      renderSuggestions(engine.parseSuggestions(data).filter((item) => typeof item === 'string').slice(0, 8), query, engine);
+      const suggestions = engine.parseSuggestions(data).filter((item) => typeof item === 'string' && item.trim());
+      renderSuggestions(suggestions.slice(0, 8), query, engine);
     } catch (error) {
       if (error.name !== 'AbortError' && isCurrentRequest()) closeSuggestions();
     } finally {
@@ -488,6 +500,7 @@
     toggleSuggestions,
     subscribe(listener) { availabilityListeners.add(listener); },
   };
+  new ResizeObserver(syncSuggestionHeight).observe(suggestionsEl, { box: 'border-box' });
   renderEngineDropdown();
   updateToggleIcon();
   syncMottoVisibility();

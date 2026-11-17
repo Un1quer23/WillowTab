@@ -190,12 +190,17 @@ function assertMinuteClock() {
   const scheduled = [];
   const cleared = [];
   const listeners = {};
+  let now = new Date(2026, 0, 1, 8, 59).getTime();
+  let showGreeting;
   const elements = {
     time: { textContent: '', dateTime: '' },
-    greeting: { textContent: '' },
+    greeting: { textContent: '', hidden: true },
   };
   const sandbox = {
-    Date,
+    Date: class extends Date {
+      constructor() { super(now); }
+      static now() { return now; }
+    },
     document: {
       hidden: false,
       getElementById(id) { return elements[id]; },
@@ -203,6 +208,10 @@ function assertMinuteClock() {
     },
     window: {
       __i18n: { t(key) { return key; } },
+      __willowPreferences: {
+        readEntry() { return { value: showGreeting }; },
+        subscribe(listener) { listeners.preferences = listener; },
+      },
       addEventListener(type, listener) { listeners[`window:${type}`] = listener; },
     },
     setTimeout(callback, delay) {
@@ -214,6 +223,8 @@ function assertMinuteClock() {
   vm.runInNewContext(source, sandbox, { filename: 'js/clock.js' });
   assert.strictEqual(scheduled.length, 1);
   assert(scheduled[0].delay > 0 && scheduled[0].delay <= 60025);
+  assert.strictEqual(elements.greeting.hidden, false);
+  assert.strictEqual(elements.greeting.textContent, 'greeting.早上好');
   assert.strictEqual(typeof listeners['document:visibilitychange'], 'function');
   assert.strictEqual(typeof listeners['window:pagehide'], 'function');
 
@@ -226,6 +237,19 @@ function assertMinuteClock() {
   listeners['document:visibilitychange']();
   assert.strictEqual(scheduled.length, 2);
   assert.match(elements.time.textContent, /^\d{2}:\d{2}$/);
+
+  showGreeting = false;
+  listeners.preferences('showGreeting');
+  assert.strictEqual(elements.greeting.hidden, true);
+  now += 60000;
+  scheduled.at(-1).callback();
+  assert.strictEqual(elements.time.textContent, '09:00');
+  assert.strictEqual(elements.greeting.hidden, true);
+
+  showGreeting = true;
+  listeners.preferences('showGreeting');
+  assert.strictEqual(elements.greeting.hidden, false);
+  assert.strictEqual(elements.greeting.textContent, 'greeting.上午好');
 
   const clearsBeforePageHide = cleared.length;
   listeners['window:pagehide']();

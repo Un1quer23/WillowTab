@@ -279,23 +279,62 @@ body.has-wallpaper .container {
   z-index: 1;
 }
 
-html[data-startup-background="wallpaper"] .search-input,
-body.has-wallpaper .search-input {
+/* Paint one wallpaper surface behind the field and suggestions. */
+:is(html[data-startup-background="wallpaper"], body.has-wallpaper) .search-input-wrapper::before,
+:is(html[data-startup-background="wallpaper"], body.has-wallpaper) .search-input-wrapper::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 0;
+  height: calc(100% + var(--suggestions-height, 0px));
+  pointer-events: none;
+}
+
+:is(html[data-startup-background="wallpaper"], body.has-wallpaper) .search-input-wrapper::before {
+  /* Sample below the visible edge so expanding the panel preserves the blur above it. */
+  --wallpaper-blur-padding: calc(3 * var(--wallpaper-surface-blur));
+  box-sizing: content-box;
+  padding-bottom: var(--wallpaper-blur-padding);
+  clip-path: inset(0 0 var(--wallpaper-blur-padding) round var(--radius-ui));
+  background: var(--wallpaper-input-bg);
   backdrop-filter: blur(var(--wallpaper-surface-blur));
   -webkit-backdrop-filter: blur(var(--wallpaper-surface-blur));
-  background: var(--wallpaper-input-bg);
-  border-color: var(--wallpaper-surface-border);
+}
+
+:is(html[data-startup-background="wallpaper"], body.has-wallpaper) .search-input-wrapper::after {
+  box-sizing: border-box;
+  border: 1px solid var(--wallpaper-surface-border);
+  border-radius: var(--radius-ui);
+  box-shadow: var(--input-shadow);
+}
+
+html:not([data-startup-background]) body.has-wallpaper .search-input-wrapper::before {
+  transition: background-color var(--duration-fast) ease;
+}
+
+html:not([data-startup-background]) body.has-wallpaper .search-input-wrapper::after {
+  transition: border-color var(--duration-fast) ease, box-shadow var(--duration-drawer-in) var(--ease-out);
+}
+
+:is(html[data-startup-background="wallpaper"], body.has-wallpaper) .search-input-wrapper:has(> .search-input:focus)::after {
+  box-shadow: var(--input-shadow-focus);
+}
+
+:is(html[data-startup-background="wallpaper"], body.has-wallpaper) .search-input-wrapper :is(.search-input, .suggestions-dropdown) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
   color: var(--wallpaper-text-color);
+}
+
+:is(html[data-startup-background="wallpaper"], body.has-wallpaper) .search-input {
+  position: relative;
+  z-index: 1;
 }
 
 html[data-startup-background="wallpaper"] .search-motto,
 body.has-wallpaper .search-motto {
   color: var(--wallpaper-motto-text);
-}
-
-html[data-startup-background="wallpaper"] .search-input:focus,
-body.has-wallpaper .search-input:focus {
-  border-color: var(--wallpaper-search-focus-stroke);
 }
 
 html[data-startup-background="wallpaper"] .engine-toggle,
@@ -400,33 +439,17 @@ body.has-wallpaper .about-panel .action-btn.icon-only:hover {
   color: var(--accent);
 }
 
-body.has-wallpaper .suggestions-dropdown {
-  --suggestion-surface: rgba(245, 240, 222, 0.94);
-  --suggestion-text: #272016;
-  --suggestion-highlight: rgba(72, 50, 27, 0.12);
-  backdrop-filter: blur(var(--wallpaper-surface-blur));
-  -webkit-backdrop-filter: blur(var(--wallpaper-surface-blur));
-  background: var(--suggestion-surface);
-  color: var(--suggestion-text);
-}
-
-body.has-wallpaper[data-wallpaper-surface="dark"] .suggestions-dropdown {
-  --suggestion-surface: rgba(28, 25, 21, 0.94);
-  --suggestion-text: #f3eddf;
-  --suggestion-highlight: rgba(255, 255, 255, 0.1);
-}
-
 body.has-wallpaper .suggest-item {
-  color: inherit;
+  color: var(--wallpaper-text-color);
 }
 
 body.has-wallpaper .suggest-item:hover,
 body.has-wallpaper .suggest-item.active {
-  background: var(--suggestion-highlight);
+  background: var(--wallpaper-button-bg);
 }
 
 body.has-wallpaper .suggest-icon {
-  color: inherit;
+  color: var(--wallpaper-text-color);
   opacity: 0.7;
 }
 
@@ -743,11 +766,6 @@ body.has-custom-bg .greeting {
   border-bottom-color: transparent;
 }
 
-.search-input-wrapper.has-suggestions .suggestions-dropdown {
-  border-color: var(--search-focus-stroke);
-  border-top-color: transparent;
-}
-
 .suggestions-dropdown {
   position: absolute;
   top: 100%;
@@ -756,7 +774,7 @@ body.has-custom-bg .greeting {
   margin-top: 0;
   padding: 4px 0;
   background: var(--search-surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--search-focus-stroke);
   border-top: none;
   border-radius: 0 0 var(--radius-ui) var(--radius-ui);
   box-shadow: 0 6px 24px rgba(44, 36, 22, 0.1);
@@ -769,6 +787,34 @@ body.has-custom-bg .greeting {
 
 .suggestions-dropdown[hidden] {
   display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .suggestions-dropdown:not([hidden]) {
+    animation: suggestions-enter var(--duration-popover) var(--ease-out);
+  }
+
+  :is(html[data-startup-background="wallpaper"], body.has-wallpaper) .search-input-wrapper.has-suggestions::before,
+  :is(html[data-startup-background="wallpaper"], body.has-wallpaper) .search-input-wrapper.has-suggestions::after {
+    animation: wallpaper-search-extend var(--duration-popover) var(--ease-out);
+  }
+
+  :is(html[data-startup-background="wallpaper"], body.has-wallpaper) .suggestions-dropdown:not([hidden]) {
+    animation-name: wallpaper-suggestions-enter;
+  }
+}
+
+@keyframes suggestions-enter {
+  from { opacity: 0; }
+}
+
+@keyframes wallpaper-search-extend {
+  from { height: 100%; }
+}
+
+@keyframes wallpaper-suggestions-enter {
+  from { opacity: 0; clip-path: inset(0 0 100% round 0 0 var(--radius-ui) var(--radius-ui)); }
+  to { clip-path: inset(0 round 0 0 var(--radius-ui) var(--radius-ui)); }
 }
 
 .suggest-item {

@@ -1,6 +1,7 @@
 (() => {
   const timeEl = document.getElementById('time');
   const greetingEl = document.getElementById('greeting');
+  const preferences = window.__willowPreferences;
 
   function pad(n) {
     return String(n).padStart(2, '0');
@@ -23,7 +24,7 @@
     const m = now.getMinutes();
     timeEl.textContent = `${pad(h)}:${pad(m)}`;
     timeEl.dateTime = `${pad(h)}:${pad(m)}`;
-    greetingEl.textContent = getGreeting(h);
+    if (!greetingEl.hidden) greetingEl.textContent = getGreeting(h);
   }
 
   let updateTimer = null;
@@ -43,6 +44,12 @@
   }
 
   function refreshAndSchedule() {
+    try {
+      greetingEl.hidden = preferences.readEntry('showGreeting').value === false;
+    } catch (_) {
+      greetingEl.hidden = false;
+    }
+
     if (document.hidden) {
       clearTimeout(updateTimer);
       updateTimer = null;
@@ -54,5 +61,8 @@
 
   document.addEventListener('visibilitychange', refreshAndSchedule);
   window.addEventListener('pagehide', () => clearTimeout(updateTimer));
+  preferences.subscribe((field) => {
+    if (field === 'showGreeting' || field === null) refreshAndSchedule();
+  });
   refreshAndSchedule();
 })();

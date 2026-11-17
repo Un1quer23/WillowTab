@@ -15,6 +15,7 @@
     shadowStrength: 25,
     settingsBtnPosition: 'footer',
     tabTitle: '',
+    showGreeting: true,
     wallpaperReadability: true,
     wallpaperSurfaceMode: 'light',
     wallpaperRotation: 'off',
@@ -100,6 +101,7 @@
   const fontOptions = document.getElementById('font-options');
   const radiusOptions = document.getElementById('radius-options');
   const tabTitleInput = document.getElementById('tab-title-input');
+  const greetingToggle = document.getElementById('greeting-toggle');
   const suggestionsToggle = document.getElementById('suggestions-toggle');
   const toastRegion = document.getElementById('toast-region');
 
@@ -416,6 +418,7 @@
     shadowStrength: applyShadowStrength,
     settingsBtnPosition: applySettingsBtnPosition,
     tabTitle: applyTabTitle,
+    showGreeting: updateWallpaperPresentation,
     wallpaperReadability: updateWallpaperPresentation,
     wallpaperSurfaceMode: updateWallpaperPresentation,
   };
@@ -1828,6 +1831,7 @@
     }
 
     if (document.activeElement !== tabTitleInput) tabTitleInput.value = settings.tabTitle || '';
+    greetingToggle.checked = settings.showGreeting !== false;
     syncUISuggestions();
   }
 
@@ -2489,6 +2493,16 @@
   });
   tabTitleInput.addEventListener('blur', () => {
     tabTitleInput.value = settings.tabTitle || '';
+  });
+
+  greetingToggle.addEventListener('change', () => {
+    try {
+      preferences.write('showGreeting', greetingToggle.checked);
+    } catch (error) {
+      greetingToggle.checked = settings.showGreeting !== false;
+      console.error('Preference update failed', error);
+      showToast(t('error.settingsSaveFailed'));
+    }
   });
 
   if (suggestionsToggle) {
