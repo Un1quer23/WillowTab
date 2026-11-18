@@ -10,5 +10,5 @@ website/
 CLAUDE.md
 *.zip
 svg/
-AGENTS.md
+/AGENTS.local.md
 autoresearch/
