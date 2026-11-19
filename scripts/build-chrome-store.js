@@ -24,13 +24,13 @@ const sharedFiles = [
   '_locales/en/messages.json',
   '_locales/zh_CN/messages.json',
   'LICENSE',
+  'privacy-policy.html',
 ];
 
 const chromeOverrides = [
   'manifest.json',
   'newtab.html',
   'README.md',
-  'privacy-policy.html',
   'js/i18n.js',
 ];
 

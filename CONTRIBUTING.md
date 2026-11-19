@@ -9,7 +9,9 @@ Open `newtab.html` in a Chromium-based browser or load the repository as an unpa
 Before submitting code changes, run:
 
 ```bash
-node --check js/assets.js js/clock.js js/i18n.js js/search.js js/settings.js js/theme.js pack-zip.js scripts/build-chrome-store.js scripts/validate-release.js
+node --check js/assets.js js/clock.js js/color.js js/i18n.js js/preferences.js js/search.js js/settings.js js/theme.js js/wallpaper-color.js js/wallpaper-policy.js pack-zip.js scripts/build-chrome-store.js scripts/validate-colors.js scripts/validate-release.js scripts/validate-runtime.js
+node scripts/validate-runtime.js
+node scripts/validate-colors.js
 ```
 
 ## Release Validation

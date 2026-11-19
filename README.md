@@ -123,16 +123,21 @@ WillowTab/
 ├── css/
 │   └── style.css
 ├── js/
-│   ├── i18n.js
-│   ├── search.js
+│   ├── assets.js
 │   ├── clock.js
+│   ├── color.js
+│   ├── i18n.js
+│   ├── preferences.js
+│   ├── search.js
 │   ├── settings.js
-│   └── theme.js
+│   ├── theme.js
+│   ├── wallpaper-color.js
+│   └── wallpaper-policy.js
 ├── icons/
 └── chrome-store/
 ```
 
-The Chrome Web Store build lives in `chrome-store/`. Its policy-specific override files include `manifest.json`, `newtab.html`, `js/search.js`, `js/settings.js`, `js/i18n.js`, `privacy-policy.html`, and `README.md`.
+The Chrome Web Store build lives in `chrome-store/`. Its policy-specific override files are `manifest.json`, `newtab.html`, `js/i18n.js`, and `README.md`.
 
 ## Privacy, Security, and Contributing
 

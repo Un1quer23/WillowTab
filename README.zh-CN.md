@@ -116,16 +116,21 @@ WillowTab/
 ├── css/
 │   └── style.css
 ├── js/
-│   ├── i18n.js
-│   ├── search.js
+│   ├── assets.js
 │   ├── clock.js
+│   ├── color.js
+│   ├── i18n.js
+│   ├── preferences.js
+│   ├── search.js
 │   ├── settings.js
-│   └── theme.js
+│   ├── theme.js
+│   ├── wallpaper-color.js
+│   └── wallpaper-policy.js
 ├── icons/
 └── chrome-store/
 ```
 
-Chrome Web Store 版本位于 `chrome-store/`。其中 `manifest.json`、`newtab.html`、`js/search.js`、`js/settings.js`、`js/i18n.js`、`privacy-policy.html`、`README.md` 是审核策略相关的覆盖文件。
+Chrome Web Store 版本位于 `chrome-store/`。其中 `manifest.json`、`newtab.html`、`js/i18n.js`、`README.md` 是审核策略相关的覆盖文件。
 
 ## 隐私、安全与贡献
 
