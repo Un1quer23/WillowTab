@@ -111,7 +111,7 @@ Manual installation steps:
 
 ### Build Packages
 
-This source builds `WillowTab-v1.7.9.zip` for Chromium-based browsers and `WillowTab-for-Chrome-v1.7.9.zip` for Chrome Web Store submission and review.
+This source builds `WillowTab-v1.7.10.zip` for Chromium-based browsers and `WillowTab-for-Chrome-v1.7.10.zip` for Chrome Web Store submission and review.
 
 ## Project Structure
 
@@ -123,16 +123,21 @@ WillowTab/
 ├── css/
 │   └── style.css
 ├── js/
-│   ├── i18n.js
-│   ├── search.js
+│   ├── assets.js
 │   ├── clock.js
+│   ├── color.js
+│   ├── i18n.js
+│   ├── preferences.js
+│   ├── search.js
 │   ├── settings.js
-│   └── theme.js
+│   ├── theme.js
+│   ├── wallpaper-color.js
+│   └── wallpaper-policy.js
 ├── icons/
 └── chrome-store/
 ```
 
-The Chrome Web Store build lives in `chrome-store/`. Its policy-specific override files include `manifest.json`, `newtab.html`, `js/search.js`, `js/settings.js`, `js/i18n.js`, `privacy-policy.html`, and `README.md`.
+The Chrome Web Store build lives in `chrome-store/`. Its policy-specific override files are `manifest.json`, `newtab.html`, `js/i18n.js`, and `README.md`.
 
 ## Privacy, Security, and Contributing
 

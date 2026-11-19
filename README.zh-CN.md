@@ -104,7 +104,7 @@ Google Chrome 用户建议直接从 Chrome Web Store 安装：
 
 ### 构建产物
 
-当前源码可构建适用于 Chromium 系浏览器的 `WillowTab-v1.7.9.zip`，以及用于 Chrome Web Store 提交和审核的 `WillowTab-for-Chrome-v1.7.9.zip`。
+当前源码可构建适用于 Chromium 系浏览器的 `WillowTab-v1.7.10.zip`，以及用于 Chrome Web Store 提交和审核的 `WillowTab-for-Chrome-v1.7.10.zip`。
 
 ## 项目结构
 
@@ -116,16 +116,21 @@ WillowTab/
 ├── css/
 │   └── style.css
 ├── js/
-│   ├── i18n.js
-│   ├── search.js
+│   ├── assets.js
 │   ├── clock.js
+│   ├── color.js
+│   ├── i18n.js
+│   ├── preferences.js
+│   ├── search.js
 │   ├── settings.js
-│   └── theme.js
+│   ├── theme.js
+│   ├── wallpaper-color.js
+│   └── wallpaper-policy.js
 ├── icons/
 └── chrome-store/
 ```
 
-Chrome Web Store 版本位于 `chrome-store/`。其中 `manifest.json`、`newtab.html`、`js/search.js`、`js/settings.js`、`js/i18n.js`、`privacy-policy.html`、`README.md` 是审核策略相关的覆盖文件。
+Chrome Web Store 版本位于 `chrome-store/`。其中 `manifest.json`、`newtab.html`、`js/i18n.js`、`README.md` 是审核策略相关的覆盖文件。
 
 ## 隐私、安全与贡献
 

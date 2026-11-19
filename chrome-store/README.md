@@ -56,11 +56,16 @@ WillowTab/
 ├── css/
 │   └── style.css
 ├── js/
-│   ├── i18n.js            # 国际化（中/英）
-│   ├── search.js          # 搜索引擎与联想
-│   ├── clock.js           # 时钟与问候
-│   ├── settings.js        # 设置面板
-│   └── theme.js           # 主题管理
+│   ├── assets.js            # 壁纸与缩略图存储
+│   ├── clock.js             # 时钟与问候
+│   ├── color.js             # OKLCH 配色生成与对比度求解
+│   ├── i18n.js              # 国际化（中/英）
+│   ├── preferences.js       # 本地设置读写与多标签同步
+│   ├── search.js            # 搜索引擎与联想
+│   ├── settings.js          # 设置面板
+│   ├── theme.js             # 主题与首屏背景初始化
+│   ├── wallpaper-color.js   # 壁纸表面采样与控件对比度求解
+│   └── wallpaper-policy.js  # 壁纸导入校验与去重规则
 └── icons/
 ```
 

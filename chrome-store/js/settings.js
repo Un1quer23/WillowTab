@@ -471,107 +471,11 @@
     canvas.width = maxWidth;
     canvas.height = Math.max(1, Math.round(sourceHeight * maxWidth / sourceWidth));
     canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
-    return { data: canvas.toDataURL('image/jpeg', 0.85), sourceWidth, sourceHeight };
-  }
-
-  function parseHexColor(value) {
-    if (typeof value !== 'string') return null;
-    const hex = value.trim().toLowerCase();
-    const short = /^#([0-9a-f]{3})$/.exec(hex);
-    if (short) {
-      return {
-        r: parseInt(short[1][0] + short[1][0], 16),
-        g: parseInt(short[1][1] + short[1][1], 16),
-        b: parseInt(short[1][2] + short[1][2], 16),
-      };
-    }
-    const full = /^#([0-9a-f]{6})$/.exec(hex);
-    if (!full) return null;
-    return {
-      r: parseInt(full[1].slice(0, 2), 16),
-      g: parseInt(full[1].slice(2, 4), 16),
-      b: parseInt(full[1].slice(4, 6), 16),
-    };
-  }
-
-  function relativeLuminance(color) {
-    const channel = (value) => {
-      const v = value / 255;
-      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-    };
-    return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
-  }
-
-  function contrastRatio(a, b) {
-    const light = Math.max(a, b);
-    const dark = Math.min(a, b);
-    return (light + 0.05) / (dark + 0.05);
-  }
-
-  function mixRgb(from, to, amount) {
-    return {
-      r: from.r + (to.r - from.r) * amount,
-      g: from.g + (to.g - from.g) * amount,
-      b: from.b + (to.b - from.b) * amount,
-    };
-  }
-
-  function rgbToHex(color) {
-    const channel = (value) => Math.round(value).toString(16).padStart(2, '0');
-    return `#${channel(color.r)}${channel(color.g)}${channel(color.b)}`;
-  }
-
-  function lowestContrast(color, surfaces) {
-    const luminance = relativeLuminance(color);
-    return Math.min(...surfaces.map((surface) => {
-      return contrastRatio(luminance, relativeLuminance(surface));
-    }));
+    return { data: canvas.toDataURL('image/webp', 0.85), sourceWidth, sourceHeight };
   }
 
   function pickReadableColor(surfaces, desired, endpoint, targetContrast = 4.5) {
-    if (window.__willowColor) {
-      return window.__willowColor.readableColor(surfaces, desired, endpoint, targetContrast).hex;
-    }
-    const isReadable = (candidate) => {
-      return lowestContrast(candidate, surfaces) >= targetContrast;
-    };
-
-    const roundedCandidate = (amount) => parseHexColor(rgbToHex(mixRgb(desired, endpoint, amount)));
-
-    const roundedDesired = parseHexColor(rgbToHex(desired));
-    if (isReadable(roundedDesired)) return rgbToHex(roundedDesired);
-
-    let low = 0;
-    let high = 1;
-    for (let i = 0; i < 20; i += 1) {
-      const middle = (low + high) / 2;
-      if (isReadable(roundedCandidate(middle))) high = middle;
-      else low = middle;
-    }
-    const candidate = roundedCandidate(high);
-    if (isReadable(candidate)) return rgbToHex(candidate);
-    for (let step = 1; step <= 255; step += 1) {
-      const amount = high + ((1 - high) * step) / 255;
-      const fallback = roundedCandidate(amount);
-      if (isReadable(fallback)) return rgbToHex(fallback);
-    }
-    return rgbToHex(endpoint);
-  }
-
-  function resolveLightInputSurface(color, white) {
-    const roundedSurface = (amount) => parseHexColor(rgbToHex(mixRgb(color, white, amount)));
-    const desiredAmount = 0.12;
-    const desired = roundedSurface(desiredAmount);
-    if (lowestContrast(white, [color, desired]) >= 4.5) return desired;
-
-    let low = 0;
-    let high = desiredAmount;
-    for (let i = 0; i < 20; i += 1) {
-      const middle = (low + high) / 2;
-      if (lowestContrast(white, [color, roundedSurface(middle)]) >= 4.5) low = middle;
-      else high = middle;
-    }
-    return roundedSurface(low);
+    return window.__willowColor.readableColor(surfaces, desired, endpoint, targetContrast).hex;
   }
 
   function clearColorReadabilityVars() {
@@ -613,106 +517,8 @@
   }
 
   function applyColorReadabilityVars(bgColor) {
-    if (window.__willowColor) {
-      activeColorPalette = window.__theme.applySolidPalette(bgColor);
-      if (activeColorPalette) document.body.dataset.colorReadable = activeColorPalette.mode;
-      return;
-    }
-    const color = parseHexColor(bgColor);
-    if (!color) return;
-    const root = document.documentElement;
-    const white = { r: 255, g: 255, b: 255 };
-    const black = { r: 0, g: 0, b: 0 };
-    const schemes = [
-      {
-        name: 'dark-text',
-        endpoint: black,
-        inputSurface: parseHexColor(rgbToHex(mixRgb(color, white, 0.5))),
-      },
-      {
-        name: 'light-text',
-        endpoint: white,
-        inputSurface: resolveLightInputSurface(color, white),
-      },
-    ];
-    schemes.forEach((scheme) => {
-      scheme.score = lowestContrast(scheme.endpoint, [color, scheme.inputSurface]);
-    });
-    const scheme = schemes.reduce((best, candidate) => candidate.score > best.score ? candidate : best);
-    const useDarkText = scheme.name === 'dark-text';
-    const endpoint = scheme.endpoint;
-    const inputSurface = scheme.inputSurface;
-    const surfaces = [color, inputSurface];
-    const lightPrimary = parseHexColor('#f3eddf');
-    const primaryDesired = useDarkText ? mixRgb(color, black, 0.8) : lightPrimary;
-    const secondaryDesired = useDarkText
-      ? mixRgb(color, black, 0.6)
-      : mixRgb(color, lightPrimary, 0.78);
-    const primaryText = pickReadableColor(surfaces, primaryDesired, endpoint);
-    const secondaryText = pickReadableColor(surfaces, secondaryDesired, endpoint);
-    const mutedText = pickReadableColor(
-      [color, inputSurface],
-      useDarkText ? parseHexColor('#6b6b60') : parseHexColor('#8f887e'),
-      endpoint,
-    );
-    const placeholderText = pickReadableColor(
-      [inputSurface],
-      useDarkText ? parseHexColor('#727269') : parseHexColor('#8f887e'),
-      endpoint,
-    );
-    const mottoText = pickReadableColor(
-      [inputSurface],
-      useDarkText ? parseHexColor('#918d83') : parseHexColor('#706b64'),
-      endpoint,
-      3.2,
-    );
-    const accent = pickReadableColor(
-      surfaces,
-      parseHexColor(useDarkText ? '#e65f10' : '#e8964a'),
-      endpoint,
-      3,
-    );
-    const accentColor = parseHexColor(accent);
-    const accentSubtleColor = mixRgb(accentColor, useDarkText ? white : black, 0.8);
-    const accentSubtleSurface = mixRgb(inputSurface, accentSubtleColor, 0.1);
-    const accentText = pickReadableColor(
-      [inputSurface, accentSubtleSurface],
-      accentColor,
-      endpoint,
-    );
-    const accentSubtle = `rgba(${Math.round(accentSubtleColor.r)}, ${Math.round(accentSubtleColor.g)}, ${Math.round(accentSubtleColor.b)}, 0.1)`;
-    document.body.dataset.colorReadable = useDarkText ? 'dark-text' : 'light-text';
-    if (useDarkText) {
-      root.style.setProperty('--bg-secondary', `color-mix(in srgb, ${bgColor} 88%, white)`);
-      root.style.setProperty('--bg-tertiary', `color-mix(in srgb, ${bgColor} 75%, white)`);
-      root.style.setProperty('--border', `color-mix(in srgb, ${bgColor} 75%, black)`);
-    } else {
-      root.style.setProperty('--bg-secondary', `color-mix(in srgb, ${bgColor} 82%, white)`);
-      root.style.setProperty('--bg-tertiary', `color-mix(in srgb, ${bgColor} 72%, white)`);
-      root.style.setProperty('--border', 'rgba(255, 255, 255, 0.24)');
-    }
-
-    root.style.setProperty('--text-primary', primaryText);
-    root.style.setProperty('--text-secondary', secondaryText);
-    root.style.setProperty('--text-tertiary', mutedText);
-    root.style.setProperty('--motto-text', mottoText);
-    root.style.setProperty('--placeholder-text', placeholderText);
-    root.style.setProperty('--input-bg', rgbToHex(inputSurface));
-    root.style.setProperty('--accent', accent);
-    root.style.setProperty('--accent-hover', accent);
-    root.style.setProperty('--accent-text', accentText);
-    root.style.setProperty('--accent-subtle', accentSubtle);
-    root.style.setProperty('--border-focus', accent);
-    root.style.setProperty('--focus-ring-color', accent);
-    root.style.setProperty('--search-control-hover-color', accent);
-    root.style.setProperty('--search-control-hover-surface', accentSubtle);
-    root.style.setProperty('--search-control-focus-color', accent);
-    root.style.setProperty('--search-control-focus-ring', accent);
-    root.style.setProperty('--search-focus-stroke', accent);
-    root.style.setProperty('--search-selected-surface', accentSubtle);
-    root.style.setProperty('--search-selected-text', accentText);
-    root.style.setProperty('--engine-menu-hover-surface', accentSubtle);
-    root.style.setProperty('--engine-menu-hover-text', accent);
+    activeColorPalette = window.__theme.applySolidPalette(bgColor);
+    if (activeColorPalette) document.body.dataset.colorReadable = activeColorPalette.mode;
   }
 
   function safeSolidHexFromOklch(oklch) {
@@ -1112,14 +918,15 @@
     inputAlpha,
     surfaceBrightness,
   ) {
-    const primaryText = parseHexColor(textColor);
+    const colorApi = window.__willowColor;
+    const primaryText = colorApi.parseHex(textColor);
     if (!primaryText) return inputAlpha;
     const tone = Math.min(1, Math.max(0, surfaceBrightness)) * 255;
     const wallpaperSurface = { r: tone, g: tone, b: tone };
-    const primaryLuminance = relativeLuminance(primaryText);
+    const primaryLuminance = colorApi.relativeLuminance(primaryText);
     const contrastAt = (alpha) => {
-      const surface = mixRgb(wallpaperSurface, inputSurfaceColor, alpha);
-      return contrastRatio(primaryLuminance, relativeLuminance(surface));
+      const surface = colorApi.mix(wallpaperSurface, inputSurfaceColor, alpha);
+      return colorApi.contrast(primaryLuminance, colorApi.relativeLuminance(surface));
     };
     let resolvedInputAlpha = inputAlpha;
     const targetPrimaryContrast = 4.5;
@@ -1133,9 +940,9 @@
       }
       resolvedInputAlpha = high;
     }
-    const inputSurface = mixRgb(wallpaperSurface, inputSurfaceColor, resolvedInputAlpha);
-    const useDarkText = relativeLuminance(primaryText) < relativeLuminance(inputSurface);
-    const desired = parseHexColor(useDarkText ? '#918d83' : '#706b64');
+    const inputSurface = colorApi.mix(wallpaperSurface, inputSurfaceColor, resolvedInputAlpha);
+    const useDarkText = primaryLuminance < colorApi.relativeLuminance(inputSurface);
+    const desired = colorApi.parseHex(useDarkText ? '#918d83' : '#706b64');
     const motto = pickReadableColor([inputSurface], desired, primaryText, 3.2);
     const root = document.documentElement;
     root.style.setProperty('--wallpaper-motto-text', motto);
@@ -1155,17 +962,18 @@
     selectedSurfaceAlpha,
     selectedTextColor,
   ) {
+    const colorApi = window.__willowColor;
     const root = document.documentElement;
     const tone = Math.min(1, Math.max(0, surfaceBrightness)) * 255;
     const wallpaperSurface = { r: tone, g: tone, b: tone };
-    const menuSurface = mixRgb(wallpaperSurface, menuSurfaceColor, menuSurfaceAlpha);
-    const selectedText = parseHexColor(selectedTextColor) || parseHexColor('#f3eddf');
-    const selectedSurface = mixRgb(menuSurface, selectedSurfaceColor, selectedSurfaceAlpha);
-    const useDarkText = relativeLuminance(selectedText) < relativeLuminance(selectedSurface);
+    const menuSurface = colorApi.mix(wallpaperSurface, menuSurfaceColor, menuSurfaceAlpha);
+    const selectedText = colorApi.parseHex(selectedTextColor) || colorApi.parseHex('#f3eddf');
+    const selectedSurface = colorApi.mix(menuSurface, selectedSurfaceColor, selectedSurfaceAlpha);
+    const useDarkText = colorApi.relativeLuminance(selectedText) < colorApi.relativeLuminance(selectedSurface);
     const resolvedSelectedText = pickReadableColor(
       [selectedSurface],
       selectedText,
-      parseHexColor(useDarkText ? '#000000' : '#ffffff'),
+      colorApi.parseHex(useDarkText ? '#000000' : '#ffffff'),
       4.5,
     );
 
