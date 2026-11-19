@@ -111,7 +111,7 @@ Manual installation steps:
 
 ### Build Packages
 
-This source builds `WillowTab-v1.7.9.zip` for Chromium-based browsers and `WillowTab-for-Chrome-v1.7.9.zip` for Chrome Web Store submission and review.
+This source builds `WillowTab-v1.7.10.zip` for Chromium-based browsers and `WillowTab-for-Chrome-v1.7.10.zip` for Chrome Web Store submission and review.
 
 ## Project Structure
 

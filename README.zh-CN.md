@@ -104,7 +104,7 @@ Google Chrome 用户建议直接从 Chrome Web Store 安装：
 
 ### 构建产物
 
-当前源码可构建适用于 Chromium 系浏览器的 `WillowTab-v1.7.9.zip`，以及用于 Chrome Web Store 提交和审核的 `WillowTab-for-Chrome-v1.7.9.zip`。
+当前源码可构建适用于 Chromium 系浏览器的 `WillowTab-v1.7.10.zip`，以及用于 Chrome Web Store 提交和审核的 `WillowTab-for-Chrome-v1.7.10.zip`。
 
 ## 项目结构
 
